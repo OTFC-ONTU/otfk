@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\DepartmentResource\Pages;
 use App\Models\Department;
 use Filament\Forms;
@@ -15,10 +16,15 @@ class DepartmentResource extends Resource
     protected static ?string $model = Department::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
+
     protected static ?string $navigationGroup = 'Структура та персонал';
+
     protected static ?int $navigationSort = 1;
+
     protected static ?string $navigationLabel = 'Підрозділи';
+
     protected static ?string $modelLabel = 'підрозділ';
+
     protected static ?string $pluralModelLabel = 'Підрозділи';
 
     public static function form(Form $form): Form
@@ -32,6 +38,7 @@ class DepartmentResource extends Resource
             Forms\Components\RichEditor::make('description')->label('Опис')->columnSpanFull(),
             Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
             Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true),
+            EnglishTranslation::academicSection(),
         ]);
     }
 
@@ -39,6 +46,8 @@ class DepartmentResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                    ->state(fn (Department $record) => $record->translationStatus())->badge(),
                 Tables\Columns\TextColumn::make('title')->label('Назва')->searchable()->weight('bold')->wrap(),
                 Tables\Columns\TextColumn::make('type')->label('Тип')->badge()
                     ->formatStateUsing(fn ($state) => Department::TYPES[$state] ?? $state),

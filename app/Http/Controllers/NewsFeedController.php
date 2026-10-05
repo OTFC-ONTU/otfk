@@ -10,9 +10,8 @@ class NewsFeedController extends Controller
     public function __invoke()
     {
         $news = News::published()->recent()->limit(30)->get();
-        $siteName = config('app.name');
-        $description = Setting::get('site_description')
-            ?? 'Новини Одеського технічного фахового коледжу ОНТУ';
+        $siteName = app()->getLocale() === 'en' ? Setting::publicGet('brand_name', __('layout.brand_name')) : config('app.name');
+        $description = Setting::publicGet('site_description', __('public.news_title'));
 
         return response()
             ->view('feed.news', compact('news', 'siteName', 'description'), 200)

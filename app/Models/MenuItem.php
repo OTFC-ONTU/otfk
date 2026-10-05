@@ -2,16 +2,18 @@
 
 namespace App\Models;
 
+use App\Support\LocalizedUrl;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Route;
 
 class MenuItem extends Model
 {
     protected $fillable = [
-        'parent_id', 'label', 'link_type', 'page_id', 'url',
+        'parent_id', 'label', 'label_en', 'link_type', 'page_id', 'url',
         'open_new_tab', 'sort_order', 'is_visible',
     ];
 
@@ -66,15 +68,33 @@ class MenuItem extends Model
         static::deleted(fn () => Cache::forget('menu.navigation'));
     }
 
+    /** Переклад обчислюється після читання спільного кешу меню. */
+    public function getLocalizedLabelAttribute(): string
+    {
+        if (app()->getLocale() !== 'en') {
+            return $this->label;
+        }
+
+        if (filled($this->label_en)) {
+            return $this->label_en;
+        }
+
+        $labels = trans('navigation.labels');
+
+        return is_array($labels) ? ($labels[$this->label] ?? $this->label) : $this->label;
+    }
+
     /**
      * Обчислене посилання пункту меню.
      */
     public function getHrefAttribute(): string
     {
-        return match ($this->link_type) {
+        $href = match ($this->link_type) {
             'url' => $this->url ?: '#',
-            'route' => $this->url && \Illuminate\Support\Facades\Route::has($this->url) ? route($this->url) : '#',
-            default => $this->page ? url('/' . $this->page->slug) : ($this->url ?: '#'),
+            'route' => $this->url && Route::has($this->url) ? route($this->url) : '#',
+            default => $this->page ? url('/'.$this->page->slug) : ($this->url ?: '#'),
         };
+
+        return LocalizedUrl::to($href);
     }
 }

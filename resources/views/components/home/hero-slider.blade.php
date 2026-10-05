@@ -32,7 +32,7 @@
                  @focusout="start()"
                  role="region"
                  aria-roledescription="carousel"
-                 aria-label="Головний банер"
+                 aria-label="{{ __('public.main_banner') }}"
              @endif>
         @foreach ($slides as $i => $banner)
             <div @if ($count > 1)
@@ -65,14 +65,14 @@
                 </div>
                 <div class="container-site relative flex min-h-[460px] flex-col justify-center py-20 lg:py-28">
                     <div class="max-w-2xl">
-                        @if ($banner->title)
-                            <h1 class="text-4xl font-extrabold leading-[1.1] text-white sm:text-5xl lg:text-6xl">{{ $banner->title }}</h1>
+                        @if ($banner->localized('title'))
+                            <h1 class="text-4xl font-extrabold leading-[1.1] text-white sm:text-5xl lg:text-6xl">{{ $banner->localized('title') }}</h1>
                         @endif
-                        @if ($banner->subtitle)
-                            <p class="mt-5 max-w-xl text-lg leading-relaxed text-brand-100">{{ $banner->subtitle }}</p>
+                        @if ($banner->localized('subtitle'))
+                            <p class="mt-5 max-w-xl text-lg leading-relaxed text-brand-100">{{ $banner->localized('subtitle') }}</p>
                         @endif
                         @if ($banner->link_url)
-                            <a href="{{ $banner->link_url }}" class="btn-accent mt-8">{{ $banner->link_label ?: 'Детальніше' }} <x-ico name="arrow-right" class="h-4 w-4" /></a>
+                            <a href="{{ \App\Support\LocalizedUrl::to($banner->link_url) }}" class="btn-accent mt-8">{{ $banner->localized('link_label') ?: __('public.details') }} <x-ico name="arrow-right" class="h-4 w-4" /></a>
                         @endif
                     </div>
                 </div>
@@ -81,20 +81,20 @@
 
         @if ($count > 1)
             <div class="pointer-events-none absolute inset-x-0 bottom-6 z-10 flex items-center justify-center gap-3">
-                <button type="button" @click="prev()" class="pointer-events-auto rounded-full bg-white/10 p-2 text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white" aria-label="Попередній слайд">
+                <button type="button" @click="prev()" class="pointer-events-auto rounded-full bg-white/10 p-2 text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white" aria-label="{{ __('public.previous_slide') }}">
                     <x-ico name="chevron-left" class="h-5 w-5" />
                 </button>
-                <div class="flex gap-2" role="tablist" aria-label="Слайди банера">
+                <div class="flex gap-2" role="tablist" aria-label="{{ __('public.banner_slides') }}">
                     @foreach ($slides as $i => $banner)
                         <button type="button" role="tab"
                                 @click="go({{ $i }})"
                                 :aria-selected="index === {{ $i }}"
                                 class="pointer-events-auto h-2.5 w-2.5 rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
                                 :class="index === {{ $i }} ? 'bg-gold-400 scale-110' : 'bg-white/40 hover:bg-white/60'"
-                                aria-label="Слайд {{ $i + 1 }}"></button>
+                                aria-label="{{ __('public.slide', ['number' => $i + 1]) }}"></button>
                     @endforeach
                 </div>
-                <button type="button" @click="next()" class="pointer-events-auto rounded-full bg-white/10 p-2 text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white" aria-label="Наступний слайд">
+                <button type="button" @click="next()" class="pointer-events-auto rounded-full bg-white/10 p-2 text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white" aria-label="{{ __('public.next_slide') }}">
                     <x-ico name="chevron-right" class="h-5 w-5" />
                 </button>
             </div>
@@ -109,17 +109,17 @@
         </div>
         <div class="container-site relative py-20 lg:py-28">
             <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-brand-100 ring-1 ring-white/15">
-                <span class="h-1.5 w-1.5 rounded-full bg-gold-400"></span> Структурний підрозділ ОНТУ
+                <span class="h-1.5 w-1.5 rounded-full bg-gold-400"></span> {{ __('public.university_unit') }}
             </span>
             <h1 class="mt-6 max-w-3xl text-4xl font-extrabold leading-[1.1] text-white sm:text-5xl lg:text-6xl">
-                Одеський технічний фаховий коледж
+                {{ __('public.college_name') }}
             </h1>
             <p class="mt-6 max-w-xl text-lg leading-relaxed text-brand-100">
-                Сучасна фахова передвища освіта: технічні спеціальності, досвідчені викладачі та практична підготовка.
+                {{ __('public.hero_intro') }}
             </p>
             <div class="mt-9 flex flex-wrap gap-3">
-                <a href="{{ url('/abituriyentu') }}" class="btn-accent">Абітурієнту <x-ico name="arrow-right" class="h-4 w-4" /></a>
-                <a href="{{ route('news.index') }}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-white/10 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-white/15">Новини коледжу</a>
+                <a href="{{ \App\Support\LocalizedUrl::to('/abituriyentu') }}" class="btn-accent">{{ __('public.applicants') }} <x-ico name="arrow-right" class="h-4 w-4" /></a>
+                <a href="{{ \App\Support\LocalizedUrl::route('news.index') }}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-white/10 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-white/15">{{ __('public.news_title') }}</a>
             </div>
         </div>
     </section>

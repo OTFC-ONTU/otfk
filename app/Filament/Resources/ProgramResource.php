@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\ProgramResource\Pages;
 use App\Models\Program;
 use Filament\Forms;
@@ -15,10 +16,15 @@ class ProgramResource extends Resource
     protected static ?string $model = Program::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
+
     protected static ?string $navigationGroup = 'Абітурієнту';
+
     protected static ?int $navigationSort = 2;
+
     protected static ?string $navigationLabel = 'Освітні програми';
+
     protected static ?string $modelLabel = 'програму';
+
     protected static ?string $pluralModelLabel = 'Освітні програми';
 
     public static function form(Form $form): Form
@@ -31,6 +37,7 @@ class ProgramResource extends Resource
             Forms\Components\TextInput::make('external_url')->label('Зовнішнє посилання')->url()->maxLength(255),
             Forms\Components\Textarea::make('description')->label('Опис')->rows(2)->columnSpanFull(),
             Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
+            EnglishTranslation::academicSection(false, false),
         ]);
     }
 
@@ -38,6 +45,8 @@ class ProgramResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                    ->state(fn (Program $record) => $record->translationStatus())->badge(),
                 Tables\Columns\TextColumn::make('title')->label('Назва')->searchable()->weight('bold')->wrap(),
                 Tables\Columns\TextColumn::make('specialty.title')->label('Спеціальність')->badge()->sortable(),
                 Tables\Columns\IconColumn::make('file_path')->label('Файл')->boolean()

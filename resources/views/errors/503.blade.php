@@ -1,9 +1,10 @@
+@php $errorLocale = request()->is('en', 'en/*') ? 'en' : 'uk'; @endphp
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="{{ $errorLocale }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Технічне обслуговування</title>
+    <title>{{ __('public.maintenance', [], $errorLocale) }}</title>
     <style>
         body{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:#0c2547;color:#fff;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;text-align:center;padding:24px;box-sizing:border-box}
         .code{font-size:80px;font-weight:800;color:#f4b740;line-height:1}
@@ -14,8 +15,8 @@
 <body>
     <div>
         <div class="code">503</div>
-        <div class="title">Технічне обслуговування</div>
-        <p class="text">Сайт тимчасово недоступний через планові роботи. Будь ласка, завітайте трохи пізніше - ми скоро повернемось.</p>
+        <div class="title">{{ __('public.maintenance', [], $errorLocale) }}</div>
+        <p class="text">{{ __('public.maintenance_text', [], $errorLocale) }}</p>
     </div>
 </body>
 </html>

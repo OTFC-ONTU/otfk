@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasEnglishTranslation;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Event extends Model
 {
+    use HasEnglishTranslation;
+
     protected $fillable = [
         'title', 'description', 'location', 'starts_at', 'ends_at', 'url', 'is_published',
+        'title_en', 'description_en', 'location_en', 'translation_published',
     ];
 
     protected function casts(): array
@@ -16,6 +21,7 @@ class Event extends Model
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
             'is_published' => 'boolean',
+            'translation_published' => 'boolean',
         ];
     }
 
@@ -41,12 +47,12 @@ class Event extends Model
     }
 
     /** Початок/кінець в UTC для календарів (час у БД — київський настінний). */
-    public function utcStart(): \Carbon\Carbon
+    public function utcStart(): Carbon
     {
         return $this->starts_at->copy()->shiftTimezone('Europe/Kyiv')->utc();
     }
 
-    public function utcEnd(): \Carbon\Carbon
+    public function utcEnd(): Carbon
     {
         return ($this->ends_at ?? $this->starts_at->copy()->addHour())
             ->copy()->shiftTimezone('Europe/Kyiv')->utc();
@@ -57,12 +63,22 @@ class Event extends Model
     {
         $fmt = fn ($c) => $c->format('Ymd\THis\Z');
 
-        return 'https://calendar.google.com/calendar/render?' . http_build_query([
+        return 'https://calendar.google.com/calendar/render?'.http_build_query([
             'action' => 'TEMPLATE',
-            'text' => $this->title,
-            'dates' => $fmt($this->utcStart()) . '/' . $fmt($this->utcEnd()),
-            'details' => (string) $this->description,
-            'location' => (string) $this->location,
+            'text' => $this->localized('title'),
+            'dates' => $fmt($this->utcStart()).'/'.$fmt($this->utcEnd()),
+            'details' => (string) $this->localized('description'),
+            'location' => (string) $this->localized('location'),
         ]);
+    }
+
+    protected function translationSourceFields(): array
+    {
+        return ['title', 'description', 'location'];
+    }
+
+    protected function translationRequiredFields(): array
+    {
+        return $this->translationSourceFields();
     }
 }

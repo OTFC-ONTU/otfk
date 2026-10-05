@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\VideoResource\Pages;
 use App\Models\Video;
 use Filament\Forms;
@@ -15,15 +16,21 @@ class VideoResource extends Resource
     protected static ?string $model = Video::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-play-circle';
+
     protected static ?string $navigationGroup = 'Контент';
+
     protected static ?int $navigationSort = 3;
+
     protected static ?string $navigationLabel = 'Відео';
+
     protected static ?string $modelLabel = 'відео';
+
     protected static ?string $pluralModelLabel = 'Відео';
 
     public static function form(Form $form): Form
     {
         return $form->schema([
+            EnglishTranslation::section(contentFields: ['description' => ['label' => 'Англійський опис', 'rows' => 3]]),
             Forms\Components\TextInput::make('title')->label('Назва')->required()->maxLength(255)->columnSpanFull(),
             Forms\Components\TextInput::make('youtube_id')->label('Посилання на YouTube або ID')->required()->maxLength(255)
                 ->helperText('Просто вставте посилання (youtube.com/watch?v=…, youtu.be/…, shorts) — ID збережеться сам.')
@@ -56,6 +63,8 @@ class VideoResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                    ->state(fn (Video $record) => $record->translationStatus())->badge(),
                 Tables\Columns\ImageColumn::make('youtube_id')->label('')->square()
                     ->getStateUsing(fn ($record) => "https://img.youtube.com/vi/{$record->youtube_id}/default.jpg"),
                 Tables\Columns\TextColumn::make('title')->label('Назва')->searchable()->weight('bold'),

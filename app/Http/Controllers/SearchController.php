@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\News;
 use App\Models\Page;
 use App\Models\Specialty;
+use App\Support\LocalizedUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -15,20 +16,18 @@ class SearchController extends Controller
     public function index(Request $request)
     {
         $q = trim((string) $request->query('q', ''));
-        $results = new Collection();
+        $results = new Collection;
 
         if (mb_strlen($q) >= 2) {
-            $like = '%' . $q . '%';
-
             $results = $results
-                ->concat(News::published()->where('title', 'like', $like)->limit(15)->get()
-                    ->map(fn ($n) => ['type' => 'Новина', 'title' => $n->title, 'url' => route('news.show', $n), 'excerpt' => $n->excerpt]))
-                ->concat(Specialty::published()->where('title', 'like', $like)->limit(15)->get()
-                    ->map(fn ($s) => ['type' => 'Спеціальність', 'title' => $s->title, 'url' => route('specialties.show', $s), 'excerpt' => $s->short_description]))
-                ->concat(Page::published()->where('title', 'like', $like)->limit(15)->get()
-                    ->map(fn ($p) => ['type' => 'Сторінка', 'title' => $p->title, 'url' => url('/' . $p->slug), 'excerpt' => $p->excerpt]))
-                ->concat(Document::published()->where('title', 'like', $like)->limit(15)->get()
-                    ->map(fn ($d) => ['type' => 'Документ', 'title' => $d->title, 'url' => $d->file_url ?: route('documents.index'), 'excerpt' => $d->description]));
+                ->concat(News::published()->searchPublic($q)->limit(15)->get()
+                    ->map(fn ($n) => ['type' => __('public.search_news'), 'title' => $n->localized('title'), 'url' => LocalizedUrl::route('news.show', $n), 'excerpt' => $n->localized('excerpt')]))
+                ->concat(Specialty::published()->searchPublic($q)->limit(15)->get()
+                    ->map(fn ($s) => ['type' => __('public.search_specialty'), 'title' => $s->localized('title'), 'url' => LocalizedUrl::route('specialties.show', $s), 'excerpt' => $s->localized('short_description')]))
+                ->concat(Page::published()->searchPublic($q)->limit(15)->get()
+                    ->map(fn ($p) => ['type' => __('public.search_page'), 'title' => $p->localized('title'), 'url' => LocalizedUrl::to('/'.$p->slug), 'excerpt' => $p->localized('excerpt')]))
+                ->concat(Document::published()->searchPublic($q)->limit(15)->get()
+                    ->map(fn ($d) => ['type' => __('public.search_document'), 'title' => $d->localized('title'), 'url' => $d->file_url ?: LocalizedUrl::route('documents.index'), 'excerpt' => $d->localized('description')]));
         }
 
         return view('search.index', compact('q', 'results'));
@@ -43,19 +42,17 @@ class SearchController extends Controller
             return response()->json(['results' => [], 'total' => 0]);
         }
 
-        $like = '%' . $q . '%';
-
         $results = collect()
-            ->concat(News::published()->where('title', 'like', $like)->recent()->limit(3)->get()
-                ->map(fn ($n) => ['group' => 'Новина', 'title' => $n->title, 'url' => route('news.show', $n)]))
-            ->concat(Page::published()->where('title', 'like', $like)->limit(3)->get()
-                ->map(fn ($p) => ['group' => 'Сторінка', 'title' => $p->title, 'url' => url('/' . $p->slug)]))
-            ->concat(Specialty::published()->where('title', 'like', $like)->limit(2)->get()
-                ->map(fn ($s) => ['group' => 'Спеціальність', 'title' => $s->title, 'url' => route('specialties.show', $s)]))
-            ->concat(Document::published()->where('title', 'like', $like)->limit(2)->get()
-                ->map(fn ($d) => ['group' => 'Документ', 'title' => $d->title, 'url' => $d->file_url ?: route('documents.index')]))
-            ->concat(Event::published()->upcoming()->where('title', 'like', $like)->limit(2)->get()
-                ->map(fn ($e) => ['group' => 'Подія', 'title' => $e->title . ' (' . $e->starts_at->format('d.m') . ')', 'url' => route('events')]))
+            ->concat(News::published()->searchPublic($q)->recent()->limit(3)->get()
+                ->map(fn ($n) => ['group' => __('public.search_news'), 'title' => $n->localized('title'), 'url' => LocalizedUrl::route('news.show', $n)]))
+            ->concat(Page::published()->searchPublic($q)->limit(3)->get()
+                ->map(fn ($p) => ['group' => __('public.search_page'), 'title' => $p->localized('title'), 'url' => LocalizedUrl::to('/'.$p->slug)]))
+            ->concat(Specialty::published()->searchPublic($q)->limit(2)->get()
+                ->map(fn ($s) => ['group' => __('public.search_specialty'), 'title' => $s->localized('title'), 'url' => LocalizedUrl::route('specialties.show', $s)]))
+            ->concat(Document::published()->searchPublic($q)->limit(2)->get()
+                ->map(fn ($d) => ['group' => __('public.search_document'), 'title' => $d->localized('title'), 'url' => $d->file_url ?: LocalizedUrl::route('documents.index')]))
+            ->concat(Event::published()->upcoming()->searchPublic($q)->limit(2)->get()
+                ->map(fn ($e) => ['group' => __('public.search_event'), 'title' => $e->localized('title').' ('.$e->starts_at->format('d.m').')', 'url' => LocalizedUrl::route('events')]))
             ->take(9)
             ->values();
 

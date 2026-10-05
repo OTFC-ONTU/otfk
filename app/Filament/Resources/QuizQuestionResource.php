@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\QuizQuestionResource\Pages;
 use App\Models\QuizQuestion;
 use Filament\Forms;
@@ -15,10 +16,15 @@ class QuizQuestionResource extends Resource
     protected static ?string $model = QuizQuestion::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-puzzle-piece';
+
     protected static ?string $navigationGroup = 'Контент';
+
     protected static ?int $navigationSort = 10;
+
     protected static ?string $navigationLabel = 'Квіз для вступників';
+
     protected static ?string $modelLabel = 'питання';
+
     protected static ?string $pluralModelLabel = 'Квіз: яка спеціальність підходить';
 
     public static function form(Form $form): Form
@@ -27,6 +33,8 @@ class QuizQuestionResource extends Resource
             Forms\Components\TextInput::make('question')->label('Питання')->required()->maxLength(255)->columnSpanFull(),
             Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
             Forms\Components\Toggle::make('is_active')->label('Активне')->default(true),
+            EnglishTranslation::section(contentFields: [], primaryField: 'question', primaryLabel: 'Англійське питання')
+                ->description('Питання на /en показується англійською лише разом з усіма повними опублікованими перекладами варіантів.'),
             Forms\Components\Repeater::make('options')
                 ->relationship()
                 ->label('Варіанти відповідей')
@@ -36,6 +44,7 @@ class QuizQuestionResource extends Resource
                         ->relationship('specialty', 'title')->preload()
                         ->helperText('Якій спеціальності зараховуються бали за цей вибір.'),
                     Forms\Components\TextInput::make('points')->label('Балів')->numeric()->default(1)->minValue(1)->maxValue(5),
+                    EnglishTranslation::section(contentFields: [], primaryField: 'label', primaryLabel: 'Англійський текст варіанта'),
                 ])
                 ->columns(2)
                 ->orderColumn('sort_order')
@@ -49,6 +58,8 @@ class QuizQuestionResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('translation_status')->label('Переклад питання EN')
+                    ->state(fn (QuizQuestion $record) => $record->translationStatus())->badge(),
                 Tables\Columns\TextColumn::make('sort_order')->label('№')->sortable(),
                 Tables\Columns\TextColumn::make('question')->label('Питання')->searchable()->weight('bold')->limit(70),
                 Tables\Columns\TextColumn::make('options_count')->counts('options')->label('Варіантів'),

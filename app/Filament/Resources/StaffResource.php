@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\StaffResource\Pages;
 use App\Models\Staff;
 use Filament\Forms;
@@ -15,10 +16,15 @@ class StaffResource extends Resource
     protected static ?string $model = Staff::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-users';
+
     protected static ?string $navigationGroup = 'Структура та персонал';
+
     protected static ?int $navigationSort = 2;
+
     protected static ?string $navigationLabel = 'Персонал';
+
     protected static ?string $modelLabel = 'працівника';
+
     protected static ?string $pluralModelLabel = 'Персонал';
 
     public static function form(Form $form): Form
@@ -37,6 +43,11 @@ class StaffResource extends Resource
             Forms\Components\Textarea::make('bio')->label('Біографія')->rows(3)->columnSpanFull(),
             Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
             Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true),
+            EnglishTranslation::section(contentFields: [
+                'position' => ['label' => 'Посада англійською'],
+                'academic_degree' => ['label' => 'Науковий ступінь / звання англійською'],
+                'bio' => ['label' => 'Біографія англійською', 'rows' => 3],
+            ], primaryField: 'full_name', primaryLabel: 'ПІБ латиницею'),
         ]);
     }
 
@@ -44,6 +55,8 @@ class StaffResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                    ->state(fn (Staff $record) => $record->translationStatus())->badge(),
                 Tables\Columns\ImageColumn::make('photo')->label('')->circular(),
                 Tables\Columns\TextColumn::make('full_name')->label('ПІБ')->searchable()->weight('bold'),
                 Tables\Columns\TextColumn::make('position')->label('Посада')->wrap()->toggleable(),

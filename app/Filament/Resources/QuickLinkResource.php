@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\QuickLinkResource\Pages;
 use App\Models\QuickLink;
 use Filament\Forms;
@@ -15,10 +16,15 @@ class QuickLinkResource extends Resource
     protected static ?string $model = QuickLink::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-squares-2x2';
+
     protected static ?string $navigationGroup = 'Контент';
+
     protected static ?int $navigationSort = 5;
+
     protected static ?string $navigationLabel = 'Плитки та партнери';
+
     protected static ?string $modelLabel = 'блок';
+
     protected static ?string $pluralModelLabel = 'Плитки та партнери';
 
     /** Доступні іконки для плиток (короткі назви heroicons). */
@@ -47,6 +53,7 @@ class QuickLinkResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
+            EnglishTranslation::section(contentFields: ['description' => ['label' => 'Англійський опис', 'rows' => 2]]),
             Forms\Components\Select::make('location')->label('Розташування')
                 ->options([
                     'home_tile' => 'Плитка на головній',
@@ -83,6 +90,8 @@ class QuickLinkResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                    ->state(fn (QuickLink $record) => $record->translationStatus())->badge(),
                 Tables\Columns\TextColumn::make('location')->label('Розташування')->badge()
                     ->formatStateUsing(fn (string $state) => $state === 'home_tile' ? 'Плитка' : 'Партнер')
                     ->color(fn (string $state) => $state === 'home_tile' ? 'primary' : 'gray')->sortable(),

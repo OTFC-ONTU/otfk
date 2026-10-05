@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\PageResource\Pages;
 use App\Models\Page;
 use Filament\Forms;
@@ -15,10 +16,15 @@ class PageResource extends Resource
     protected static ?string $model = Page::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
+
     protected static ?string $navigationGroup = 'Структура сайту';
+
     protected static ?int $navigationSort = 1;
+
     protected static ?string $navigationLabel = 'Сторінки';
+
     protected static ?string $modelLabel = 'сторінку';
+
     protected static ?string $pluralModelLabel = 'Сторінки';
 
     public static function form(Form $form): Form
@@ -38,6 +44,7 @@ class PageResource extends Resource
                 Forms\Components\RichEditor::make('body')->label('Основний текст')->columnSpanFull(),
                 Forms\Components\FileUpload::make('cover_image')->label('Зображення')->image()->directory('pages')->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('1600')->imageResizeTargetHeight('1600')->columnSpanFull(),
             ])->columns(2),
+            EnglishTranslation::section(true),
             Forms\Components\Section::make('Налаштування')->schema([
                 Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true),
                 Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
@@ -55,6 +62,8 @@ class PageResource extends Resource
                 Tables\Columns\TextColumn::make('title')->label('Назва')->searchable()->weight('bold'),
                 Tables\Columns\TextColumn::make('parent.title')->label('Розділ')->badge()->placeholder('-')->sortable(),
                 Tables\Columns\TextColumn::make('slug')->label('URL')->color('gray')->toggleable(),
+                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                    ->state(fn (Page $record) => $record->translationStatus())->badge(),
                 Tables\Columns\IconColumn::make('is_published')->label('Опубл.')->boolean(),
                 Tables\Columns\IconColumn::make('is_heritage')->label('Heritage')->boolean()->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(),

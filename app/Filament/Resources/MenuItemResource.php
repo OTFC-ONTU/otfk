@@ -15,16 +15,23 @@ class MenuItemResource extends Resource
     protected static ?string $model = MenuItem::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-bars-3';
+
     protected static ?string $navigationGroup = 'Структура сайту';
+
     protected static ?int $navigationSort = 2;
+
     protected static ?string $navigationLabel = 'Меню навігації';
+
     protected static ?string $modelLabel = 'пункт меню';
+
     protected static ?string $pluralModelLabel = 'Пункти меню';
 
     public static function form(Form $form): Form
     {
         return $form->schema([
             Forms\Components\TextInput::make('label')->label('Підпис')->required()->maxLength(255),
+            Forms\Components\TextInput::make('label_en')->label('Підпис англійською')->maxLength(255)
+                ->helperText('Необов’язково. Без перекладу використовується словник стандартного меню або український підпис.'),
             Forms\Components\Select::make('parent_id')->label('Батьківський пункт')
                 ->relationship('parent', 'label')->searchable()->preload()
                 ->helperText('Залиште порожнім для пункту верхнього рівня.'),

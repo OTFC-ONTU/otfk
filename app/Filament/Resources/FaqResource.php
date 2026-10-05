@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\FaqResource\Pages;
 use App\Models\Faq;
 use Filament\Forms;
@@ -15,10 +16,15 @@ class FaqResource extends Resource
     protected static ?string $model = Faq::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-question-mark-circle';
+
     protected static ?string $navigationGroup = 'Контент';
+
     protected static ?int $navigationSort = 9;
+
     protected static ?string $navigationLabel = 'Питання (FAQ)';
+
     protected static ?string $modelLabel = 'питання';
+
     protected static ?string $pluralModelLabel = 'Питання та відповіді';
 
     public static function form(Form $form): Form
@@ -29,6 +35,7 @@ class FaqResource extends Resource
                 ->helperText('Звичайний текст; перенесення рядків зберігаються.'),
             Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
             Forms\Components\Toggle::make('is_active')->label('Показувати')->default(true),
+            EnglishTranslation::section(contentFields: ['answer' => ['label' => 'Англійська відповідь', 'rows' => 5]], primaryField: 'question', primaryLabel: 'Англійське питання'),
         ]);
     }
 
@@ -36,6 +43,8 @@ class FaqResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                    ->state(fn (Faq $record) => $record->translationStatus())->badge(),
                 Tables\Columns\TextColumn::make('question')->label('Питання')->searchable()->weight('bold')->limit(70),
                 Tables\Columns\TextColumn::make('sort_order')->label('Порядок')->sortable(),
                 Tables\Columns\IconColumn::make('is_active')->label('Активне')->boolean(),

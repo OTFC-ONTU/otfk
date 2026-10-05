@@ -2,13 +2,21 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasEnglishTranslation;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class DocumentCategory extends Model
 {
-    protected $fillable = ['title', 'slug', 'sort_order'];
+    use HasEnglishTranslation;
+
+    protected function casts(): array
+    {
+        return ['translation_published' => 'boolean'];
+    }
+
+    protected $fillable = ['title_en', 'translation_published', 'title', 'slug', 'sort_order'];
 
     public function getRouteKeyName(): string
     {
@@ -32,5 +40,15 @@ class DocumentCategory extends Model
                 $c->slug = Str::slug($c->title);
             }
         });
+    }
+
+    protected function translationSourceFields(): array
+    {
+        return ['title'];
+    }
+
+    protected function translationRequiredFields(): array
+    {
+        return $this->translationSourceFields();
     }
 }

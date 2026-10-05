@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasEnglishTranslation;
 use App\Models\Concerns\OptimizesUploadedImages;
 use App\Observers\NewsObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -12,6 +13,7 @@ use Illuminate\Support\Str;
 #[ObservedBy(NewsObserver::class)]
 class News extends Model
 {
+    use HasEnglishTranslation;
     use OptimizesUploadedImages;
 
     /** @var list<string> */
@@ -20,6 +22,7 @@ class News extends Model
     protected $table = 'news';
 
     protected $fillable = [
+        'title_en', 'excerpt_en', 'body_en', 'translation_published',
         'category_id', 'title', 'slug', 'excerpt', 'body', 'cover_image',
         'published_at', 'is_published', 'is_featured', 'is_heritage', 'views', 'likes',
         'telegram_posted_at',
@@ -30,6 +33,7 @@ class News extends Model
         return [
             'published_at' => 'datetime',
             'is_published' => 'boolean',
+            'translation_published' => 'boolean',
             'is_featured' => 'boolean',
             'is_heritage' => 'boolean',
             'telegram_posted_at' => 'datetime',

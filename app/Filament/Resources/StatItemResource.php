@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\StatItemResource\Pages;
 use App\Models\StatItem;
 use Filament\Forms;
@@ -15,15 +16,21 @@ class StatItemResource extends Resource
     protected static ?string $model = StatItem::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
+
     protected static ?string $navigationGroup = 'Контент';
+
     protected static ?int $navigationSort = 7;
+
     protected static ?string $navigationLabel = 'Коледж у цифрах';
+
     protected static ?string $modelLabel = 'цифру';
+
     protected static ?string $pluralModelLabel = 'Коледж у цифрах';
 
     public static function form(Form $form): Form
     {
         return $form->schema([
+            EnglishTranslation::section(contentFields: [], primaryField: 'label', primaryLabel: 'Англійський підпис'),
             Forms\Components\TextInput::make('label')->label('Підпис')->required()->maxLength(255)
                 ->placeholder('Студентів'),
             Forms\Components\TextInput::make('value')->label('Значення')->required()->maxLength(20)
@@ -41,6 +48,8 @@ class StatItemResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                    ->state(fn (StatItem $record) => $record->translationStatus())->badge(),
                 Tables\Columns\TextColumn::make('label')->label('Підпис')->weight('bold'),
                 Tables\Columns\TextColumn::make('value')->label('Значення')->badge()->color('warning'),
                 Tables\Columns\TextColumn::make('sort_order')->label('Порядок')->sortable(),

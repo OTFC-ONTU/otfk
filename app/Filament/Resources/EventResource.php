@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\EventResource\Pages;
 use App\Models\Event;
 use Filament\Forms;
@@ -15,10 +16,15 @@ class EventResource extends Resource
     protected static ?string $model = Event::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
+
     protected static ?string $navigationGroup = 'Контент';
+
     protected static ?int $navigationSort = 5;
+
     protected static ?string $navigationLabel = 'Події';
+
     protected static ?string $modelLabel = 'подію';
+
     protected static ?string $pluralModelLabel = 'Події';
 
     public static function form(Form $form): Form
@@ -34,6 +40,7 @@ class EventResource extends Resource
             Forms\Components\TextInput::make('url')->label('Посилання «Детальніше»')->url()->maxLength(255)
                 ->helperText('Необовʼязково: новина на сайті або зовнішня сторінка.')->columnSpanFull(),
             Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true),
+            EnglishTranslation::section(contentFields: ['description' => ['label' => 'Англійський опис', 'rows' => 3], 'location' => ['label' => 'Місце проведення англійською']]),
         ]);
     }
 
@@ -41,6 +48,8 @@ class EventResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                    ->state(fn (Event $record) => $record->translationStatus())->badge(),
                 Tables\Columns\TextColumn::make('starts_at')->label('Дата')->dateTime('d.m.Y H:i')->sortable(),
                 Tables\Columns\TextColumn::make('title')->label('Подія')->searchable()->limit(60)->weight('bold'),
                 Tables\Columns\TextColumn::make('location')->label('Місце')->limit(30)->toggleable(),

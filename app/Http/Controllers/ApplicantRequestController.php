@@ -6,6 +6,7 @@ use App\Mail\ApplicantRequestReceived;
 use App\Models\ApplicantRequest;
 use App\Models\Setting;
 use App\Models\Specialty;
+use App\Support\LocalizedUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 
@@ -13,7 +14,7 @@ class ApplicantRequestController extends Controller
 {
     public function create()
     {
-        $specialties = Specialty::published()->ordered()->get(['id', 'title']);
+        $specialties = Specialty::published()->ordered()->get();
 
         return view('applicants.create', compact('specialties'));
     }
@@ -22,7 +23,7 @@ class ApplicantRequestController extends Controller
     {
         // Антиспам: приховане поле-пастка
         if (filled($request->input('website'))) {
-            return back()->with('status', 'Дякуємо! Вашу заявку прийнято — ми звʼяжемося з вами.');
+            return redirect(LocalizedUrl::route('applicants.create'))->with('status', __('public.application_bot_sent'));
         }
 
         $data = $request->validate([
@@ -49,6 +50,6 @@ class ApplicantRequestController extends Controller
             })->afterResponse();
         }
 
-        return back()->with('status', 'Дякуємо! Вашу заявку прийнято — ми звʼяжемося з вами найближчим часом.');
+        return redirect(LocalizedUrl::route('applicants.create'))->with('status', __('public.application_sent'));
     }
 }

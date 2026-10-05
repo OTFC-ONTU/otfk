@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasEnglishTranslation;
 use App\Models\Concerns\OptimizesUploadedImages;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Staff extends Model
 {
+    use HasEnglishTranslation;
     use OptimizesUploadedImages;
 
     /** @var list<string> */
@@ -20,14 +22,14 @@ class Staff extends Model
         'teacher' => 'Викладач',
     ];
 
-    protected $fillable = [
+    protected $fillable = ['full_name_en', 'position_en', 'academic_degree_en', 'bio_en', 'translation_published',
         'full_name', 'position', 'category', 'department_id', 'photo',
         'email', 'phone', 'bio', 'academic_degree', 'sort_order', 'is_published',
     ];
 
     protected function casts(): array
     {
-        return ['is_published' => 'boolean'];
+        return ['is_published' => 'boolean', 'translation_published' => 'boolean'];
     }
 
     public function department(): BelongsTo
@@ -52,8 +54,23 @@ class Staff extends Model
 
     public function initials(): string
     {
-        $parts = preg_split('/\s+/u', trim($this->full_name ?? ''));
+        $parts = preg_split('/\s+/u', trim($this->localized('full_name') ?? ''));
 
-        return mb_strtoupper(mb_substr($parts[0] ?? '', 0, 1) . mb_substr($parts[1] ?? '', 0, 1));
+        return mb_strtoupper(mb_substr($parts[0] ?? '', 0, 1).mb_substr($parts[1] ?? '', 0, 1));
+    }
+
+    protected function translationPrimaryField(): string
+    {
+        return 'full_name';
+    }
+
+    protected function translationSourceFields(): array
+    {
+        return ['full_name', 'position', 'academic_degree', 'bio'];
+    }
+
+    protected function translationRequiredFields(): array
+    {
+        return $this->translationSourceFields();
     }
 }

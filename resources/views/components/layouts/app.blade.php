@@ -6,11 +6,12 @@
     use App\Models\Setting;
 
     $menu = MenuItem::navigation();
-    $s = Setting::map();
+    $s = Setting::publicMap();
     $partners = QuickLink::visible()->location('footer_partner')->ordered()->get();
     $logo = ! empty($s['logo']) ? asset('storage/' . $s['logo']) : null;
     $favicon = ! empty($s['favicon']) ? asset('storage/' . $s['favicon']) : asset('favicon.svg');
-    $metaDesc = $description ?: ($s['site_description'] ?? 'Офіційний сайт Одеського технічного фахового коледжу ОНТУ.');
+    $metaDesc = $description ?: ($s['site_description'] ?? __('layout.description'));
+    $siteName = app()->getLocale() === 'en' ? ($s['brand_name'] ?? __('layout.brand_name')) : config('app.name');
     $year = date('Y');
     // Чи веде пункт меню на поточну сторінку (порівнюємо шлях без домену й слешів) — для aria-current
     $currentPath = rtrim(request()->getPathInfo(), '/') ?: '/';
@@ -25,44 +26,44 @@
 @endphp
 
 <!DOCTYPE html>
-<html lang="uk" class="scroll-smooth">
+<html lang="{{ app()->getLocale() }}" class="scroll-smooth">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     {{-- Позначка, що JS активний — лише тоді вмикається scroll-reveal (без FOUC) --}}
     <script>document.documentElement.classList.add('js')</script>
-    <title>{{ $title ? $title . ' - ' . config('app.name') : config('app.name') }}</title>
+    <title>{{ $title ? $title . ' - ' . $siteName : $siteName }}</title>
     <link rel="icon" href="{{ $favicon }}"@if (\Illuminate\Support\Str::endsWith($favicon, '.svg')) type="image/svg+xml"@endif>
     <link rel="apple-touch-icon" href="{{ $favicon }}">
     <meta name="description" content="{{ $metaDesc }}">
     <meta property="og:type" content="website">
-    <meta property="og:site_name" content="{{ config('app.name') }}">
-    <meta property="og:title" content="{{ $title ?: config('app.name') }}">
+    <meta property="og:site_name" content="{{ $siteName }}">
+    <meta property="og:title" content="{{ $title ?: $siteName }}">
     <meta property="og:description" content="{{ $metaDesc }}">
     <meta property="og:url" content="{{ url()->current() }}">
     @php $shareImage = $ogImage ?: $logo; @endphp
     @if ($shareImage)
         <meta property="og:image" content="{{ $shareImage }}">
-        <meta property="og:image:alt" content="{{ $title ?: config('app.name') }}">
+        <meta property="og:image:alt" content="{{ $title ?: $siteName }}">
     @endif
-    <meta property="og:locale" content="uk_UA">
+    <meta property="og:locale" content="{{ app()->getLocale() === 'en' ? 'en_GB' : 'uk_UA' }}">
     {{-- Велика картка лише коли є справжня обкладинка сторінки (не логотип-фолбек) --}}
     <meta name="twitter:card" content="{{ $ogImage ? 'summary_large_image' : 'summary' }}">
     <link rel="alternate" type="application/xml" title="Sitemap" href="{{ url('/sitemap.xml') }}">
-    <link rel="alternate" type="application/rss+xml" title="RSS — Новини" href="{{ route('news.feed') }}">
+    <link rel="alternate" type="application/rss+xml" title="RSS — {{ __('layout.news') }}" href="{{ \App\Support\LocalizedUrl::route('news.feed') }}">
     <link rel="canonical" href="{{ url()->current() }}">
     @php $jsonld = array_filter([
         '@context' => 'https://schema.org',
         '@type' => 'EducationalOrganization',
-        'name' => config('app.name'),
+        'name' => $siteName,
         'url' => url('/'),
         'logo' => $logo ?: asset('favicon.svg'),
         'email' => $s['contact_email'] ?? null,
         'telephone' => $s['contact_phone'] ?? null,
         'address' => $s['contact_address'] ?? null,
     ]); @endphp
-    <script type="application/ld+json">{!! json_encode($jsonld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+    <script type="application/ld+json">{!! json_encode($jsonld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700|manrope:600,700,800|cormorant-garamond:400,500,600,700|lora:400,500,600,700&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -72,14 +73,14 @@
     {{-- Пропустити навігацію (зʼявляється лише при фокусі з клавіатури) --}}
     <a href="#main-content"
        class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-brand-700 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">
-        Перейти до основного вмісту
+        {{ __('layout.skip') }}
     </a>
 
     {{-- ============================ БАНЕР ОГОЛОШЕНЬ ============================ --}}
     @php
         $annText = trim($s['announcement_text'] ?? '');
         $annType = $s['announcement_type'] ?? 'info';
-        $annUrl = trim($s['announcement_url'] ?? '');
+        $annUrl = \App\Support\LocalizedUrl::to(trim($s['announcement_url'] ?? ''));
         $annStyles = [
             'info' => 'bg-brand-700 text-white',
             'warning' => 'bg-gold-500 text-white',
@@ -99,7 +100,7 @@
                     <span>{{ $annText }}</span>
                 @endif
             </div>
-            <button type="button" aria-label="Закрити оголошення"
+            <button type="button" aria-label="{{ __('layout.close_announcement') }}"
                     @click="hidden = true; try { localStorage.setItem('ann-closed', @js(md5($annText))) } catch (e) {}"
                     class="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full transition hover:bg-white/15">
                 <x-ico name="x-mark" class="h-4 w-4" />
@@ -126,7 +127,7 @@
                     {{-- Жива позначка «зараз йде пара» (з розкладу дзвінків) --}}
                     @php $bellPeriods = \App\Models\BellPeriod::active(); @endphp
                     @if ($bellPeriods->isNotEmpty())
-                        <a href="{{ route('bells') }}"
+                        <a href="{{ \App\Support\LocalizedUrl::route('bells') }}"
                            x-data="bellChip(@js($bellPeriods->map(fn ($b) => ['n' => $b->number, 's' => substr($b->starts, 0, 5), 'e' => substr($b->ends, 0, 5)])->values()))"
                            x-init="tick(); setInterval(() => tick(), 30000)" x-show="label" x-cloak
                            class="inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 px-2.5 py-0.5 font-medium text-gold-200 ring-1 ring-gold-400/30 transition hover:bg-gold-400/25">
@@ -146,7 +147,7 @@
                         <a href="{{ $s['social_instagram'] }}" target="_blank" rel="noopener" class="hover:text-white">Instagram</a>
                     @endif
                     <a href="{{ url('/admin') }}" class="inline-flex items-center gap-1.5 text-gold-300 hover:text-gold-200">
-                        <x-ico name="lock-closed" class="h-3.5 w-3.5" /> Адмінпанель
+                        <x-ico name="lock-closed" class="h-3.5 w-3.5" /> {{ __('layout.admin') }}
                     </a>
                 </div>
             </div>
@@ -158,28 +159,29 @@
             <div class="border-b border-transparent bg-white shadow-sm transition-[box-shadow,background-color,border-color] duration-300"
                  :class="scrolled ? 'border-slate-200/80 bg-white/90 shadow-md backdrop-blur-md' : ''">
                 <div class="mx-auto flex h-20 w-full max-w-[1600px] items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
-                <a href="{{ route('home') }}" class="flex shrink-0 items-center gap-3">
+                <a href="{{ \App\Support\LocalizedUrl::route('home') }}" class="flex shrink-0 items-center gap-3">
                     @if ($logo)
-                        <img src="{{ $logo }}" alt="ОТФК ОНТУ" class="h-12 w-auto shrink-0 lg:h-16">
+                        <img src="{{ $logo }}" alt="{{ $s['brand_short'] ?? __('layout.brand_short') }}" class="h-12 w-auto shrink-0 lg:h-16">
                     @else
                         <span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-700 to-brand-900 text-white shadow-sm">
                             <x-ico name="academic-cap" class="h-7 w-7" />
                         </span>
                     @endif
                     <span class="leading-tight">
-                        <span class="font-display block whitespace-nowrap text-lg font-extrabold tracking-tight text-brand-900">{{ $s['brand_short'] ?? 'ОТФК ОНТУ' }}</span>
-                        <span class="hidden whitespace-nowrap text-xs text-slate-500 sm:block">{{ $s['brand_name'] ?? 'Одеський технічний фаховий коледж' }}</span>
+                        <span class="font-display block whitespace-nowrap text-lg font-extrabold tracking-tight text-brand-900">{{ $s['brand_short'] ?? __('layout.brand_short') }}</span>
+                        <span class="hidden whitespace-nowrap text-xs text-slate-500 sm:block">{{ $s['brand_name'] ?? __('layout.brand_name') }}</span>
                     </span>
                 </a>
 
                 <div class="flex items-center gap-2 sm:gap-3">
+                    <x-language-switcher />
                     {{-- Пошук з миттєвими підказками (десктоп) --}}
-                    <div x-data="liveSearch(@js(route('search.suggest')), @js(route('search')))"
+                    <div x-data="liveSearch(@js(\App\Support\LocalizedUrl::route('search.suggest')), @js(\App\Support\LocalizedUrl::route('search')))"
                          @click.outside="open = false" @keydown.escape.window="open = false"
                          class="relative hidden lg:block">
-                        <form action="{{ route('search') }}" method="GET" class="relative">
+                        <form action="{{ \App\Support\LocalizedUrl::route('search') }}" method="GET" class="relative">
                             <x-ico name="magnifying-glass" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                            <input type="search" name="q" placeholder="Пошук..." autocomplete="off"
+                            <input type="search" name="q" placeholder="{{ __('layout.search_placeholder') }}" autocomplete="off"
                                    x-model="q" @input.debounce.250ms="suggest()" @focus="items.length && (open = true)"
                                    class="w-48 rounded-full border-0 bg-slate-100 py-2 pl-9 pr-4 text-sm text-slate-700 ring-1 ring-transparent transition focus:w-64 focus:bg-white focus:ring-2 focus:ring-brand-500" />
                         </form>
@@ -191,18 +193,18 @@
                                     <span class="min-w-0 truncate text-sm text-slate-700" x-text="it.title"></span>
                                 </a>
                             </template>
-                            <p x-show="!items.length && !busy" class="px-3.5 py-3 text-sm text-slate-400">Нічого не знайдено.</p>
+                            <p x-show="!items.length && !busy" class="px-3.5 py-3 text-sm text-slate-400">{{ __('layout.no_results') }}</p>
                             <a x-show="items.length" :href="allUrl()"
                                class="block border-t border-slate-100 px-3.5 py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-50">
-                                Усі результати →
+                                {{ __('layout.all_results') }}
                             </a>
                         </div>
                     </div>
                     {{-- CTA --}}
-                    <a href="{{ url('/abituriyentu') }}" class="btn-accent hidden whitespace-nowrap sm:inline-flex">Вступнику</a>
+                    <a href="{{ \App\Support\LocalizedUrl::to('/abituriyentu') }}" class="btn-accent hidden whitespace-nowrap sm:inline-flex">{{ __('layout.applicants') }}</a>
                     {{-- Мобільні дії --}}
-                    <a href="{{ route('search') }}" class="btn-ghost p-2 lg:hidden" aria-label="Пошук"><x-ico name="magnifying-glass" class="h-5 w-5" /></a>
-                    <button @click="mobile = true" class="btn-ghost p-2 xl:hidden" aria-label="Меню"><x-ico name="bars-3" class="h-6 w-6" /></button>
+                    <a href="{{ \App\Support\LocalizedUrl::route('search') }}" class="btn-ghost p-2 lg:hidden" aria-label="{{ __('layout.search') }}"><x-ico name="magnifying-glass" class="h-5 w-5" /></a>
+                    <button @click="mobile = true" class="btn-ghost p-2 xl:hidden" aria-label="{{ __('layout.menu') }}"><x-ico name="bars-3" class="h-6 w-6" /></button>
                 </div>
                 </div>
             </div>
@@ -216,7 +218,7 @@
                                 <button type="button" @click="open = ! open"
                                         class="flex items-center gap-1 whitespace-nowrap border-b-2 border-transparent px-2 py-3 text-[13px] font-medium text-white/90 transition hover:bg-white/5 hover:text-white"
                                         :class="open ? 'border-gold-400 bg-white/5 text-white' : ''">
-                                    {{ $item->label }}
+                                    {{ $item->localized_label }}
                                     <x-ico name="chevron-down" class="h-4 w-4 opacity-70 transition" x-bind:class="open && 'rotate-180'" />
                                 </button>
                                 <div x-show="open" x-cloak x-transition.opacity
@@ -228,7 +230,7 @@
                                                'block rounded-lg px-3 py-2 text-sm transition hover:bg-brand-50 hover:text-brand-800',
                                                'text-slate-600' => ! $navCurrent($child->href),
                                                'bg-brand-50 font-semibold text-brand-800' => $navCurrent($child->href),
-                                           ])>{{ $child->label }}</a>
+                                           ])>{{ $child->localized_label }}</a>
                                     @endforeach
                                 </div>
                             </div>
@@ -239,7 +241,7 @@
                                    'flex shrink-0 items-center whitespace-nowrap border-b-2 px-2 py-3 text-[13px] font-medium transition hover:bg-white/5',
                                    'border-transparent text-white/90 hover:border-gold-400 hover:text-white' => ! $navCurrent($item->href),
                                    'border-gold-400 text-white' => $navCurrent($item->href),
-                               ])>{{ $item->label }}</a>
+                               ])>{{ $item->localized_label }}</a>
                         @endif
                     @endforeach
                 </div>
@@ -252,14 +254,14 @@
             <div class="absolute right-0 top-0 flex h-full w-80 max-w-[88%] flex-col bg-white shadow-2xl"
                  x-transition:enter="transition ease-out duration-200" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0">
                 <div class="flex h-16 items-center justify-between border-b border-slate-200 px-5">
-                    <span class="font-display font-extrabold text-brand-900">Меню</span>
+                    <span class="font-display font-extrabold text-brand-900">{{ __('layout.menu') }}</span>
                     <button @click="mobile = false" class="btn-ghost p-2"><x-ico name="x-mark" class="h-6 w-6" /></button>
                 </div>
                 <div class="border-b border-slate-100 p-4">
-                    <div x-data="liveSearch(@js(route('search.suggest')), @js(route('search')))" class="relative">
-                        <form action="{{ route('search') }}" method="GET" class="relative">
+                    <div x-data="liveSearch(@js(\App\Support\LocalizedUrl::route('search.suggest')), @js(\App\Support\LocalizedUrl::route('search')))" class="relative">
+                        <form action="{{ \App\Support\LocalizedUrl::route('search') }}" method="GET" class="relative">
                             <x-ico name="magnifying-glass" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                            <input type="search" name="q" placeholder="Пошук по сайту..." autocomplete="off"
+                            <input type="search" name="q" placeholder="{{ __('layout.site_search_placeholder') }}" autocomplete="off"
                                    x-model="q" @input.debounce.250ms="suggest()" class="input w-full pl-9" />
                         </form>
                         <div x-show="open && items.length" x-cloak
@@ -270,17 +272,17 @@
                                     <span class="min-w-0 truncate text-sm text-slate-700" x-text="it.title"></span>
                                 </a>
                             </template>
-                            <a :href="allUrl()" class="block border-t border-slate-100 px-3.5 py-2.5 text-sm font-semibold text-brand-700">Усі результати →</a>
+                            <a :href="allUrl()" class="block border-t border-slate-100 px-3.5 py-2.5 text-sm font-semibold text-brand-700">{{ __('layout.all_results') }}</a>
                         </div>
                     </div>
-                    <a href="{{ url('/abituriyentu') }}" class="btn-accent mt-3 w-full">Вступнику</a>
+                    <a href="{{ \App\Support\LocalizedUrl::to('/abituriyentu') }}" class="btn-accent mt-3 w-full">{{ __('layout.applicants') }}</a>
                 </div>
                 <nav class="flex-1 overflow-y-auto p-3">
                     @foreach ($menu as $item)
                         @if ($item->children->isNotEmpty())
                             <div x-data="{ sub: false }" class="border-b border-slate-100">
                                 <button @click="sub = !sub" class="flex w-full items-center justify-between px-3 py-3 text-sm font-semibold text-slate-800">
-                                    {{ $item->label }}
+                                    {{ $item->localized_label }}
                                     <x-ico name="chevron-down" class="h-4 w-4 transition" ::class="sub && 'rotate-180'" />
                                 </button>
                                 <div x-show="sub" x-cloak class="pb-2">
@@ -291,7 +293,7 @@
                                                'block rounded-lg px-5 py-2 text-sm hover:bg-brand-50 hover:text-brand-800',
                                                'text-slate-600' => ! $navCurrent($child->href),
                                                'bg-brand-50 font-semibold text-brand-800' => $navCurrent($child->href),
-                                           ])>{{ $child->label }}</a>
+                                           ])>{{ $child->localized_label }}</a>
                                     @endforeach
                                 </div>
                             </div>
@@ -302,7 +304,7 @@
                                    'block border-b border-slate-100 px-3 py-3 text-sm font-semibold hover:text-brand-800',
                                    'text-slate-800' => ! $navCurrent($item->href),
                                    'text-brand-700' => $navCurrent($item->href),
-                               ])>{{ $item->label }}</a>
+                               ])>{{ $item->localized_label }}</a>
                         @endif
                     @endforeach
                 </nav>
@@ -322,34 +324,34 @@
                 <div class="flex items-center gap-3">
                     @if ($logo)
                         <span class="grid h-11 place-items-center rounded-xl bg-white px-2 ring-1 ring-white/15">
-                            <img src="{{ $logo }}" alt="ОТФК ОНТУ" loading="lazy" decoding="async" class="h-8 w-auto">
+                            <img src="{{ $logo }}" alt="{{ $s['brand_short'] ?? __('layout.brand_short') }}" loading="lazy" decoding="async" class="h-8 w-auto">
                         </span>
                     @else
                         <span class="grid h-11 w-11 place-items-center rounded-xl bg-white/10 text-white ring-1 ring-white/15">
                             <x-ico name="academic-cap" class="h-6 w-6" />
                         </span>
                     @endif
-                    <span class="font-display font-extrabold text-white">{{ $s['brand_short'] ?? 'ОТФК ОНТУ' }}</span>
+                    <span class="font-display font-extrabold text-white">{{ $s['brand_short'] ?? __('layout.brand_short') }}</span>
                 </div>
                 <p class="mt-4 text-sm leading-relaxed text-brand-200">
-                    {{ $s['footer_about'] ?? 'Одеський технічний фаховий коледж Одеського національного технологічного університету.' }}
+                    {{ $s['footer_about'] ?? __('layout.about') }}
                 </p>
             </div>
 
             <div>
-                <h3 class="text-sm font-semibold uppercase tracking-wide text-white">Розділи</h3>
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-white">{{ __('layout.sections') }}</h3>
                 <ul class="mt-4 space-y-2 text-sm text-brand-200">
-                    <li><a href="{{ route('home') }}" class="hover:text-white">Головна</a></li>
-                    <li><a href="{{ route('news.index') }}" class="hover:text-white">Новини</a></li>
-                    <li><a href="{{ route('events') }}" class="hover:text-white">Події</a></li>
-                    <li><a href="{{ route('specialties.index') }}" class="hover:text-white">Спеціальності</a></li>
-                    <li><a href="{{ route('galleries.index') }}" class="hover:text-white">Галерея</a></li>
-                    <li><a href="{{ route('contacts') }}" class="hover:text-white">Контакти</a></li>
+                    <li><a href="{{ \App\Support\LocalizedUrl::route('home') }}" class="hover:text-white">{{ __('layout.home') }}</a></li>
+                    <li><a href="{{ \App\Support\LocalizedUrl::route('news.index') }}" class="hover:text-white">{{ __('layout.news') }}</a></li>
+                    <li><a href="{{ \App\Support\LocalizedUrl::route('events') }}" class="hover:text-white">{{ __('layout.events') }}</a></li>
+                    <li><a href="{{ \App\Support\LocalizedUrl::route('specialties.index') }}" class="hover:text-white">{{ __('layout.specialties') }}</a></li>
+                    <li><a href="{{ \App\Support\LocalizedUrl::route('galleries.index') }}" class="hover:text-white">{{ __('layout.gallery') }}</a></li>
+                    <li><a href="{{ \App\Support\LocalizedUrl::route('contacts') }}" class="hover:text-white">{{ __('layout.contacts') }}</a></li>
                 </ul>
             </div>
 
             <div>
-                <h3 class="text-sm font-semibold uppercase tracking-wide text-white">Контакти</h3>
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-white">{{ __('layout.contacts') }}</h3>
                 <ul class="mt-4 space-y-3 text-sm text-brand-200">
                     @if (! empty($s['contact_address']))
                         <li class="flex gap-2"><x-ico name="map-pin" class="mt-0.5 h-4 w-4 shrink-0 text-gold-300" /> {{ $s['contact_address'] }}</li>
@@ -364,22 +366,22 @@
             </div>
 
             <div>
-                <h3 class="text-sm font-semibold uppercase tracking-wide text-white">Партнери</h3>
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-white">{{ __('layout.partners') }}</h3>
                 <ul class="mt-4 space-y-2 text-sm text-brand-200">
                     @forelse ($partners as $partner)
-                        <li><a href="{{ $partner->url }}" @if ($partner->open_new_tab) target="_blank" rel="noopener" @endif class="hover:text-white">{{ $partner->title }}</a></li>
+                        <li><a href="{{ \App\Support\LocalizedUrl::to($partner->url) }}" @if ($partner->open_new_tab) target="_blank" rel="noopener" @endif class="hover:text-white">{{ $partner->localized('title') }}</a></li>
                     @empty
-                        <li><a href="https://onaft.edu.ua" target="_blank" rel="noopener" class="hover:text-white">ОНТУ</a></li>
-                        <li><a href="https://mon.gov.ua" target="_blank" rel="noopener" class="hover:text-white">МОН України</a></li>
+                        <li><a href="https://onaft.edu.ua" target="_blank" rel="noopener" class="hover:text-white">{{ __('layout.university') }}</a></li>
+                        <li><a href="https://mon.gov.ua" target="_blank" rel="noopener" class="hover:text-white">{{ __('layout.ministry') }}</a></li>
                     @endforelse
                 </ul>
                 <div class="mt-5 flex gap-3">
                     @if (! empty($s['social_facebook']))
-                        <a href="{{ $s['social_facebook'] }}" target="_blank" rel="noopener" aria-label="Facebook коледжу"
+                        <a href="{{ $s['social_facebook'] }}" target="_blank" rel="noopener" aria-label="{{ __('layout.facebook') }}"
                            class="grid h-9 w-9 place-items-center rounded-lg bg-white/10 text-white transition hover:bg-white/20"><x-brand-ico name="facebook" class="h-4 w-4" /></a>
                     @endif
                     @if (! empty($s['social_instagram']))
-                        <a href="{{ $s['social_instagram'] }}" target="_blank" rel="noopener" aria-label="Instagram коледжу"
+                        <a href="{{ $s['social_instagram'] }}" target="_blank" rel="noopener" aria-label="{{ __('layout.instagram') }}"
                            class="grid h-9 w-9 place-items-center rounded-lg bg-white/10 text-white transition hover:bg-white/20"><x-brand-ico name="instagram" class="h-4 w-4" /></a>
                     @endif
                 </div>
@@ -389,7 +391,7 @@
             @php
                 // Напис версії сайту: текст і колір редагуються в адмінці
                 // (Налаштування: site_version_label / site_version_color).
-                $versionLabel = trim($s['site_version_label'] ?? 'Альфа-версія');
+                $versionLabel = trim($s['site_version_label'] ?? __('layout.version_alpha'));
                 $versionColors = [
                     'gold' => ['badge' => 'bg-gold-400/15 text-gold-200 ring-gold-400/30', 'dot' => 'bg-gold-400'],
                     'green' => ['badge' => 'bg-emerald-400/15 text-emerald-200 ring-emerald-400/30', 'dot' => 'bg-emerald-400'],
@@ -400,10 +402,10 @@
                 $versionColor = $versionColors[$s['site_version_color'] ?? 'gold'] ?? $versionColors['gold'];
             @endphp
             <div class="container-site flex flex-col items-center justify-center gap-2.5 text-center text-xs text-brand-300 sm:flex-row">
-                <span>© 2014-{{ $year }} ВСП «ОТФК ОНТУ». Усі права захищено.</span>
+                <span>© 2014-{{ $year }} {{ __('layout.copyright') }}</span>
                 @if ($versionLabel !== '')
                     <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium ring-1 {{ $versionColor['badge'] }}"
-                          title="Стадія роботи сайту">
+                          title="{{ __('layout.version_stage') }}">
                         <span class="h-1.5 w-1.5 rounded-full {{ $versionColor['dot'] }}"></span> {{ $versionLabel }}
                     </span>
                 @endif
@@ -415,6 +417,9 @@
     <script>
         (function () {
             const ORD = { 1: '1-ша', 2: '2-га', 3: '3-тя', 4: '4-та', 5: '5-та', 6: '6-та', 7: '7-ма', 8: '8-ма' };
+            const bellMessages = @js(['current' => __('layout.bell_current'), 'next' => __('layout.bell_next'), 'break' => __('layout.bell_break')]);
+            const ordinal = n => @js(app()->getLocale()) === 'en' ? n : (ORD[n] ?? n);
+            const bellMessage = (key, n, minutes = '', time = '') => bellMessages[key].replace(':number', ordinal(n)).replace(':minutes', minutes).replace(':time', time);
             const toMin = t => +t.slice(0, 2) * 60 + +t.slice(3, 5);
 
             // Повертає {current, status}: current — номер пари (або null), status — текст
@@ -426,7 +431,7 @@
                 for (const p of periods) {
                     const s = toMin(p.s), e = toMin(p.e);
                     if (cur >= s && cur < e) {
-                        return { current: p.n, status: (ORD[p.n] ?? p.n) + ' пара · до кінця ' + (e - cur) + ' хв' };
+                        return { current: p.n, status: bellMessage('current', p.n, e - cur) };
                     }
                 }
 
@@ -434,8 +439,8 @@
                 if (next) {
                     // зранку показуємо за годину до першої пари; між парами — завжди
                     const isBreak = cur >= toMin(periods[0].s);
-                    if (isBreak) return { current: null, status: 'Перерва · ' + (ORD[next.n] ?? next.n) + ' пара о ' + next.s };
-                    if (toMin(next.s) - cur <= 60) return { current: null, status: (ORD[next.n] ?? next.n) + ' пара о ' + next.s };
+                    if (isBreak) return { current: null, status: bellMessage('break', next.n, '', next.s) };
+                    if (toMin(next.s) - cur <= 60) return { current: null, status: bellMessage('next', next.n, '', next.s) };
                 }
 
                 return { current: null, status: '' };

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\TestimonialResource\Pages;
 use App\Models\Testimonial;
 use Filament\Forms;
@@ -15,15 +16,21 @@ class TestimonialResource extends Resource
     protected static ?string $model = Testimonial::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-chat-bubble-left-right';
+
     protected static ?string $navigationGroup = 'Контент';
+
     protected static ?int $navigationSort = 8;
+
     protected static ?string $navigationLabel = 'Відгуки';
+
     protected static ?string $modelLabel = 'відгук';
+
     protected static ?string $pluralModelLabel = 'Відгуки студентів';
 
     public static function form(Form $form): Form
     {
         return $form->schema([
+            EnglishTranslation::section(contentFields: ['role' => ['label' => 'Хто це англійською'], 'quote' => ['label' => 'Англійський відгук', 'rows' => 4]], primaryField: 'name', primaryLabel: 'Ім’я англійською'),
             Forms\Components\FileUpload::make('photo')->label('Фото')->image()->avatar()->directory('testimonials')
                 ->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('600')->imageResizeTargetHeight('600')
                 ->helperText('Необовʼязково — без фото покажуться ініціали.'),
@@ -40,6 +47,8 @@ class TestimonialResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                    ->state(fn (Testimonial $record) => $record->translationStatus())->badge(),
                 Tables\Columns\ImageColumn::make('photo')->label('')->circular(),
                 Tables\Columns\TextColumn::make('name')->label('Імʼя')->searchable()->weight('bold'),
                 Tables\Columns\TextColumn::make('role')->label('Хто це')->limit(40)->color('gray'),

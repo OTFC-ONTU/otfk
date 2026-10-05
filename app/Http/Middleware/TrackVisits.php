@@ -21,13 +21,13 @@ class TrackVisits
 
         try {
             if ($this->shouldTrack($request, $response)) {
-                $path = '/' . trim($request->path(), '/');
+                $path = '/'.trim($request->path(), '/');
                 $path = mb_substr($path === '/.' ? '/' : $path, 0, 180);
 
                 SiteVisit::hit($path === '' ? '/' : $path);
 
                 // Візит (сесія) — один раз на день на відвідувача
-                $dayKey = 'visited_' . now()->toDateString();
+                $dayKey = 'visited_'.now()->toDateString();
                 if (! $request->session()->has($dayKey)) {
                     $request->session()->put($dayKey, true);
                     SiteVisit::hit(SiteVisit::VISITS_PATH);
@@ -47,9 +47,10 @@ class TrackVisits
         }
 
         $path = trim($request->path(), '/');
+        $path = str_starts_with($path, 'en/') ? substr($path, 3) : $path;
 
         foreach ($this->skipPrefixes as $prefix) {
-            if ($path === $prefix || str_starts_with($path, $prefix . '/')) {
+            if ($path === $prefix || str_starts_with($path, $prefix.'/')) {
                 return false;
             }
         }

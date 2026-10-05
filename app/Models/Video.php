@@ -2,17 +2,22 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasEnglishTranslation;
 use Illuminate\Database\Eloquent\Model;
 
 class Video extends Model
 {
+    use HasEnglishTranslation;
+
     protected $fillable = [
         'title', 'youtube_id', 'description', 'published_at', 'sort_order', 'is_published',
+        'title_en', 'description_en', 'translation_published',
     ];
 
     protected function casts(): array
     {
         return [
+            'translation_published' => 'boolean',
             'published_at' => 'date',
             'is_published' => 'boolean',
         ];
@@ -41,5 +46,15 @@ class Video extends Model
     public function getWatchUrlAttribute(): string
     {
         return "https://www.youtube.com/watch?v={$this->youtube_id}";
+    }
+
+    protected function translationSourceFields(): array
+    {
+        return ['title', 'description'];
+    }
+
+    protected function translationRequiredFields(): array
+    {
+        return $this->translationSourceFields();
     }
 }

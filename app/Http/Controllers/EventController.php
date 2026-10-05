@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
+use App\Support\LocalizedUrl;
+use Illuminate\Support\Str;
 
 class EventController extends Controller
 {
@@ -33,27 +35,27 @@ class EventController extends Controller
             'CALSCALE:GREGORIAN',
             'METHOD:PUBLISH',
             'BEGIN:VEVENT',
-            'UID:event-' . $event->id . '@' . parse_url(config('app.url'), PHP_URL_HOST),
-            'DTSTAMP:' . $fmt(now()->utc()),
-            'DTSTART:' . $fmt($event->utcStart()),
-            'DTEND:' . $fmt($event->utcEnd()),
-            'SUMMARY:' . $esc($event->title),
+            'UID:event-'.$event->id.'@'.parse_url(config('app.url'), PHP_URL_HOST),
+            'DTSTAMP:'.$fmt(now()->utc()),
+            'DTSTART:'.$fmt($event->utcStart()),
+            'DTEND:'.$fmt($event->utcEnd()),
+            'SUMMARY:'.$esc($event->localized('title')),
         ];
 
-        if (filled($event->description)) {
-            $lines[] = 'DESCRIPTION:' . $esc(\Illuminate\Support\Str::limit($event->description, 500));
+        if (filled($event->localized('description'))) {
+            $lines[] = 'DESCRIPTION:'.$esc(Str::limit($event->localized('description'), 500));
         }
-        if (filled($event->location)) {
-            $lines[] = 'LOCATION:' . $esc($event->location);
+        if (filled($event->localized('location'))) {
+            $lines[] = 'LOCATION:'.$esc($event->localized('location'));
         }
 
-        $lines[] = 'URL:' . route('events');
+        $lines[] = 'URL:'.LocalizedUrl::route('events');
         $lines[] = 'END:VEVENT';
         $lines[] = 'END:VCALENDAR';
 
         return response(implode("\r\n", $lines), 200, [
             'Content-Type' => 'text/calendar; charset=utf-8',
-            'Content-Disposition' => 'attachment; filename="podiya-' . $event->id . '.ics"',
+            'Content-Disposition' => 'attachment; filename="podiya-'.$event->id.'.ics"',
         ]);
     }
 }

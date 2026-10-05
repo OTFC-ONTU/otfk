@@ -1,9 +1,10 @@
+@php $errorLocale = request()->is('en', 'en/*') ? 'en' : 'uk'; @endphp
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="{{ $errorLocale }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Помилка сервера</title>
+    <title>{{ __('public.server_error', [], $errorLocale) }}</title>
     <style>
         body{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:#0c2547;color:#fff;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;text-align:center;padding:24px;box-sizing:border-box}
         .code{font-size:80px;font-weight:800;color:#f4b740;line-height:1}
@@ -15,9 +16,9 @@
 <body>
     <div>
         <div class="code">500</div>
-        <div class="title">Щось пішло не так</div>
-        <p class="text">На сервері сталася непередбачена помилка. Ми вже працюємо над цим - спробуйте оновити сторінку трохи пізніше.</p>
-        <a href="/">На головну</a>
+        <div class="title">{{ __('public.error_title', [], $errorLocale) }}</div>
+        <p class="text">{{ __('public.server_error_text', [], $errorLocale) }}</p>
+        <a href="{{ request()->is('en', 'en/*') ? '/en' : '/' }}">{{ __('public.back_home', [], $errorLocale) }}</a>
     </div>
 </body>
 </html>

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\NewsCategoryResource\Pages;
 use App\Models\NewsCategory;
 use Filament\Forms;
@@ -15,10 +16,15 @@ class NewsCategoryResource extends Resource
     protected static ?string $model = NewsCategory::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-tag';
+
     protected static ?string $navigationGroup = 'Контент';
+
     protected static ?int $navigationSort = 2;
+
     protected static ?string $navigationLabel = 'Категорії новин';
+
     protected static ?string $modelLabel = 'категорію';
+
     protected static ?string $pluralModelLabel = 'Категорії новин';
 
     public static function form(Form $form): Form
@@ -32,6 +38,7 @@ class NewsCategoryResource extends Resource
                 ->label('Heritage-стиль для всіх новин категорії')
                 ->helperText('Урочисте листоподібне оформлення для архіву, історії, ювілеїв. Можна вимкнути окремо в новині.')
                 ->default(false),
+            EnglishTranslation::section(contentFields: []),
         ]);
     }
 
@@ -39,6 +46,8 @@ class NewsCategoryResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                    ->state(fn (NewsCategory $record) => $record->translationStatus())->badge(),
                 Tables\Columns\TextColumn::make('title')->label('Назва')->searchable()->weight('bold'),
                 Tables\Columns\TextColumn::make('slug')->label('URL')->color('gray'),
                 Tables\Columns\TextColumn::make('news_count')->label('Новин')->counts('news')->badge(),

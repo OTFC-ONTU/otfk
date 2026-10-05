@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasEnglishTranslation;
 use App\Models\Concerns\OptimizesUploadedImages;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,12 +11,15 @@ use Illuminate\Support\Str;
 
 class Page extends Model
 {
+    use HasEnglishTranslation;
     use OptimizesUploadedImages;
 
     /** @var list<string> */
     protected static array $optimizedImages = ['cover_image'];
 
     protected $fillable = [
+        'title_en', 'excerpt_en', 'body_en', 'translation_published',
+        'meta_title_en', 'meta_description_en',
         'parent_id', 'title', 'slug', 'excerpt', 'body', 'cover_image',
         'section', 'is_published', 'is_heritage', 'sort_order', 'meta_title', 'meta_description',
     ];
@@ -24,6 +28,7 @@ class Page extends Model
     {
         return [
             'is_published' => 'boolean',
+            'translation_published' => 'boolean',
             'is_heritage' => 'boolean',
         ];
     }

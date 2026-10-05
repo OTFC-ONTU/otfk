@@ -8,7 +8,7 @@ class GalleryController extends Controller
 {
     public function index()
     {
-        $galleries = Gallery::published()->ordered()->withCount('photos')->get();
+        $galleries = Gallery::published()->ordered()->with('photos')->withCount('photos')->get();
 
         return view('galleries.index', compact('galleries'));
     }

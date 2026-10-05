@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\NewsResource\Pages;
 use App\Models\News;
 use Filament\Forms;
@@ -15,10 +16,15 @@ class NewsResource extends Resource
     protected static ?string $model = News::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-newspaper';
+
     protected static ?string $navigationGroup = 'Контент';
+
     protected static ?int $navigationSort = 1;
+
     protected static ?string $navigationLabel = 'Новини';
+
     protected static ?string $modelLabel = 'новину';
+
     protected static ?string $pluralModelLabel = 'Новини';
 
     public static function form(Form $form): Form
@@ -35,6 +41,7 @@ class NewsResource extends Resource
                 ->label('Короткий опис')->rows(2)->maxLength(1000)->columnSpanFull(),
             Forms\Components\RichEditor::make('body')
                 ->label('Текст новини')->columnSpanFull(),
+            EnglishTranslation::section(false),
             Forms\Components\FileUpload::make('cover_image')
                 ->label('Обкладинка')->image()->directory('news')->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('1600')->imageResizeTargetHeight('1600'),
             Forms\Components\DateTimePicker::make('published_at')
@@ -55,6 +62,8 @@ class NewsResource extends Resource
                 Tables\Columns\TextColumn::make('title')->label('Заголовок')->searchable()->limit(50)->weight('bold'),
                 Tables\Columns\TextColumn::make('category.title')->label('Категорія')->badge()->sortable(),
                 Tables\Columns\TextColumn::make('published_at')->label('Дата')->dateTime('d.m.Y')->sortable(),
+                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                    ->state(fn (News $record) => $record->translationStatus())->badge(),
                 Tables\Columns\IconColumn::make('is_published')->label('Опубл.')->boolean(),
                 Tables\Columns\IconColumn::make('is_featured')->label('Реком.')->boolean()->toggleable(),
                 Tables\Columns\IconColumn::make('is_heritage')->label('Heritage')->boolean()->toggleable(isToggledHiddenByDefault: true),

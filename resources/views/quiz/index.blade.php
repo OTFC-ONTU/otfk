@@ -1,26 +1,23 @@
-<x-layouts.app title="Яка спеціальність тобі підходить?" description="Короткий профорієнтаційний тест: 6 питань — і дізнаєшся, яка спеціальність коледжу пасує саме тобі.">
+<x-layouts.app :title="__('public.quiz')" :description="__('public.quiz_description')">
 
-    <x-page-hero title="Яка спеціальність тобі підходить?" :breadcrumbs="[
-        ['label' => 'Головна', 'url' => route('home')],
-        ['label' => 'Абітурієнту', 'url' => url('/abituriyentu')],
-        ['label' => 'Тест на спеціальність'],
+    <x-page-hero :title="__('public.quiz')" :breadcrumbs="[
+        ['label' => __('public.home'), 'url' => \App\Support\LocalizedUrl::route('home')],
+        ['label' => __('public.applicants'), 'url' => \App\Support\LocalizedUrl::to('/abituriyentu')],
+        ['label' => __('public.quiz_breadcrumb')],
     ]" />
 
     <section class="container-site py-12">
         <div class="mx-auto max-w-2xl">
             @if ($questions->isEmpty() || $specialties->isEmpty())
-                <x-empty-state icon="puzzle-piece" title="Тест ще готується — завітайте пізніше." />
+                <x-empty-state icon="puzzle-piece" :title="__('public.no_quiz')" />
             @else
                 <div x-data="quiz(
-                        @js($questions->map(fn ($q) => [
-                            'q' => $q->question,
-                            'options' => $q->options->map(fn ($o) => ['label' => $o->label, 'sid' => $o->specialty_id, 'pts' => (int) $o->points])->values(),
-                        ])->values()),
+                        @js($questions->map(fn ($q) => $q->publicPayload())->values()),
                         @js($specialties->keyBy('id')->map(fn ($s) => [
-                            'title' => $s->title, 'code' => $s->code,
-                            'short' => $s->short_description,
-                            'url' => route('specialties.show', $s),
-                            'apply' => route('applicants.create') . '?specialty_id=' . $s->id,
+                            'title' => $s->localized('title'), 'code' => $s->code,
+                            'short' => $s->localized('short_description'),
+                            'url' => \App\Support\LocalizedUrl::route('specialties.show', $s),
+                            'apply' => \App\Support\LocalizedUrl::route('applicants.create') . '?specialty_id=' . $s->id,
                         ]))
                      )">
 
@@ -29,20 +26,19 @@
                         <span class="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-gold-100 text-gold-600">
                             <x-ico name="puzzle-piece" class="h-8 w-8" />
                         </span>
-                        <h2 class="mt-5 text-2xl font-extrabold text-slate-900">Не знаєш, куди вступати?</h2>
+                        <h2 class="mt-5 text-2xl font-extrabold text-slate-900">{{ __('public.quiz_intro') }}</h2>
                         <p class="mx-auto mt-3 max-w-md text-slate-500">
-                            Дай відповідь на <span class="font-semibold" x-text="questions.length"></span> коротких питань —
-                            і ми підкажемо, яка спеціальність коледжу пасує саме тобі. Це займе хвилину.
+                            <span x-text="@js(__('public.quiz_intro_text')).replace(':count', questions.length)"></span>
                         </p>
-                        <button type="button" @click="step = 0" class="btn-accent mt-7 px-8">Почати тест</button>
+                        <button type="button" @click="step = 0" class="btn-accent mt-7 px-8">{{ __('public.quiz_start') }}</button>
                     </div>
 
                     {{-- Питання --}}
                     <div x-show="typeof step === 'number'" x-cloak aria-live="polite" aria-atomic="true" class="card p-6 sm:p-8">
                         <div class="flex items-center justify-between gap-4 text-sm text-slate-400">
-                            <span>Питання <span x-text="step + 1"></span> з <span x-text="questions.length"></span></span>
+                            <span x-text="@js(__('public.quiz_progress')).replace(':number', step + 1).replace(':total', questions.length)"></span>
                             <button type="button" x-show="step > 0" @click="back()" class="inline-flex items-center gap-1 font-medium text-slate-500 hover:text-brand-700">
-                                <x-ico name="arrow-left" class="h-4 w-4" /> Назад
+                                <x-ico name="arrow-left" class="h-4 w-4" /> {{ __('public.back') }}
                             </button>
                         </div>
                         {{-- Прогрес --}}
@@ -68,21 +64,21 @@
                     {{-- Результат --}}
                     <div x-show="step === 'result'" x-cloak aria-live="polite" aria-atomic="true" class="card overflow-hidden">
                         <div class="bg-brand-950 px-8 pb-8 pt-9 text-center">
-                            <p class="text-sm font-medium uppercase tracking-wide text-gold-300">Твій результат</p>
+                            <p class="text-sm font-medium uppercase tracking-wide text-gold-300">{{ __('public.quiz_result') }}</p>
                             <h2 class="mt-2 text-2xl font-extrabold text-white sm:text-3xl" x-text="winner()?.title"></h2>
-                            <p class="mt-1 text-sm text-brand-200" x-text="winner() ? 'Код спеціальності: ' + winner().code : ''"></p>
+                            <p class="mt-1 text-sm text-brand-200" x-text="winner() ? @js(__('public.specialty_code')).replace(':code', winner().code) : ''"></p>
                         </div>
                         <div class="p-8 text-center">
                             <p class="mx-auto max-w-md text-sm leading-relaxed text-slate-600" x-text="winner()?.short"></p>
                             <p x-show="runnerUp()" class="mt-3 text-xs text-slate-400">
-                                Також тобі може пасувати: <span class="font-semibold text-slate-500" x-text="runnerUp()?.title"></span>
+                                {{ __('public.quiz_alternative') }} <span class="font-semibold text-slate-500" x-text="runnerUp()?.title"></span>
                             </p>
                             <div class="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-                                <a :href="winner()?.apply" class="btn-accent">Залишити заявку</a>
-                                <a :href="winner()?.url" class="btn-outline">Про спеціальність</a>
+                                <a :href="winner()?.apply" class="btn-accent">{{ __('public.apply') }}</a>
+                                <a :href="winner()?.url" class="btn-outline">{{ __('public.about_specialty') }}</a>
                             </div>
                             <button type="button" @click="restart()" class="mt-5 inline-flex items-center gap-1.5 text-sm text-slate-400 transition hover:text-brand-700">
-                                <x-ico name="arrow-path" class="h-4 w-4" /> Пройти ще раз
+                                <x-ico name="arrow-path" class="h-4 w-4" /> {{ __('public.quiz_restart') }}
                             </button>
                         </div>
                     </div>

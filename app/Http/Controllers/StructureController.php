@@ -12,7 +12,7 @@ class StructureController extends Controller
         foreach (Department::TYPES as $type => $label) {
             $items = Department::published()->where('type', $type)->ordered()->withCount('staff')->get();
             if ($items->isNotEmpty()) {
-                $groups[$type] = ['label' => $label, 'items' => $items];
+                $groups[$type] = ['label' => __('public.department_'.str_replace('-', '_', $type)), 'items' => $items];
             }
         }
 

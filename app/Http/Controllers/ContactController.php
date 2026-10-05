@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\FeedbackReceived;
 use App\Models\FeedbackMessage;
 use App\Models\Setting;
+use App\Support\LocalizedUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 
@@ -19,7 +20,7 @@ class ContactController extends Controller
     {
         // Антиспам: приховане поле-пастка (honeypot). Боти його заповнюють.
         if (filled($request->input('website'))) {
-            return back()->with('status', 'Дякуємо! Ваше звернення успішно надіслано.');
+            return redirect(LocalizedUrl::route('contacts'))->with('status', __('public.feedback_sent'));
         }
 
         $data = $request->validate([
@@ -46,6 +47,6 @@ class ContactController extends Controller
             })->afterResponse();
         }
 
-        return back()->with('status', 'Дякуємо! Ваше звернення успішно надіслано.');
+        return redirect(LocalizedUrl::route('contacts'))->with('status', __('public.feedback_sent'));
     }
 }

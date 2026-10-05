@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\BannerResource\Pages;
 use App\Models\Banner;
 use Filament\Forms;
@@ -15,15 +16,21 @@ class BannerResource extends Resource
     protected static ?string $model = Banner::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-photo';
+
     protected static ?string $navigationGroup = 'Контент';
+
     protected static ?int $navigationSort = 4;
+
     protected static ?string $navigationLabel = 'Банери';
+
     protected static ?string $modelLabel = 'банер';
+
     protected static ?string $pluralModelLabel = 'Банери (головна)';
 
     public static function form(Form $form): Form
     {
         return $form->schema([
+            EnglishTranslation::section(contentFields: ['subtitle' => ['label' => 'Англійський підзаголовок'], 'image_alt' => ['label' => 'Англійський опис зображення (alt)'], 'link_label' => ['label' => 'Англійський текст кнопки']], optionalPrimary: true),
             Forms\Components\TextInput::make('title')->label('Заголовок')->maxLength(255)->columnSpanFull(),
             Forms\Components\TextInput::make('subtitle')->label('Підзаголовок')->maxLength(255)->columnSpanFull(),
             Forms\Components\FileUpload::make('image')->label('Зображення')->image()->directory('banners')->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('1920')->imageResizeTargetHeight('1080')
@@ -44,6 +51,8 @@ class BannerResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                    ->state(fn (Banner $record) => $record->translationStatus())->badge(),
                 Tables\Columns\ImageColumn::make('image')->label('')->square(),
                 Tables\Columns\TextColumn::make('title')->label('Заголовок')->searchable()->weight('bold'),
                 Tables\Columns\IconColumn::make('is_published')->label('Активний')->boolean(),

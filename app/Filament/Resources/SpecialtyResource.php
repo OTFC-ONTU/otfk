@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\SpecialtyResource\Pages;
 use App\Models\Specialty;
 use Filament\Forms;
@@ -15,10 +16,15 @@ class SpecialtyResource extends Resource
     protected static ?string $model = Specialty::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-academic-cap';
+
     protected static ?string $navigationGroup = 'Абітурієнту';
+
     protected static ?int $navigationSort = 1;
+
     protected static ?string $navigationLabel = 'Спеціальності';
+
     protected static ?string $modelLabel = 'спеціальність';
+
     protected static ?string $pluralModelLabel = 'Спеціальності';
 
     public static function form(Form $form): Form
@@ -40,6 +46,7 @@ class SpecialtyResource extends Resource
                 Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
                 Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true),
             ])->columns(2),
+            EnglishTranslation::academicSection(true),
         ]);
     }
 
@@ -47,6 +54,8 @@ class SpecialtyResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                    ->state(fn (Specialty $record) => $record->translationStatus())->badge(),
                 Tables\Columns\ImageColumn::make('cover_image')->label('')->square(),
                 Tables\Columns\TextColumn::make('title')->label('Назва')->searchable()->weight('bold')->wrap(),
                 Tables\Columns\TextColumn::make('code')->label('Код')->badge()->toggleable(),

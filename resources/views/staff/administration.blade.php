@@ -1,8 +1,8 @@
-<x-layouts.app title="Адміністрація">
+<x-layouts.app :title="__('public.administration')">
 
-    <x-page-hero title="Адміністрація коледжу" :breadcrumbs="[
-        ['label' => 'Головна', 'url' => route('home')],
-        ['label' => 'Адміністрація'],
+    <x-page-hero :title="__('public.college_administration')" :breadcrumbs="[
+        ['label' => __('public.home'), 'url' => \App\Support\LocalizedUrl::route('home')],
+        ['label' => __('public.administration')],
     ]" />
 
     <section class="container-site py-12">
@@ -13,7 +13,7 @@
                 @endforeach
             </div>
         @else
-            <x-empty-state icon="users" title="Інформацію про адміністрацію незабаром буде додано." />
+            <x-empty-state icon="users" :title="__('public.no_administration')" />
         @endif
     </section>
 
