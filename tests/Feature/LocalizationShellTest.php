@@ -18,7 +18,7 @@ class LocalizationShellTest extends TestCase
             ->assertSee('content="en_GB"', false)
             ->assertSee('Skip to main content')
             ->assertSee('Search the site...')
-            ->assertSee('All rights reserved.')
+            ->assertSee('SSD &quot;OTPC ONTU&quot;', false)
             ->assertSee('href="'.url('/en/abituriyentu').'"', false)
             ->assertSee('action="'.url('/en/poshuk').'"', false)
             ->assertSee('href="'.url('/en/novyny').'"', false)
@@ -28,7 +28,7 @@ class LocalizationShellTest extends TestCase
         $this->get('/faq')->assertOk()
             ->assertSee('lang="uk"', false)
             ->assertSee('Перейти до основного вмісту')
-            ->assertSee('Усі права захищено.')
+            ->assertSee('ВСП &quot;ОТФК ОНТУ&quot;', false)
             ->assertSee('href="'.url('/abituriyentu').'"', false);
     }
 

@@ -28,7 +28,7 @@ return [
     'ministry' => 'Ministry of Education and Science of Ukraine',
     'facebook' => 'College Facebook',
     'instagram' => 'College Instagram',
-    'copyright' => 'OTPC ONTU. All rights reserved.',
+    'copyright' => 'SSD "OTPC ONTU"',
     'version_stage' => 'Website development stage',
     'version_alpha' => 'Alpha version',
     'bell_current' => 'Class :number · :minutes min remaining',

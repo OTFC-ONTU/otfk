@@ -28,7 +28,7 @@ return [
     'ministry' => 'МОН України',
     'facebook' => 'Facebook коледжу',
     'instagram' => 'Instagram коледжу',
-    'copyright' => 'ВСП «ОТФК ОНТУ». Усі права захищено.',
+    'copyright' => 'ВСП "ОТФК ОНТУ"',
     'version_stage' => 'Стадія роботи сайту',
     'version_alpha' => 'Альфа-версія',
     'bell_current' => ':number пара · до кінця :minutes хв',
