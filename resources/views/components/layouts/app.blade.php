@@ -12,7 +12,6 @@
     $favicon = ! empty($s['favicon']) ? asset('storage/' . $s['favicon']) : asset('favicon.svg');
     $metaDesc = $description ?: ($s['site_description'] ?? __('layout.description'));
     $siteName = app()->getLocale() === 'en' ? ($s['brand_name'] ?? __('layout.brand_name')) : config('app.name');
-    $year = date('Y');
     // Чи веде пункт меню на поточну сторінку (порівнюємо шлях без домену й слешів) — для aria-current
     $currentPath = rtrim(request()->getPathInfo(), '/') ?: '/';
     $navCurrent = function (?string $href) use ($currentPath) {
@@ -403,7 +402,8 @@
                 $versionColor = $versionColors[$s['site_version_color'] ?? 'gold'] ?? $versionColors['gold'];
             @endphp
             <div class="container-site flex flex-col items-center justify-center gap-2.5 text-center text-xs text-brand-300 sm:flex-row">
-                <span>© 2014-{{ $year }} {{ __('layout.copyright') }}</span>
+                {{-- Копірайт дослівно як у підвалі оригіналу otfk.od.ua (рік зафіксований там) --}}
+                <span>© 2014-2025 {{ __('layout.copyright') }}</span>
                 @if ($versionLabel !== '')
                     <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium ring-1 {{ $versionColor['badge'] }}"
                           title="{{ __('layout.version_stage') }}">
