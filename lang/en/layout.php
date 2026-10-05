@@ -2,8 +2,12 @@
 
 return [
     'language' => 'Language',
+    'language_mobile' => 'Language (menu)',
     'skip' => 'Skip to main content',
     'close_announcement' => 'Close announcement',
+    'announcement_more' => 'Read more',
+    'nav_more' => 'More',
+    'close_menu' => 'Close menu',
     'admin' => 'Admin panel',
     'brand_short' => 'OTPC ONTU',
     'brand_name' => 'Odesa Technical Professional College',
@@ -34,4 +38,16 @@ return [
     'bell_current' => 'Class :number · :minutes min remaining',
     'bell_next' => 'Class :number at :time',
     'bell_break' => 'Break · class :number at :time',
+    'holiday' => [
+        'new_year' => 'Happy New Year and Merry Christmas!',
+        'easter' => 'Happy Easter!',
+        'vyshyvanka' => 'Happy Vyshyvanka Day!',
+        'independence' => 'Happy Independence Day of Ukraine!',
+        'knowledge' => 'Happy Knowledge Day and a great start to the school year!',
+        'programmer' => 'Happy Programmers’ Day!',
+        'teachers' => 'Happy Teachers’ Day!',
+        'food' => 'Happy Food Industry Workers’ Day!',
+        'halloween' => 'Happy Halloween!',
+        'energy' => 'Happy Power Engineers’ Day!',
+    ],
 ];

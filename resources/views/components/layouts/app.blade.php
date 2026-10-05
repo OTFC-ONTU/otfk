@@ -12,6 +12,9 @@
     $favicon = ! empty($s['favicon']) ? asset('storage/' . $s['favicon']) : asset('favicon.svg');
     $metaDesc = $description ?: ($s['site_description'] ?? __('layout.description'));
     $siteName = app()->getLocale() === 'en' ? ($s['brand_name'] ?? __('layout.brand_name')) : config('app.name');
+    // Святкова тема (App\Support\HolidayTheme): null — звичайний вигляд
+    $holidayKey = \App\Support\HolidayTheme::active();
+    $holiday = \App\Support\HolidayTheme::config($holidayKey);
     // Чи веде пункт меню на поточну сторінку (порівнюємо шлях без домену й слешів) — для aria-current
     $currentPath = rtrim(request()->getPathInfo(), '/') ?: '/';
     $navCurrent = function (?string $href) use ($currentPath) {
@@ -67,7 +70,9 @@
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700|manrope:600,700,800|cormorant-garamond:400,500,600,700|lora:400,500,600,700&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="flex min-h-screen flex-col bg-white text-slate-700">
+<body class="flex min-h-screen flex-col bg-white text-slate-700"
+      @if ($holiday) data-holiday="{{ $holidayKey }}" data-holiday-particles="{{ $holiday['particles']['type'] }}"
+      data-holiday-colors="{{ implode(',', $holiday['particles']['colors']) }}" style="{{ \App\Support\HolidayTheme::style($holiday) }}" @endif>
 
     {{-- Пропустити навігацію (зʼявляється лише при фокусі з клавіатури) --}}
     <a href="#main-content"
@@ -81,29 +86,44 @@
         $annType = $s['announcement_type'] ?? 'info';
         $annUrl = \App\Support\LocalizedUrl::to(trim($s['announcement_url'] ?? ''));
         $annStyles = [
-            'info' => 'bg-brand-700 text-white',
-            'warning' => 'bg-gold-500 text-white',
-            'danger' => 'bg-red-600 text-white',
+            'info' => ['bar' => 'bg-gradient-to-r from-brand-800 via-brand-700 to-brand-800 text-white', 'badge' => 'bg-gold-400 text-brand-950', 'cta' => 'bg-white text-brand-800 hover:bg-gold-300 hover:text-brand-950'],
+            'warning' => ['bar' => 'bg-gold-400 text-brand-950', 'badge' => 'bg-brand-900 text-white', 'cta' => 'bg-brand-900 text-white hover:bg-brand-800'],
+            'danger' => ['bar' => 'bg-red-700 text-white', 'badge' => 'bg-white text-red-700', 'cta' => 'bg-white text-red-700 hover:bg-red-50'],
         ];
+        $annStyle = $annStyles[$annType] ?? $annStyles['info'];
     @endphp
     @if ($annText !== '')
-        <div x-data="{ hidden: false }"
+        <div id="announcement" x-data="{ hidden: false, full: false }"
              x-init="hidden = localStorage.getItem('ann-closed') === @js(md5($annText))"
              x-show="!hidden" x-cloak role="status" aria-live="polite"
-             class="relative {{ $annStyles[$annType] ?? $annStyles['info'] }}">
-            <div class="container-site flex items-center justify-center gap-3 py-2.5 pr-10 text-center text-sm font-medium">
-                <x-ico name="megaphone" class="h-4 w-4 shrink-0" />
+             class="{{ $annStyle['bar'] }}">
+            <div class="mx-auto flex w-full max-w-[1600px] items-start gap-3 px-4 py-2.5 sm:px-6 md:items-center lg:px-8">
+                <span class="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full md:mt-0 {{ $annStyle['badge'] }}">
+                    <x-ico name="megaphone" class="h-4 w-4" />
+                </span>
+                <p class="min-w-0 flex-1 text-[13px] font-medium leading-snug md:text-sm md:line-clamp-none"
+                   :class="full ? '' : 'line-clamp-3 cursor-pointer'" @click="full = true">{{ $annText }}</p>
                 @if ($annUrl !== '')
-                    <a href="{{ $annUrl }}" class="underline decoration-white/50 underline-offset-2 hover:decoration-white">{{ $annText }}</a>
-                @else
-                    <span>{{ $annText }}</span>
+                    <a href="{{ $annUrl }}"
+                       class="hidden shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold shadow-sm transition sm:inline-flex {{ $annStyle['cta'] }}">
+                        {{ __('layout.announcement_more') }}
+                        <x-ico name="arrow-right" class="h-3.5 w-3.5" />
+                    </a>
                 @endif
+                <button type="button" aria-label="{{ __('layout.close_announcement') }}"
+                        @click="hidden = true; try { localStorage.setItem('ann-closed', @js(md5($annText))) } catch (e) {}"
+                        class="grid h-7 w-7 shrink-0 place-items-center rounded-full opacity-80 transition hover:bg-black/10 hover:opacity-100">
+                    <x-ico name="x-mark" class="h-4 w-4" />
+                </button>
             </div>
-            <button type="button" aria-label="{{ __('layout.close_announcement') }}"
-                    @click="hidden = true; try { localStorage.setItem('ann-closed', @js(md5($annText))) } catch (e) {}"
-                    class="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full transition hover:bg-white/15">
-                <x-ico name="x-mark" class="h-4 w-4" />
-            </button>
+            @if ($annUrl !== '')
+                <div class="px-4 pb-2.5 pl-14 sm:hidden">
+                    <a href="{{ $annUrl }}" class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold {{ $annStyle['cta'] }}">
+                        {{ __('layout.announcement_more') }}
+                        <x-ico name="arrow-right" class="h-3.5 w-3.5" />
+                    </a>
+                </div>
+            @endif
         </div>
     @endif
 
@@ -157,23 +177,28 @@
             {{-- Ряд бренду та дій --}}
             <div class="border-b border-transparent bg-white shadow-sm transition-[box-shadow,background-color,border-color] duration-300"
                  :class="scrolled ? 'border-slate-200/80 bg-white/90 shadow-md backdrop-blur-md' : ''">
-                <div class="mx-auto flex h-20 w-full max-w-[1600px] items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
-                <a href="{{ \App\Support\LocalizedUrl::route('home') }}" class="flex shrink-0 items-center gap-3">
+                <div class="mx-auto flex h-16 w-full max-w-[1600px] items-center justify-between gap-3 px-4 sm:h-20 sm:gap-6 sm:px-6 lg:px-8">
+                <a href="{{ \App\Support\LocalizedUrl::route('home') }}" class="flex min-w-0 items-center gap-2.5 sm:gap-3">
+                    <span class="relative shrink-0">
+                    @if ($holiday)
+                        <x-holiday.badge :theme="$holiday" :size="24" class="holiday-logo-badge" />
+                    @endif
                     @if ($logo)
-                        <img src="{{ $logo }}" alt="{{ $s['brand_short'] ?? __('layout.brand_short') }}" class="h-12 w-auto shrink-0 lg:h-16">
+                        <img src="{{ $logo }}" alt="{{ $s['brand_short'] ?? __('layout.brand_short') }}" class="h-10 w-auto shrink-0 sm:h-12 lg:h-16">
                     @else
-                        <span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-700 to-brand-900 text-white shadow-sm">
+                        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-700 to-brand-900 text-white shadow-sm sm:h-12 sm:w-12">
                             <x-ico name="academic-cap" class="h-7 w-7" />
                         </span>
                     @endif
-                    <span class="leading-tight">
-                        <span class="font-display block whitespace-nowrap text-lg font-extrabold tracking-tight text-brand-900">{{ $s['brand_short'] ?? __('layout.brand_short') }}</span>
-                        <span class="hidden whitespace-nowrap text-xs text-slate-500 sm:block">{{ $s['brand_name'] ?? __('layout.brand_name') }}</span>
+                    </span>
+                    <span class="min-w-0 leading-tight">
+                        <span class="font-display block truncate text-base sm:text-lg font-extrabold tracking-tight text-brand-900">{{ $s['brand_short'] ?? __('layout.brand_short') }}</span>
+                        <span class="hidden truncate text-xs text-slate-500 sm:block">{{ $s['brand_name'] ?? __('layout.brand_name') }}</span>
                     </span>
                 </a>
 
-                <div class="flex items-center gap-2 sm:gap-3">
-                    <x-language-switcher />
+                <div class="flex shrink-0 items-center gap-1.5 sm:gap-3">
+                    <div class="hidden sm:block"><x-language-switcher /></div>
                     {{-- Пошук з миттєвими підказками (десктоп) --}}
                     <div x-data="liveSearch(@js(\App\Support\LocalizedUrl::route('search.suggest')), @js(\App\Support\LocalizedUrl::route('search')))"
                          @click.outside="open = false" @keydown.escape.window="open = false"
@@ -202,26 +227,40 @@
                     {{-- CTA --}}
                     <a href="{{ \App\Support\LocalizedUrl::to('/abituriyentu') }}" class="btn-accent hidden whitespace-nowrap sm:inline-flex">{{ __('layout.applicants') }}</a>
                     {{-- Мобільні дії --}}
-                    <a href="{{ \App\Support\LocalizedUrl::route('search') }}" class="btn-ghost p-2 lg:hidden" aria-label="{{ __('layout.search') }}"><x-ico name="magnifying-glass" class="h-5 w-5" /></a>
-                    <button @click="mobile = true" class="btn-ghost p-2 xl:hidden" aria-label="{{ __('layout.menu') }}"><x-ico name="bars-3" class="h-6 w-6" /></button>
+                    <a href="{{ \App\Support\LocalizedUrl::route('search') }}" class="grid h-10 w-10 place-items-center rounded-xl text-brand-900 transition hover:bg-slate-100 lg:hidden" aria-label="{{ __('layout.search') }}"><x-ico name="magnifying-glass" class="h-5 w-5" /></a>
+                    <button type="button" @click="mobile = true" :aria-expanded="mobile" class="grid h-10 w-10 place-items-center rounded-xl bg-brand-900 text-white shadow-sm transition hover:bg-brand-800 xl:hidden" aria-label="{{ __('layout.menu') }}"><x-ico name="bars-3" class="h-6 w-6" /></button>
                 </div>
                 </div>
             </div>
 
-            {{-- Навігаційна стрічка (десктоп) — впирається в банер без білої смуги знизу --}}
-            <nav class="hidden bg-brand-900 xl:block">
-                <div class="mx-auto flex w-full max-w-[1600px] flex-wrap items-stretch px-4 sm:px-6 lg:px-8">
+            {{-- Навігаційна стрічка (десктоп): один рядок; пункти, що не вміщаються, переходять у «Ще» --}}
+            <nav class="hidden bg-brand-900 xl:block" aria-label="{{ __('layout.menu') }}">
+                <div x-data="navOverflow({{ $menu->count() }})" x-ref="bar"
+                     class="mx-auto flex w-full max-w-[1600px] items-stretch px-4 sm:px-6 lg:px-8"
+                     :class="ready ? 'flex-nowrap' : 'flex-wrap'">
                     @foreach ($menu as $item)
+                        @php
+                            $itemActive = $item->children->isNotEmpty()
+                                ? $item->children->contains(fn ($child) => $navCurrent($child->href))
+                                : $navCurrent($item->href);
+                        @endphp
                         @if ($item->children->isNotEmpty())
-                            <div x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false" class="relative shrink-0">
-                                <button type="button" @click="open = ! open"
-                                        class="flex items-center gap-1 whitespace-nowrap border-b-2 border-transparent px-2 py-3 text-[13px] font-medium text-white/90 transition hover:bg-white/5 hover:text-white"
-                                        :class="open ? 'border-gold-400 bg-white/5 text-white' : ''">
+                            <div data-nav-item x-data="{ open: false, right: false }" :class="{{ $loop->index }} >= visible && '!hidden'"
+                                 @mouseenter="right = $el.getBoundingClientRect().left + 300 > window.innerWidth; open = true"
+                                 @mouseleave="open = false" @keydown.escape="open = false"
+                                 class="relative shrink-0">
+                                <button type="button" @click="open = ! open" :aria-expanded="open"
+                                        @class([
+                                            'flex h-full items-center gap-1 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition hover:bg-white/5 hover:text-white',
+                                            'border-transparent text-white/85' => ! $itemActive,
+                                            'border-gold-400 text-white' => $itemActive,
+                                        ])
+                                        :class="open ? '!border-gold-400 bg-white/5 text-white' : ''">
                                     {{ $item->localized_label }}
-                                    <x-ico name="chevron-down" class="h-4 w-4 opacity-70 transition" x-bind:class="open && 'rotate-180'" />
+                                    <x-ico name="chevron-down" class="h-3.5 w-3.5 opacity-60 transition" x-bind:class="open && 'rotate-180'" />
                                 </button>
-                                <div x-show="open" x-cloak x-transition.opacity
-                                     class="absolute left-0 top-full z-50 max-h-[75vh] w-72 overflow-y-auto rounded-b-xl border border-slate-200 bg-white p-2 shadow-2xl">
+                                <div x-show="open" x-cloak x-transition.opacity :class="right ? 'right-0' : 'left-0'"
+                                     class="absolute top-full z-50 max-h-[75vh] w-72 overflow-y-auto rounded-b-xl border border-slate-200 bg-white p-2 shadow-2xl">
                                     @foreach ($item->children as $child)
                                         <a href="{{ $child->href }}" @if ($child->open_new_tab) target="_blank" @endif
                                            @if ($navCurrent($child->href)) aria-current="page" @endif
@@ -234,27 +273,76 @@
                                 </div>
                             </div>
                         @else
-                            <a href="{{ $item->href }}" @if ($item->open_new_tab) target="_blank" @endif
-                               @if ($navCurrent($item->href)) aria-current="page" @endif
+                            <a data-nav-item href="{{ $item->href }}" @if ($item->open_new_tab) target="_blank" @endif
+                               @if ($itemActive) aria-current="page" @endif
+                               x-bind:class="{{ $loop->index }} >= visible && '!hidden'"
                                @class([
-                                   'flex shrink-0 items-center whitespace-nowrap border-b-2 px-2 py-3 text-[13px] font-medium transition hover:bg-white/5',
-                                   'border-transparent text-white/90 hover:border-gold-400 hover:text-white' => ! $navCurrent($item->href),
-                                   'border-gold-400 text-white' => $navCurrent($item->href),
+                                   'flex shrink-0 items-center whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition hover:bg-white/5',
+                                   'border-transparent text-white/85 hover:border-gold-400/60 hover:text-white' => ! $itemActive,
+                                   'border-gold-400 text-white' => $itemActive,
                                ])>{{ $item->localized_label }}</a>
                         @endif
                     @endforeach
+
+                    {{-- «Ще»: пункти, що не вмістилися в рядок --}}
+                    <div data-nav-more x-data="{ open: false }" x-cloak :class="ready && visible >= total && '!hidden'"
+                         @mouseenter="open = true" @mouseleave="open = false" @keydown.escape="open = false"
+                         class="relative ml-auto shrink-0">
+                        <button type="button" @click="open = ! open" :aria-expanded="open"
+                                class="flex h-full items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-semibold text-gold-300 transition hover:bg-white/5 hover:text-gold-200"
+                                :class="open ? '!border-gold-400 bg-white/5' : ''">
+                            <x-ico name="ellipsis-horizontal-circle" class="h-4 w-4" />
+                            {{ __('layout.nav_more') }}
+                        </button>
+                        <div x-show="open" x-cloak x-transition.opacity
+                             class="absolute right-0 top-full z-50 max-h-[75vh] w-80 overflow-y-auto rounded-b-xl border border-slate-200 bg-white p-2 shadow-2xl">
+                            @foreach ($menu as $item)
+                                <div :class="{{ $loop->index }} < visible && 'hidden'">
+                                    @if ($item->children->isNotEmpty())
+                                        <p class="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{{ $item->localized_label }}</p>
+                                        @foreach ($item->children as $child)
+                                            <a href="{{ $child->href }}" @if ($child->open_new_tab) target="_blank" @endif
+                                               @class([
+                                                   'block rounded-lg px-3 py-2 text-sm transition hover:bg-brand-50 hover:text-brand-800',
+                                                   'text-slate-600' => ! $navCurrent($child->href),
+                                                   'bg-brand-50 font-semibold text-brand-800' => $navCurrent($child->href),
+                                               ])>{{ $child->localized_label }}</a>
+                                        @endforeach
+                                    @else
+                                        <a href="{{ $item->href }}" @if ($item->open_new_tab) target="_blank" @endif
+                                           @class([
+                                               'block rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-brand-50 hover:text-brand-800',
+                                               'text-slate-700' => ! $navCurrent($item->href),
+                                               'bg-brand-50 font-semibold text-brand-800' => $navCurrent($item->href),
+                                           ])>{{ $item->localized_label }}</a>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
             </nav>
+
+            {{-- Святкова гірлянда звисає під шапкою; ховається під час прокручування --}}
+            @if ($holiday)
+                <x-holiday.garland :theme="$holiday" class="holiday-garland-hang" x-show="!scrolled"
+                                   x-transition.opacity.duration.300ms />
+            @endif
         </div>
 
         {{-- Мобільне меню (off-canvas) --}}
-        <div x-show="mobile" x-cloak class="fixed inset-0 z-50 xl:hidden">
+        <div x-show="mobile" x-cloak x-effect="document.documentElement.classList.toggle('overflow-hidden', mobile)"
+             @keydown.escape.window="mobile = false" class="fixed inset-0 z-50 xl:hidden">
             <div @click="mobile = false" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
             <div class="absolute right-0 top-0 flex h-full w-80 max-w-[88%] flex-col bg-white shadow-2xl"
                  x-transition:enter="transition ease-out duration-200" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0">
-                <div class="flex h-16 items-center justify-between border-b border-slate-200 px-5">
+                <div class="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200 pl-5 pr-3">
                     <span class="font-display font-extrabold text-brand-900">{{ __('layout.menu') }}</span>
-                    <button @click="mobile = false" class="btn-ghost p-2"><x-ico name="x-mark" class="h-6 w-6" /></button>
+                    <div class="flex items-center gap-2">
+                        <x-language-switcher :label="__('layout.language_mobile')" />
+                        <button type="button" @click="mobile = false" aria-label="{{ __('layout.close_menu') }}"
+                                class="grid h-10 w-10 place-items-center rounded-xl text-slate-600 transition hover:bg-slate-100"><x-ico name="x-mark" class="h-6 w-6" /></button>
+                    </div>
                 </div>
                 <div class="border-b border-slate-100 p-4">
                     <div x-data="liveSearch(@js(\App\Support\LocalizedUrl::route('search.suggest')), @js(\App\Support\LocalizedUrl::route('search')))" class="relative">
@@ -318,6 +406,16 @@
 
     {{-- Підвал --}}
     <footer class="border-t border-white/15 bg-brand-950 text-brand-100">
+        @if ($holiday)
+            {{-- Святкове вітання над підвалом --}}
+            <div class="holiday-greeting">
+                <x-holiday.garland :theme="$holiday" :tiles="18" class="holiday-greeting-garland" />
+                <p class="container-site flex items-center justify-center gap-3 py-5 text-center">
+                    <x-holiday.badge :theme="$holiday" :size="30" />
+                    <span class="font-display text-lg font-bold sm:text-xl">{{ __('layout.holiday.'.$holidayKey) }}</span>
+                </p>
+            </div>
+        @endif
         <div class="container-site grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-4">
             <div class="lg:col-span-1">
                 <div class="flex items-center gap-3">
@@ -481,6 +579,39 @@
                 }, { passive: true });
                 document.addEventListener('mouseout', () => clearTimeout(timer), { passive: true });
             })();
+
+            // Десктоп-меню в один рядок: ширини пунктів вимірюємо (після шрифтів) лише коли
+            // стрічка видима; при зміні ширини перераховуємо, скільки вміщається; решта — у «Ще».
+            window.navOverflow = total => ({
+                total, visible: total, ready: false, measuring: false, widths: [], moreWidth: 0,
+                init() {
+                    (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => this.fit());
+                    if ('ResizeObserver' in window) new ResizeObserver(() => this.fit()).observe(this.$refs.bar);
+                },
+                measure() {
+                    if (this.measuring) return;
+                    this.measuring = true;
+                    this.visible = this.total;
+                    this.$nextTick(() => {
+                        this.widths = [...this.$refs.bar.querySelectorAll(':scope > [data-nav-item]')].map(el => el.offsetWidth);
+                        this.moreWidth = this.$refs.bar.querySelector(':scope > [data-nav-more]').offsetWidth;
+                        this.ready = true;
+                        this.measuring = false;
+                        this.fit();
+                    });
+                },
+                fit() {
+                    const bar = this.$refs.bar;
+                    if (!bar.clientWidth) return; // стрічка прихована (мобільна ширина)
+                    if (!this.ready) { this.measure(); return; }
+                    const cs = getComputedStyle(bar);
+                    const avail = bar.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+                    if (this.widths.reduce((a, b) => a + b, 0) <= avail) { this.visible = this.total; return; }
+                    let used = this.moreWidth, n = 0;
+                    while (n < this.widths.length && used + this.widths[n] <= avail) used += this.widths[n++];
+                    this.visible = n;
+                },
+            });
 
             // Миттєві підказки пошуку (шапка + мобільне меню)
             window.liveSearch = (suggestUrl, searchUrl) => ({
