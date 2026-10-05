@@ -6,7 +6,9 @@ use App\Models\Department;
 use App\Models\Document;
 use App\Models\DocumentCategory;
 use App\Models\Page;
+use App\Models\Program;
 use App\Models\Setting;
+use App\Models\Specialty;
 use App\Models\Staff;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -94,5 +96,23 @@ class LegacyContentParityTest extends TestCase
             ->assertSee(__('public.staff_qualification_page'));
         $this->get('/en/struktura/'.$department->slug)->assertOk()
             ->assertSee('href="'.url('/en/prof-test').'"', false);
+    }
+
+    public function test_specialty_cards_list_programs_with_file_links(): void
+    {
+        $specialty = Specialty::query()->where('is_published', true)->first();
+        Program::create([
+            'specialty_id' => $specialty->id, 'title' => 'Тестова освітня програма',
+            'external_url' => 'https://example.org/opp-test.pdf', 'sort_order' => 99,
+        ]);
+
+        $html = $this->get('/spetsialnosti')->assertOk()
+            ->assertSee('Тестова освітня програма')
+            ->assertSee('href="https://example.org/opp-test.pdf"', false)
+            ->assertSee(__('public.programs'))
+            ->getContent();
+
+        // Картка — не обгортка-посилання: посилання ОПП не вкладені в інше посилання.
+        $this->assertStringContainsString('<article class="card card-interactive group relative', $html);
     }
 }

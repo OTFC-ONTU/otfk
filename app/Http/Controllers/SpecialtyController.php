@@ -8,7 +8,7 @@ class SpecialtyController extends Controller
 {
     public function index()
     {
-        $specialties = Specialty::published()->ordered()->get();
+        $specialties = Specialty::published()->ordered()->with('programs')->get();
 
         return view('specialties.index', compact('specialties'));
     }
