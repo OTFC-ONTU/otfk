@@ -6,13 +6,13 @@ use App\Filament\Resources\DepartmentResource;
 use App\Filament\Resources\DocumentCategoryResource;
 use App\Filament\Resources\GalleryResource;
 use App\Filament\Resources\PageResource;
-use App\Filament\Resources\SettingResource;
 use App\Models\Department;
 use App\Models\DocumentCategory;
 use App\Models\Gallery;
 use App\Models\Page;
 use App\Models\Setting;
 use Filament\Pages\Page as FilamentPage;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Живий чек-лист наповнення сайту: показує, що ще порожнє або заглушка,
@@ -113,13 +113,10 @@ class ContentChecklist extends FilamentPage
 
         foreach ($keys as $key => $label) {
             if (blank(optional($rows->get($key))->value)) {
-                $record = $rows->get($key);
                 $missing[] = [
                     'label' => $label,
                     'meta' => $key,
-                    'url' => $record
-                        ? SettingResource::getUrl('edit', ['record' => $record])
-                        : SettingResource::getUrl('index'),
+                    'url' => $key === 'site_description' ? GeneralSettings::getUrl() : ContactSettings::getUrl(),
                 ];
             }
         }
@@ -130,8 +127,8 @@ class ContentChecklist extends FilamentPage
     /** Загальна кількість незакритих пунктів — для бейджа в меню (кеш 60с, бо рахується на кожен рендер). */
     public static function getNavigationBadge(): ?string
     {
-        $total = \Illuminate\Support\Facades\Cache::remember('content_checklist_badge', 60, function () {
-            $page = new static();
+        $total = Cache::remember('content_checklist_badge', 60, function () {
+            $page = new static;
 
             return count($page->stubPages())
                 + count($page->emptyDocumentCategories())

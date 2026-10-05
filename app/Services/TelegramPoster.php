@@ -37,15 +37,15 @@ class TelegramPoster
         $excerpt = filled($news->excerpt) ? Str::limit(strip_tags($news->excerpt), 200) : '';
 
         // HTML-розмітка Telegram: <b>назва</b> + анотація + посилання
-        $caption = '<b>' . e($news->title) . '</b>'
-            . ($excerpt !== '' ? "\n\n" . e($excerpt) : '')
-            . "\n\n" . '<a href="' . $url . '">Читати на сайті →</a>';
+        $caption = '<b>'.e($news->title).'</b>'
+            .($excerpt !== '' ? "\n\n".e($excerpt) : '')
+            ."\n\n".'<a href="'.$url.'">Читати на сайті →</a>';
 
         try {
             if ($news->cover_image) {
                 $resp = Http::timeout(20)->post("https://api.telegram.org/bot{$token}/sendPhoto", [
                     'chat_id' => $channel,
-                    'photo' => asset('storage/' . $news->cover_image),
+                    'photo' => asset('storage/'.$news->cover_image),
                     'caption' => $caption,
                     'parse_mode' => 'HTML',
                 ]);
@@ -74,6 +74,30 @@ class TelegramPoster
             report($e);
 
             return false;
+        }
+    }
+
+    /**
+     * Тестове повідомлення з довільних (навіть незбережених) токена й каналу.
+     * Повертає null при успіху або текст помилки від Telegram.
+     */
+    public static function sendTest(string $token, string $channel): ?string
+    {
+        try {
+            $resp = Http::timeout(20)->post("https://api.telegram.org/bot{$token}/sendMessage", [
+                'chat_id' => $channel,
+                'text' => 'Тестове повідомлення з сайту коледжу — налаштування Telegram працюють.',
+            ]);
+
+            if ($resp->successful() && $resp->json('ok') === true) {
+                return null;
+            }
+
+            return (string) ($resp->json('description') ?? ('HTTP '.$resp->status()));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return $e->getMessage();
         }
     }
 }

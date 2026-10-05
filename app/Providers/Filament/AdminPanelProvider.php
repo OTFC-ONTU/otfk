@@ -34,6 +34,17 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Blue,
             ])
+            // Порядок груп меню: щоденна робота зверху, налаштування — внизу
+            // (без цього Filament ставить групи в порядку виявлення класів).
+            ->navigationGroups([
+                'Контент',
+                'Структура сайту',
+                'Абітурієнту',
+                'Структура та персонал',
+                'Публічна інформація',
+                'Звернення',
+                'Налаштування',
+            ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([

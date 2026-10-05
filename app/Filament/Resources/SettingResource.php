@@ -19,11 +19,13 @@ class SettingResource extends Resource
 
     protected static ?string $navigationGroup = 'Налаштування';
 
-    protected static ?string $navigationLabel = 'Налаштування сайту';
+    protected static ?string $navigationLabel = 'Розширені налаштування';
+
+    protected static ?int $navigationSort = 8;
 
     protected static ?string $modelLabel = 'налаштування';
 
-    protected static ?string $pluralModelLabel = 'Налаштування сайту';
+    protected static ?string $pluralModelLabel = 'Розширені налаштування';
 
     public static function form(Form $form): Form
     {
@@ -55,6 +57,7 @@ class SettingResource extends Resource
                     'announcement_type' => 'Колір смуги: info (синій), warning (золотий) або danger (червоний).',
                     'announcement_url' => 'Необовʼязкове посилання, куди веде оголошення (напр., новина).',
                     'banner_overlay_opacity' => 'Затемнення фото банера (0–100). Зручніше змінювати в розділі «Банери».',
+                    'holiday_theme', 'holiday_theme_until' => 'Зручніше змінювати на сторінці «Налаштування → Святкова тема».',
                     default => null,
                 }),
             Forms\Components\TextInput::make('group')->label('Група')->default('general')->maxLength(255),
