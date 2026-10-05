@@ -10,10 +10,19 @@ return new class extends Migration
     public function up(): void
     {
         foreach ($this->tables() as $name => $fields) {
-            Schema::table($name, function (Blueprint $table) use ($fields) {
-                $table->boolean('translation_published')->default(false);
-                $table->string('translation_source_hash', 64)->nullable();
+            // MySQL не відкочує DDL: повторний запуск додає лише відсутні поля.
+            $existing = Schema::getColumnListing($name);
+            Schema::table($name, function (Blueprint $table) use ($fields, $existing) {
+                if (! in_array('translation_published', $existing, true)) {
+                    $table->boolean('translation_published')->default(false);
+                }
+                if (! in_array('translation_source_hash', $existing, true)) {
+                    $table->string('translation_source_hash', 64)->nullable();
+                }
                 foreach ($fields as $field) {
+                    if (in_array($field.'_en', $existing, true)) {
+                        continue;
+                    }
                     if (in_array($field, ['quote', 'value'], true)) {
                         $table->text($field.'_en')->nullable();
                     } else {
