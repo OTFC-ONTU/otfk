@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    // Дзеркалювання файлів старого сайту (otfk:mirror-files): дозволені хости-джерела та ліміт розміру файлу
+    'file_mirror' => [
+        'hosts' => array_filter(array_map('trim', explode(',', env('FILE_MIRROR_HOSTS', 'otfk.od.ua,www.otfk.od.ua')))),
+        'max_mb' => (int) env('FILE_MIRROR_MAX_MB', 100),
+    ],
+
 ];

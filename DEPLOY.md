@@ -108,6 +108,7 @@ php artisan optimize             # кеш конфигов/роутов/вью (
 У коді вже налаштовано:
 - **щонеділі о 03:30** — `php artisan otfk:backup` (дамп БД у `storage/app/backups`);
 - **щонеділі о 04:00** — очищення старої статистики відвідувань.
+- **щохвилини** — `php artisan otfk:mirror-files --limit=30` (черга `file_mirrors`: сервер сам завантажує файли старого сайту otfk.od.ua у `storage/app/public/mirror/`; без записів у черзі лише перевіряє її).
 
 Щоб це працювало, у панелі хостинга додайте **один** cron (щохвилини):
 
@@ -121,6 +122,19 @@ php artisan optimize             # кеш конфигов/роутов/вью (
 php artisan schedule:list
 php artisan otfk:backup
 ```
+
+## Файли старого сайту і переїзд на постійний хостинг
+
+**Дзеркалювання.** Файли старого сайту не заливаються вручну: URL ставиться в таблицю `file_mirrors` (`App\Models\FileMirror::enqueue($url)` або INSERT з `source_hash = SHA2(source_url, 256)` і `status = 'pending'`), cron `schedule:run` щохвилини запускає `otfk:mirror-files`, файл з'являється за `FileMirror::publicUrl()` (`/storage/mirror/otfk.od.ua/...`). У контент вставляються лише **відносні** шляхи `/storage/...` — тоді зміна домену посилань не ламає. Дозволені хости — `FILE_MIRROR_HOSTS` (типово `otfk.od.ua,www.otfk.od.ua`), ліміт — `FILE_MIRROR_MAX_MB` (100). Стан: `SELECT status, COUNT(*) FROM file_mirrors GROUP BY status`; помилки — колонка `error`; повтор невдалих — `php artisan otfk:mirror-files --retry-failed`. Потрібні cron і вихідний HTTPS з хостингу.
+
+**Переїзд з тимчасового хостингу на постійний** (нічого не видаляє на старому сервері):
+
+1. На старому сервері: `php artisan otfk:backup` (дамп БД у `storage/app/backups/otfk_*.sql.gz`) і `php artisan otfk:storage-export` (архів `storage/app/backups/storage_*.zip`: увесь диск `public` — завантаження адмінки, імпортовані фото, `mirror/` — з маніфестом sha256).
+2. Перенести обидва файли на новий сервер (scp/rsync або файловий менеджер панелі; у Git їх не класти — `storage/` ігнорується).
+3. На новому сервері: розгорнути код за «Вариант А», імпортувати дамп у нову БД, `php artisan migrate --force`, `php artisan storage:link`.
+4. Відновити файли: `php artisan otfk:storage-import /шлях/storage_….zip` — пише відсутні файли й перевіряє sha256; наявні файли з іншим вмістом лише показує як конфлікти (замінити — `--overwrite`).
+5. Добрати дзеркальні файли, яких немає або які пошкоджені: `php artisan otfk:mirror-files --verify --limit=1000` (із джерела otfk.od.ua). Якщо оригінал уже недоступний, а старий хостинг ще працює: `php artisan otfk:mirror-files --verify --from=https://СТАРИЙ-ДОМЕН --limit=1000` — файл береться з `/storage/...` старого хостингу і приймається лише за збігу записаного sha256. Повторювати, доки в черзі нічого не лишиться.
+6. Додати cron `schedule:run` на новому хостингу, оновити `APP_URL`, `php artisan optimize`. Перевірити `/`, `/en`, `/admin` і кілька сторінок з файлами.
 
 ## Моніторинг доступності (без коду)
 

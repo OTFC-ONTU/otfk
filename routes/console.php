@@ -15,6 +15,12 @@ Schedule::command('otfk:backup')
     ->weeklyOn(0, '03:30')
     ->withoutOverlapping();
 
+// Черга дзеркалювання файлів старого сайту (file_mirrors): щохвилини невеликими порціями.
+// Без записів у черзі команда лише перевіряє її й завершується.
+Schedule::command('otfk:mirror-files --limit=30')
+    ->everyMinute()
+    ->withoutOverlapping(30);
+
 // Чистимо статистику відвідувань, старішу за пів року (агрегати займають місце дарма)
 Schedule::call(fn () => \App\Models\SiteVisit::where('date', '<', now()->subDays(180)->toDateString())->delete())
     ->weeklyOn(0, '04:00')

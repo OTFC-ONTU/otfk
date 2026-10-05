@@ -23,7 +23,7 @@
 | `app/Support/` | `ImageOptimizer` (GD → WebP), `BannerOverlay` (inline-CSS градиенты) |
 | `app/Jobs/`, `app/Mail/` | `PostNewsToTelegram`; письма `ApplicantRequestReceived`, `FeedbackReceived` |
 | `app/Observers/` | `NewsObserver` — триггер Telegram-автопоста (подключён атрибутом на модели!) |
-| `app/Console/Commands/` | `otfk:backup`, `images:webp`, `otfk:import-docs`, `otfk:import-news` |
+| `app/Console/Commands/` | `otfk:backup`, `images:webp`, `otfk:import-docs`, `otfk:import-news`, `otfk:mirror-files`, `otfk:storage-export`, `otfk:storage-import` |
 | `bootstrap/app.php` | Регистрация роутов, health `/up`, кастомные middleware |
 | `config/` | Сток Laravel 12, кроме `blade-icons.php` (отключён дефолтный `<x-icon>`) |
 | `database/migrations/` | Схема **и контент-фикстуры** (см. «Миграции как контент») |
@@ -160,6 +160,7 @@ flowchart LR
 | `stat_items`, `testimonials`, `faqs` | Блоки главной: StatItem — label_en (value общие), Testimonial — name_en/role_en/quote_en, FAQ — question_en/answer_en; отдельные translation_published/source_hash |
 | `quiz_questions`, `quiz_options` | Квиз: options с points и specialty_id; question_en у вопроса, label_en у варианта, отдельные translation_published/source_hash у обоих |
 | `applicant_requests`, `feedback_messages` | Заявки и обращения (name, phone, email, ip, is_processed/is_read) |
+| `file_mirrors` | Очередь зеркалирования файлов старого сайта: source_url (+ unique sha256-хеш URL), path на диске `public` (`mirror/{host}/{путь источника}`), status pending/done/failed, attempts, error, size, sha256, mime, fetched_at. Ссылки в контенте — только относительные `FileMirror::publicUrl()` (`/storage/...`), домен в БД не хранится |
 | `site_visits` | Аналитика без кук: unique(date, path), без timestamps; спец-путь `_visits` для уникальных визитов; prune > 180 дней |
 | users, sessions, cache, jobs... | Стоковые таблицы Laravel |
 
@@ -181,6 +182,12 @@ flowchart LR
 
 Telegram-автопост: `NewsObserver` (подключён PHP-атрибутом `#[ObservedBy]` на модели `News`, НЕ в провайдере) атомарно ставит `telegram_posted_at` (`whereNull->update`) и диспатчит `PostNewsToTelegram`. Включается тремя настройками из БД: `telegram_autopost === '1'`, `telegram_bot_token`, `telegram_channel`.
 
+### Зеркалирование файлов и перенос хранилища
+
+Загрузка файлов на хостинг без SSH: в `file_mirrors` ставится URL (`FileMirror::enqueue()` или прямой INSERT с `source_hash = sha256(source_url)`, `status = pending`), а `otfk:mirror-files` из планировщика (каждую минуту, `--limit=30`, `withoutOverlapping`) скачивает файл сервером в `storage/app/public/mirror/{host}/{путь}`. Разрешены только хосты `services.file_mirror.hosts` (env `FILE_MIRROR_HOSTS`, по умолчанию otfk.od.ua), белый список расширений (документы, архивы, растровые изображения, медиа; SVG/HTML запрещены), лимит `FILE_MIRROR_MAX_MB` (100). Содержимое проверяется по сигнатуре: HTML-страница 404 со статусом 200 не сохранится. 3 неудачные попытки → `failed`; `--retry-failed` возвращает в очередь. Требует cron `schedule:run` и исходящий HTTPS с хостинга.
+
+Переезд на другой хостинг: (1) БД — `otfk:backup` → импорт дампа; (2) файлы — `otfk:storage-export` на старом сервере создаёт `storage/app/backups/storage_*.zip` со всем диском `public` и манифестом `.otfk-storage-manifest.json` (path/size/sha256), `otfk:storage-import <zip>` на новом восстанавливает с проверкой sha256, не удаляя и (без `--overwrite`) не заменяя файлы; (3) `otfk:mirror-files --verify` повторно скачивает зеркальные файлы, отсутствующие или с другим хешем; с `--from=https://старый-хост` они берутся из `/storage/{path}` старого хостинга и принимаются только при совпадении записанного sha256 (если оригинал уже недоступен). Пошагово — DEPLOY.md.
+
 ## CI / деплой
 
 ### `.github/workflows/tests.yml` — CI («Тести»)
@@ -200,7 +207,7 @@ Telegram-автопост: `NewsObserver` (подключён PHP-атрибут
 
 ### Первичный деплой (DEPLOY.md, хостинг ukraine.com.ua «Кращий»)
 
-Вариант A: `git clone` → `composer install --no-dev` → `.env` из `.env.production.example` → `migrate --seed --force` (**обязательно до** `artisan optimize` — кэш конфига ломает env-чтение в сидере) → `filament:assets` → `storage:link` → `optimize` → document root на `public/`; `public/build` при первом деплое залить вручную. Вариант B: zip с локально собранными `vendor/` и `public/build/`. Cron: `* * * * * php artisan schedule:run` (расписание: `otfk:backup` вс 03:30 UTC, prune `site_visits` вс 04:00 UTC).
+Вариант A: `git clone` → `composer install --no-dev` → `.env` из `.env.production.example` → `migrate --seed --force` (**обязательно до** `artisan optimize` — кэш конфига ломает env-чтение в сидере) → `filament:assets` → `storage:link` → `optimize` → document root на `public/`; `public/build` при первом деплое залить вручную. Вариант B: zip с локально собранными `vendor/` и `public/build/`. Cron: `* * * * * php artisan schedule:run` (расписание: `otfk:backup` вс 03:30 UTC, prune `site_visits` вс 04:00 UTC, `otfk:mirror-files --limit=30` каждую минуту).
 
 ## Gotchas
 
@@ -218,7 +225,7 @@ Telegram-автопост: `NewsObserver` (подключён PHP-атрибут
 12. **Layout ходит в БД:** `app.blade.php` дергает `MenuItem::navigation()`, `Setting::publicMap()`, `QuickLink`, `BellPeriod::active()` на каждой странице (частично кэшировано на 600с). Миграции и прямые SQL-правки `settings` обязаны сбрасывать `settings.map` и `settings.translations`; локаль не включается в общий кеш.
 13. **Неэкранированный HTML:** `{!! $news->body !!}`, `{!! $page->body !!}`, `map_embed` → iframe. Контент админский, но санитизации нет.
 14. **Sitemap без кэша** — 5 полных `->get()` по таблицам на каждый запрос; деградирует с ростом архива новостей (импортирован с 2014).
-15. **Импорт-команды `otfk:import-news|docs` ходят на живой legacy-сайт** otfk.od.ua; `--fresh` удаляет ранее импортированное. Не запускать бездумно.
+15. **Импорт-команды `otfk:import-news|docs` ходят на живой legacy-сайт** otfk.od.ua; `--fresh` удаляет ранее импортированное. Не запускать бездумно. `otfk:mirror-files` тоже ходит на legacy-сайт, но только по очереди `file_mirrors` и ничего не удаляет.
 16. **`FILESYSTEM_DISK=local`** в env, но все загрузки/URL рассчитаны на диск `public` (Filament по умолчанию грузит в `public`). Код, использующий default-диск, запишет в недоступное место.
 17. **Тесты ловят контракты** — перед правкой поведения читай соответствующий Feature-тест (excerpt-дедупликация, heritage-типографика, чеклист контента, light-only и т.д.).
 18. **`SecurityHeaders` намеренно без CSP** (инлайн-скрипты Livewire/Alpine/Filament); `SESSION_SECURE_COOKIE` в прод-шаблоне не задан.
@@ -243,6 +250,8 @@ Telegram-автопост: `NewsObserver` (подключён PHP-атрибут
 | 10 | Квиз `/kviz`: клиентский скоринг, вопросы из `QuizSeeder` | `resources/views/quiz/index.blade.php` | Решить судьбу фичи; контент — методистам |
 | 11 | Импортированные тексты старого сайта (не вычитаны) | миграции `import_*_content` | Редакторская вычитка |
 | 12 | Импорт-команды со скрейпингом legacy-сайта | `app/Console/Commands/ImportOtfk*` | Удалить после финального импорта |
+| 17 | Ежеминутная задача зеркалирования файлов legacy-сайта и каталог `storage/app/public/mirror/` | `otfk:mirror-files`, `routes/console.php`, `file_mirrors` | После финального переноса файлов можно убрать из расписания; таблицу и файлы сохранить (на них ссылается контент) |
 | 13 | Telegram-токен плейнтекстом в `settings` + открытое поле в админке | `SettingResource` | Маскировать поле / перенести в env |
-| 15 | `/en` имеет переведённый интерфейс, переводы Page/News/Specialty/Department/Program/FAQ/Event/NewsCategory/Staff/QuizQuestion/QuizOption/DocumentCategory/Document/Video/Gallery/Photo/Banner/QuickLink/Testimonial/StatItem и текстовых Setting, поиск Page/News/Specialty/Document, но большинство материалов БД ещё украинские; `noindex` | `SetPublicLocale`, `routes/public.php` | Завершить тексты страниц, переводы материалов и SEO; затем убрать `noindex` |
+| 15 | `/en` имеет переведённый интерфейс, переводы Page/News/Specialty/Department/Program/FAQ/Event/NewsCategory/Staff/QuizQuestion/QuizOption/DocumentCategory/Document/Video/Gallery/Photo/Banner/QuickLink/Testimonial/StatItem и текстовых Setting, поиск Page/News/Specialty/Document, на тестовой БД just-test.shop материалы переведены 2026-10-05, нужна вычитка; `noindex` | `SetPublicLocale`, `routes/public.php` | Вычитать переводы тестовой БД, отдельно проверить наполнение целевого прод-окружения и SEO; затем решить снятие `noindex` |
+| 16 | Самостоятельный альбом редизайна: демонстрационные показатели, тексты и действия; не подключён к приложению | `docs/redesign-2026-10-05/` | Использовать для согласования; переносить в Blade/Filament отдельной задачей, не публиковать как готовый сайт |
 | 14 | Мёртвый груз: axios в бандле (не используется, всё на fetch), `laravel/sail` без compose.yaml, pest-plugin в allow-plugins | `resources/js/bootstrap.js`, `composer.json` | Удалить |
