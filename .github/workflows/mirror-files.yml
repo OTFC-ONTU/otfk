@@ -1,0 +1,55 @@
+name: Mirror legacy files
+
+# Ручний запуск черги file_mirrors на сервері (otfk:mirror-files) — коли cron schedule:run
+# на хостингу ще не налаштований або чергу треба обробити одразу великою порцією.
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: Скільки файлів обробити за запуск
+        default: '500'
+        required: true
+      verify:
+        description: Перевірити готові файли (--verify)
+        type: boolean
+        default: false
+      retry_failed:
+        description: Повернути failed у чергу (--retry-failed)
+        type: boolean
+        default: false
+
+concurrency:
+  group: mirror-files
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build command
+        id: cmd
+        env:
+          LIMIT: ${{ inputs.limit }}
+          VERIFY: ${{ inputs.verify }}
+          RETRY: ${{ inputs.retry_failed }}
+        run: |
+          [[ "$LIMIT" =~ ^[0-9]{1,5}$ ]] || { echo "limit must be a number"; exit 1; }
+          args="--limit=$LIMIT"
+          [ "$VERIFY" = "true" ] && args="$args --verify"
+          [ "$RETRY" = "true" ] && args="$args --retry-failed"
+          echo "args=$args" >> "$GITHUB_OUTPUT"
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.REMOTE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.REMOTE_PORT || 22 }} -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Run otfk:mirror-files
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.REMOTE_PORT || 22 }} ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "
+            set -e
+            cd ${{ secrets.REMOTE_PATH }}
+            php artisan otfk:mirror-files ${{ steps.cmd.outputs.args }} -v
+          "
