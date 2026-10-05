@@ -37,6 +37,10 @@ class StaffResource extends Resource
                 ->options(Staff::CATEGORIES),
             Forms\Components\Select::make('department_id')->label('Підрозділ')
                 ->relationship('department', 'title')->searchable()->preload(),
+            Forms\Components\Select::make('profile_page_id')->label('Сторінка: результати професійної діяльності')
+                ->relationship('profilePage', 'title')->searchable()->preload(),
+            Forms\Components\Select::make('qualification_page_id')->label('Сторінка: підвищення кваліфікації')
+                ->relationship('qualificationPage', 'title')->searchable()->preload(),
             Forms\Components\TextInput::make('academic_degree')->label('Науковий ступінь / звання')->maxLength(255),
             Forms\Components\TextInput::make('email')->label('Email')->email()->maxLength(255),
             Forms\Components\TextInput::make('phone')->label('Телефон')->maxLength(255),

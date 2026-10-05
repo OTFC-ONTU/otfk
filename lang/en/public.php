@@ -111,6 +111,8 @@ return [
     'college_structure' => 'College structure',
     'no_structure' => 'Information about college departments will be added soon.',
     'department_staff' => 'Department staff',
+    'staff_profile_page' => 'Professional activity',
+    'staff_qualification_page' => 'Professional development',
     'no_department' => 'Information about this department will be added soon.',
     'back_structure' => 'Back to college structure',
     'administration' => 'Administration',

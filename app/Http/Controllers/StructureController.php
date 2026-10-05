@@ -23,7 +23,7 @@ class StructureController extends Controller
     {
         abort_unless($department->is_published, 404);
 
-        $department->load(['staff' => fn ($q) => $q->where('is_published', true)->orderBy('sort_order')]);
+        $department->load(['staff' => fn ($q) => $q->where('is_published', true)->orderBy('sort_order')->with(['profilePage', 'qualificationPage'])]);
 
         return view('structure.show', compact('department'));
     }

@@ -24,7 +24,7 @@ class Staff extends Model
 
     protected $fillable = ['full_name_en', 'position_en', 'academic_degree_en', 'bio_en', 'translation_published',
         'full_name', 'position', 'category', 'department_id', 'photo',
-        'email', 'phone', 'bio', 'academic_degree', 'sort_order', 'is_published',
+        'email', 'phone', 'bio', 'academic_degree', 'sort_order', 'is_published', 'profile_page_id', 'qualification_page_id',
     ];
 
     protected function casts(): array
@@ -35,6 +35,18 @@ class Staff extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /** Сторінка «Результати професійної та наукової діяльності» викладача. */
+    public function profilePage(): BelongsTo
+    {
+        return $this->belongsTo(Page::class, 'profile_page_id');
+    }
+
+    /** Сторінка «Відомості про підвищення кваліфікації» викладача. */
+    public function qualificationPage(): BelongsTo
+    {
+        return $this->belongsTo(Page::class, 'qualification_page_id');
     }
 
     public function scopePublished($query)

@@ -111,6 +111,8 @@ return [
     'college_structure' => 'Структура коледжу',
     'no_structure' => 'Інформацію про структурні підрозділи незабаром буде додано.',
     'department_staff' => 'Склад підрозділу',
+    'staff_profile_page' => 'Професійна діяльність',
+    'staff_qualification_page' => 'Підвищення кваліфікації',
     'no_department' => 'Інформацію про цей підрозділ незабаром буде додано.',
     'back_structure' => 'До структури',
     'administration' => 'Адміністрація',
