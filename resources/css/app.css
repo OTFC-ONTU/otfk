@@ -111,6 +111,26 @@
                prose-hr:border-gold-200/80;
     }
 
+    /* Абзац-посилання на файл у тексті сторінки — картка як у розділі документів (App\Support\FileCards) */
+    .file-card {
+        @apply my-3 flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80 transition hover:shadow-md;
+    }
+    .file-card__icon {
+        @apply grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-rose-50 text-rose-600;
+    }
+    .file-card__body {
+        @apply flex min-w-0 flex-1 flex-col;
+    }
+    .file-card__title {
+        @apply text-base font-medium leading-snug text-slate-800 no-underline hover:text-brand-700 hover:underline;
+    }
+    .file-card__meta {
+        @apply mt-0.5 text-xs font-semibold uppercase tracking-wide text-slate-400;
+    }
+    .file-card__download {
+        @apply inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-xs no-underline;
+    }
+
     /* Велика літера першого абзацу (drop cap) — лише де явно увімкнено (сторінка /istoriya) */
     .prose-site:not(.prose-site--no-dropcap) > p:first-of-type::first-letter,
     .prose-heritage:not(.prose-site--no-dropcap) > p:first-of-type::first-letter {

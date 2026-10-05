@@ -20,7 +20,7 @@
 
         @if (filled($page->localized('body')))
             <x-prose.article :heritage="$page->is_heritage" :drop-cap="$page->slug === 'istoriya'">
-                {!! \App\Support\LocalizedHtml::links($page->localized('body')) !!}
+                {!! \App\Support\FileCards::render(\App\Support\LocalizedHtml::links($page->localized('body'))) !!}
             </x-prose.article>
         @endif
 

@@ -55,4 +55,22 @@ class LegacyContentParityTest extends TestCase
         $this->assertGreaterThan(255, mb_strlen($title));
         $this->assertSame($title, $document->fresh()->title);
     }
+
+    public function test_paragraph_with_only_a_file_link_renders_as_file_card(): void
+    {
+        Page::create([
+            'title' => 'Освітньо-професійні програми', 'slug' => 'opp-test', 'is_published' => true,
+            'body' => '<p><strong>Освітньо-професійні програми 2022 року</strong></p>'
+                .'<p><a href="/storage/imported/files/fac_123_1.pdf">ОПП спеціальності: 123 Комп’ютерна інженерія</a></p>'
+                .'<p>Див. <a href="/storage/imported/files/plan.pdf">план</a> у тексті.</p>',
+        ]);
+
+        $html = $this->get('/opp-test')->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($html, 'class="file-card not-prose"'));
+        $this->assertStringContainsString('ОПП спеціальності: 123 Комп’ютерна інженерія</a>', $html);
+        $this->assertStringContainsString('href="/storage/imported/files/fac_123_1.pdf" target="_blank" rel="noopener" class="file-card__title"', $html);
+        $this->assertStringContainsString('<p>Див. <a href="/storage/imported/files/plan.pdf">план</a> у тексті.</p>', $html);
+        $this->assertStringContainsString(__('public.download'), $html);
+    }
 }
