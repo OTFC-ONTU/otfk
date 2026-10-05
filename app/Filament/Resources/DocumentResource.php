@@ -30,10 +30,10 @@ class DocumentResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            EnglishTranslation::section(contentFields: ['description' => ['label' => 'Англійський опис', 'rows' => 3]]),
+            EnglishTranslation::section(contentFields: ['description' => ['label' => 'Англійський опис', 'rows' => 3]], primaryRows: 2),
             Forms\Components\Select::make('document_category_id')->label('Категорія')
                 ->relationship('category', 'title')->searchable()->preload()->required(),
-            Forms\Components\TextInput::make('title')->label('Назва документа')->required()->maxLength(255)->columnSpanFull(),
+            Forms\Components\Textarea::make('title')->label('Назва документа')->required()->rows(2)->maxLength(2000)->columnSpanFull(),
             Forms\Components\FileUpload::make('file_path')->label('Файл')->directory('documents')
                 ->downloadable()->openable()
                 ->acceptedFileTypes([

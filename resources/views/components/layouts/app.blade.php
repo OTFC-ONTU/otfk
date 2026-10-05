@@ -333,9 +333,10 @@
                     @endif
                     <span class="font-display font-extrabold text-white">{{ $s['brand_short'] ?? __('layout.brand_short') }}</span>
                 </div>
-                <p class="mt-4 text-sm leading-relaxed text-brand-200">
-                    {{ $s['footer_about'] ?? __('layout.about') }}
-                </p>
+                {{-- Опис у підвалі — лише якщо заповнений у налаштуваннях (у підвалі оригіналу його немає) --}}
+                @if (filled($s['footer_about'] ?? null))
+                    <p class="mt-4 text-sm leading-relaxed text-brand-200">{{ $s['footer_about'] }}</p>
+                @endif
             </div>
 
             <div>

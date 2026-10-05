@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\FeedbackReceived;
 use App\Models\FeedbackMessage;
+use App\Models\Page;
 use App\Models\Setting;
 use App\Support\LocalizedUrl;
 use Illuminate\Http\Request;
@@ -13,7 +14,10 @@ class ContactController extends Controller
 {
     public function index()
     {
-        return view('contacts');
+        // Текст сторінки контактів — CMS-сторінка зі slug «kontakty» (дослівно з оригіналу); без неї — блок із налаштувань.
+        $page = Page::published()->where('slug', 'kontakty')->first();
+
+        return view('contacts', compact('page'));
     }
 
     public function store(Request $request)

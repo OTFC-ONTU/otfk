@@ -8,7 +8,14 @@
     ]" />
 
     <section class="container-site grid gap-10 py-12 lg:grid-cols-2">
-        {{-- Інформація --}}
+        {{-- Інформація: текст CMS-сторінки «kontakty» або, без неї, контакти з налаштувань --}}
+        @if ($page && filled($page->localized('body')))
+            <div>
+                <x-prose.article>
+                    {!! \App\Support\LocalizedHtml::links($page->localized('body')) !!}
+                </x-prose.article>
+            </div>
+        @else
         <div>
             <h2 class="text-2xl font-bold text-slate-900">{{ __('public.contact_us') }}</h2>
             <p class="mt-2 text-slate-500">{{ __('public.contact_intro') }}</p>
@@ -36,6 +43,8 @@
                 </div>
             @endif
         </div>
+
+        @endif
 
         {{-- Форма --}}
         <div class="card p-6 sm:p-8">
