@@ -147,7 +147,7 @@
                     @php $bellPeriods = \App\Models\BellPeriod::active(); @endphp
                     @if ($bellPeriods->isNotEmpty())
                         <a href="{{ \App\Support\LocalizedUrl::route('bells') }}"
-                           x-data="bellChip(@js($bellPeriods->map(fn ($b) => ['n' => $b->number, 's' => substr($b->starts, 0, 5), 'e' => substr($b->ends, 0, 5)])->values()))"
+                           x-data="bellChip(@js($bellPeriods->map(fn ($b) => ['id' => $b->id, 'n' => $b->number, 's' => substr($b->starts, 0, 5), 'e' => substr($b->ends, 0, 5)])->values()))"
                            x-init="tick(); setInterval(() => tick(), 30000)" x-show="label" x-cloak
                            class="inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 px-2.5 py-0.5 font-medium text-gold-200 ring-1 ring-gold-400/30 transition hover:bg-gold-400/25">
                             <span class="relative flex h-1.5 w-1.5">
@@ -521,7 +521,7 @@
             const bellMessage = (key, n, minutes = '', time = '') => bellMessages[key].replace(':number', ordinal(n)).replace(':minutes', minutes).replace(':time', time);
             const toMin = t => +t.slice(0, 2) * 60 + +t.slice(3, 5);
 
-            // Повертає {current, status}: current — номер пари (або null), status — текст
+            // Повертає {current, status}: current — ID запису пари (або null), status — текст.
             window.bellState = function (periods) {
                 const d = new Date();
                 if (d.getDay() === 0 || !periods.length) return { current: null, status: '' }; // неділя
@@ -530,7 +530,7 @@
                 for (const p of periods) {
                     const s = toMin(p.s), e = toMin(p.e);
                     if (cur >= s && cur < e) {
-                        return { current: p.n, status: bellMessage('current', p.n, e - cur) };
+                        return { current: p.id, status: bellMessage('current', p.n, e - cur) };
                     }
                 }
 

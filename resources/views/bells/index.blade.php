@@ -6,7 +6,7 @@
     ]" />
 
     <section class="container-site py-12"
-             x-data="bellSchedule(@js($periods->map(fn ($b) => ['n' => $b->number, 's' => substr($b->starts, 0, 5), 'e' => substr($b->ends, 0, 5)])->values()))"
+             x-data="bellSchedule(@js($periods->map(fn ($b) => ['id' => $b->id, 'n' => $b->number, 's' => substr($b->starts, 0, 5), 'e' => substr($b->ends, 0, 5)])->values()))"
              x-init="tick(); setInterval(() => tick(), 15000)">
 
         @if ($periods->isEmpty())
@@ -34,19 +34,22 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
+                            @php $latestEnd = null; @endphp
                             @foreach ($periods->values() as $i => $p)
-                                <tr :class="current === {{ $p->number }} ? 'bg-gold-50/70' : ''">
+                                <tr :class="current === {{ $p->id }} ? 'bg-gold-50/70' : ''">
                                     <td class="px-5 py-3.5 font-bold text-slate-900">{{ __('public.class_number', ['number' => $p->number, 'suffix' => [1 => 'ша', 2 => 'га', 3 => 'тя', 4 => 'та', 5 => 'та', 6 => 'та', 7 => 'ма', 8 => 'ма'][$p->number] ?? 'та']) }}</td>
                                     <td class="px-5 py-3.5 tabular-nums text-slate-600">{{ substr($p->starts, 0, 5) }}</td>
                                     <td class="px-5 py-3.5 tabular-nums text-slate-600">{{ substr($p->ends, 0, 5) }}</td>
                                     <td class="px-5 py-3.5 text-right">
-                                        <span x-show="current === {{ $p->number }}" x-cloak class="badge bg-gold-100 text-gold-800">{{ __('public.now') }}</span>
-                                        <span x-show="current !== {{ $p->number }}" class="text-slate-300">—</span>
+                                        <span x-show="current === {{ $p->id }}" x-cloak class="badge bg-gold-100 text-gold-800">{{ __('public.now') }}</span>
+                                        <span x-show="current !== {{ $p->id }}" class="text-slate-300">—</span>
                                     </td>
                                 </tr>
                                 @php
                                     $next = $periods->values()->get($i + 1);
-                                    $gap = $next ? \Carbon\Carbon::parse($p->ends)->diffInMinutes(\Carbon\Carbon::parse($next->starts)) : 0;
+                                    // Перерва починається лише після завершення всіх попередніх пар.
+                                    $latestEnd = max($latestEnd ?? $p->ends, $p->ends);
+                                    $gap = $next ? \Carbon\Carbon::parse($latestEnd)->diffInMinutes(\Carbon\Carbon::parse($next->starts), false) : 0;
                                 @endphp
                                 @if ($next && $gap > 0)
                                     <tr>

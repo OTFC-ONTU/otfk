@@ -44,7 +44,7 @@ class BellPeriodResource extends Resource
                 Tables\Columns\TextColumn::make('ends')->label('Кінець')->time('H:i'),
                 Tables\Columns\IconColumn::make('is_active')->label('Активна')->boolean(),
             ])
-            ->defaultSort('number')
+            ->defaultSort('starts')
             ->actions([Tables\Actions\EditAction::make()])
             ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
     }

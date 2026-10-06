@@ -156,7 +156,7 @@ flowchart LR
 | `galleries`, `photos` | Фотоальбомы: title_en/description_en, фото: caption_en; отдельные translation_published/source_hash; `is_archive` → сепия-режим |
 | `videos` | YouTube-ролики (youtube_id → accessors embed/thumb); title_en/description_en, translation_published/source_hash |
 | `events` | События; **starts_at хранится как киевское wall-clock время**, UTC — через `utcStart()/utcEnd()`; английские title/description/location, translation_published/source_hash |
-| `bell_periods` | Расписание звонков; кэш `bell_periods` 600с |
+| `bell_periods` | Расписание звонков; кэш `bell_periods` 600с. Активные записи сортируются по starts/id, одинаковые number допустимы; live-индикатор использует ID записи. Перерывы — положительные промежутки после завершения всех предыдущих интервалов; поля смены нет, при пересечении live-индикатор выбирает первую текущую запись по времени начала |
 | `quick_links` | Плитки главной и партнёры футера; title_en/description_en, translation_published/source_hash; URL/иконка/цвет/видимость общие |
 | `stat_items`, `testimonials`, `faqs` | Блоки главной: StatItem — label_en (value общие), Testimonial — name_en/role_en/quote_en, FAQ — question_en/answer_en; отдельные translation_published/source_hash |
 | `quiz_questions`, `quiz_options` | Квиз: options с points и specialty_id; question_en у вопроса, label_en у варианта, отдельные translation_published/source_hash у обоих |

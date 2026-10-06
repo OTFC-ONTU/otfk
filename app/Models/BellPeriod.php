@@ -14,13 +14,14 @@ class BellPeriod extends Model
         return ['is_active' => 'boolean'];
     }
 
-    /** Активні пари у порядку номерів (кешовано — макет показує їх на кожній сторінці). */
+    /** Активні пари у часовому порядку (кешовано — макет показує їх на кожній сторінці). */
     public static function active()
     {
         return Cache::remember('bell_periods', 600, fn () => static::query()
             ->where('is_active', true)
-            ->orderBy('number')
-            ->get(['number', 'starts', 'ends']));
+            ->orderBy('starts')
+            ->orderBy('id')
+            ->get(['id', 'number', 'starts', 'ends']));
     }
 
     protected static function booted(): void
