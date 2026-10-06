@@ -111,7 +111,7 @@
             @endif
             <x-lead-excerpt :excerpt="$news->localized('excerpt')" :body="$news->localized('body')" :heritage="$heritage" />
             <x-prose.article :heritage="$heritage" :date="$news->published_at" :drop-cap="false">
-                {!! \App\Support\LocalizedHtml::links($news->localized('body')) !!}
+                {!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($news->localized('body')))) !!}
             </x-prose.article>
 
             {{-- Поділитися новиною --}}

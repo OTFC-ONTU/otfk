@@ -57,8 +57,8 @@
         {{-- Світла шапка-картка — у стилі решти внутрішніх сторінок --}}
         @php
             $headerIcon = $isHub ? 'folder-open' : 'document-text';
-            $readingMinutes = (int) max(1, round(mb_strlen(strip_tags((string) $page->localized('body'))) / 1100));
-            $fileLinks = preg_match_all('/href="[^"]+\.(?:pdf|docx?|xlsx?|pptx?|zip|rar)(?:\?[^"]*)?"/i', (string) $page->localized('body'));
+            $readingMinutes = (int) max(1, round(mb_strlen(strip_tags((string) $page->publicBody())) / 1100));
+            $fileLinks = preg_match_all('/(?:href|src)="[^"]+\.(?:pdf|docx?|xlsx?|pptx?|zip|rar)(?:\?[^"]*)?"/i', (string) $page->publicBody());
         @endphp
         <section class="border-b border-slate-200/70 bg-slate-50/80">
             <div class="container-site py-8 lg:py-10">
@@ -104,7 +104,7 @@
                                     </span>
                                 @endif
                             @else
-                                @if (filled($page->localized('body')))
+                                @if (filled($page->publicBody()))
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-gold-50 px-3 py-1 font-semibold text-gold-700 ring-1 ring-gold-300/70">
                                         <x-ico name="clock" class="h-4 w-4" aria-hidden="true" />
                                         {{ __('feature.reading_approx', ['minutes' => $readingMinutes]) }}
@@ -140,12 +140,12 @@
             @endif
 
             <div class="w-full">
-                <x-lead-excerpt :excerpt="$page->localized('excerpt')" :body="$page->localized('body')" heritage />
+                <x-lead-excerpt :excerpt="$page->localized('excerpt')" :body="$page->publicBody()" heritage />
             </div>
 
-            @if (filled($page->localized('body')))
+            @if (filled($page->publicBody()))
                 <x-prose.article heritage :drop-cap="$page->slug === 'istoriya'">
-                    {!! \App\Support\FileCards::render(\App\Support\LocalizedHtml::links($page->localized('body'))) !!}
+                    {!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->publicBody()))) !!}
                 </x-prose.article>
             @else
                 <x-empty-state icon="document-text" title="{{ __('public.no_page_content') }}" />

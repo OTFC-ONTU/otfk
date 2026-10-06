@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\HasEnglishTranslation;
 use App\Models\Concerns\OptimizesUploadedImages;
+use App\Support\AccreditationContent;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -93,6 +94,15 @@ class Page extends Model
         return $headings;
     }
 
+    /** Адаптація старого імпорту лише при публічному виводі; редактор і БД бачать оригінал. */
+    public function publicBody(): string
+    {
+        $body = (string) $this->localized('body');
+
+        return $this->slug === 'litsenzuvannya-ta-akredytatsiya'
+            ? AccreditationContent::restore($body) : $body;
+    }
+
     /** Те саме тіло сторінки, але із проставленими id на заголовках — щоб якорі працювали. */
     public function bodyWithAnchors(): string
     {
@@ -114,9 +124,9 @@ class Page extends Model
                     return $m[0];
                 }
 
-                return '<h' . $m[1] . $m[2] . ' id="' . $this->headingId($text, $i++) . '">' . $m[3] . '</h' . $m[1] . '>';
+                return '<h'.$m[1].$m[2].' id="'.$this->headingId($text, $i++).'">'.$m[3].'</h'.$m[1].'>';
             },
-            (string) $this->localized('body')
+            $this->publicBody()
         );
     }
 
@@ -125,7 +135,7 @@ class Page extends Model
     {
         $slug = Str::slug(Str::limit($text, 60, ''));
 
-        return 'rozdil-' . ($index + 1) . ($slug !== '' ? '-' . $slug : '');
+        return 'rozdil-'.($index + 1).($slug !== '' ? '-'.$slug : '');
     }
 
     public static function booted(): void

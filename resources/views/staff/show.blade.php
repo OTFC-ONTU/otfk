@@ -74,7 +74,7 @@
                 </dl>
             @elseif (filled($staff->localized('bio')))
                 <div class="prose prose-slate max-w-none prose-headings:font-display prose-a:text-brand-700">
-                    {!! \App\Support\LocalizedHtml::links($staff->localized('bio')) !!}
+                    {!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($staff->localized('bio')))) !!}
                 </div>
             @else
                 <x-empty-state icon="user" title="{{ __('feature.details_about_this_staff_member_will_be') }}" />

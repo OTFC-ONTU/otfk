@@ -80,11 +80,11 @@ class LegacyContentParityTest extends TestCase
         $this->assertMatchesRegularExpression('/class="text-slate-700"\s+aria-current="page"/', $html);
     }
 
-    public function test_file_cards_preserve_query_and_fragment_on_both_links(): void
+    public function test_file_cards_preserve_query_and_fragment_on_all_actions(): void
     {
         $html = FileCards::render('<p><a href="/storage/plan.pdf?download=1&amp;version=2#page=4">План навчання</a></p>');
 
-        $this->assertSame(2, substr_count($html, 'href="/storage/plan.pdf?download=1&amp;version=2#page=4"'));
+        $this->assertSame(3, substr_count($html, 'href="/storage/plan.pdf?download=1&amp;version=2#page=4"'));
         $this->assertStringContainsString('aria-label="'.__('public.download').': План навчання"', $html);
         $this->assertSame('<p>Текст <a href="/plan.pdf?version=2#page=4">плану</a></p>',
             FileCards::render('<p>Текст <a href="/plan.pdf?version=2#page=4">плану</a></p>'));

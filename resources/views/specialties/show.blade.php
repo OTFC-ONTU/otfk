@@ -100,7 +100,7 @@
                 <div @class([
                     'prose prose-slate max-w-none prose-headings:font-display prose-a:text-brand-700',
                     'mt-8' => filled($specialty->localized('short_description')),
-                ])>{!! \App\Support\LocalizedHtml::links($specialty->localized('description')) !!}</div>
+                ])>{!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($specialty->localized('description')))) !!}</div>
             @endif
 
             {{-- Освітні програми --}}
@@ -110,18 +110,7 @@
                     <div class="accent-rule"></div>
                     <ul class="mt-5 space-y-3">
                         @foreach ($specialty->programs as $program)
-                            <li class="card flex items-center gap-4 p-4">
-                                <span class="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700"><x-ico name="document-text" class="h-6 w-6" /></span>
-                                <div class="min-w-0 flex-1">
-                                    <p class="font-medium text-slate-800">{{ $program->localized('title') }}</p>
-                                    @if ($program->localized('description'))<p class="text-sm text-slate-500">{{ $program->localized('description') }}</p>@endif
-                                </div>
-                                @if ($program->file_url)
-                                    <a href="{{ $program->file_url }}" target="_blank" rel="noopener" class="btn-outline shrink-0 px-3 py-2 text-xs">
-                                        <x-ico name="arrow-down-tray" class="h-4 w-4" /> {{ __('public.download') }}
-                                    </a>
-                                @endif
-                            </li>
+                            <li><x-file-card :href="$program->file_url" :download="(bool) $program->file_path && !$program->external_url" :title="$program->localized('title')" :description="$program->localized('description')" :extension="$program->file_url ? pathinfo(parse_url($program->file_url, PHP_URL_PATH), PATHINFO_EXTENSION) : ''" /></li>
                         @endforeach
                     </ul>
                 </div>

@@ -1,8 +1,8 @@
 <x-layouts.app title="{{ __('public.contacts') }}"
                description="{{ __('feature.contact_odesa_technical_professional_college_of_ontu') }}">
 
-    @if ($page && filled($page->localized('body')))
-        <section class="container-site py-8"><div class="prose-site">{!! \App\Support\FileCards::render(\App\Support\LocalizedHtml::links($page->localized('body'))) !!}</div></section>
+    @if ($page && filled($page->publicBody()))
+        <section class="container-site py-8"><div class="prose-site">{!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->publicBody()))) !!}</div></section>
     @endif
 
     @php

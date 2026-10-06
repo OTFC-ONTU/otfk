@@ -73,7 +73,7 @@
         <div class="lg:col-span-2">
             @if (filled($department->localized('description')))
                 <x-prose.article :drop-cap="false">
-                    {!! \App\Support\LocalizedHtml::links($department->localized('description')) !!}
+                    {!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($department->localized('description')))) !!}
                 </x-prose.article>
             @elseif ($department->staff->isEmpty())
                 <x-empty-state icon="building-office-2" title="{{ __('public.no_department') }}" />

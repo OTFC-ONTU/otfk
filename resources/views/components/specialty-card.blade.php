@@ -60,15 +60,12 @@
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('public.programs') }}</p>
                 <ul class="mt-3 space-y-2.5">
                     @foreach ($specialty->programs as $program)
-                        <li class="flex items-start gap-2.5">
-                            <x-ico name="book-open" class="mt-1 h-4 w-4 shrink-0 text-brand-500" aria-hidden="true" />
-                            <span class="min-w-0 text-[15px] font-bold leading-snug text-slate-900">
-                                @if ($program->file_url)
-                                    <a href="{{ $program->file_url }}" class="relative z-10 hover:text-brand-700" target="_blank" rel="noopener">{{ $program->localized('title') }}</a>
-                                @else
-                                    {{ $program->localized('title') }}
-                                @endif
-                            </span>
+                        <li>
+                            @if ($program->file_url)
+                                <x-file-card class="relative z-10" :href="$program->file_url" :download="(bool) $program->file_path && !$program->external_url" :title="$program->localized('title')" :extension="pathinfo(parse_url($program->file_url, PHP_URL_PATH), PATHINFO_EXTENSION)" />
+                            @else
+                                <span class="text-[15px] font-bold leading-snug text-slate-900">{{ $program->localized('title') }}</span>
+                            @endif
                         </li>
                     @endforeach
                 </ul>

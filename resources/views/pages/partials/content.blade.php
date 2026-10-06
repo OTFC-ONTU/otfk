@@ -34,7 +34,7 @@
 
         @if (filled($page->localized('body')))
             <x-prose.article :drop-cap="$page->slug === 'istoriya'">
-                {!! \App\Support\FileCards::render(\App\Support\LocalizedHtml::links($page->bodyWithAnchors())) !!}
+                {!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->bodyWithAnchors()))) !!}
             </x-prose.article>
         @else
             <x-empty-state icon="document-text" title="{{ __('feature.content_for_this_page_will_be_added') }}" />

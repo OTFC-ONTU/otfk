@@ -2,41 +2,95 @@
 
 namespace App\Support;
 
-/**
- * Абзаци, що містять лише посилання на файл (PDF, DOC, XLS…), при виводі сторінки
- * показуються карткою файла — як у розділі документів. HTML у БД не змінюється;
- * посилання всередині речень лишаються звичайними.
- */
+use Illuminate\View\ComponentAttributeBag;
+
 class FileCards
 {
     private const EXTENSIONS = 'pdf|docx?|xlsx?|pptx?|pps|ppsx|odt|ods|odp|rtf|zip|rar|7z';
 
+    /** Єдиний вигляд файлових абзаців, списків і вбудованих PDF; оригінал у БД незмінний. */
     public static function render(?string $html): string
     {
-        if (blank($html)) {
-            return (string) $html;
-        }
+        $parts = preg_split('~(<!--.*?-->|<(?:script|style|textarea)\b[^>]*>.*?</(?:script|style|textarea)\s*>)~is', (string) $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+        return implode('', array_map(fn ($part, $index) => $index % 2 ? $part : self::renderFragment($part), $parts, array_keys($parts)));
+    }
+
+    private static function renderFragment(string $html): string
+    {
+        $html = preg_replace_callback(
+            '~<(p|li)\b[^>]*>\s*(?:\d+[.)]\s*)?(?:<strong>\s*)?(<a\b(?:"[^"]*"|\x27[^\x27]*\x27|[^\x27">])*>)(.*?)</a>\s*(?:</strong>\s*)?</\1>~isu',
+            function (array $match): string {
+                $url = self::attribute($match[2], 'href');
+                $extension = self::extension($url);
+                if ($extension === null) {
+                    return $match[0];
+                }
+                $card = self::card($url, self::text($match[3]), $extension);
+
+                return strtolower($match[1]) === 'li' ? '<li class="file-card-list">'.$card.'</li>' : $card;
+            },
+            $html
+        ) ?? $html;
+
+        $original = $html;
 
         return preg_replace_callback(
-            '#<p>\s*<a\s+([^>]*?)href="([^"]+\.('.self::EXTENSIONS.')(?:[?\#][^"]*)?)"([^>]*)>((?:(?!</a>).)+)</a>\s*</p>#isu',
-            fn (array $m) => self::card($m[2], strtolower($m[3]), $m[5]),
+            '~<p\b[^>]*>\s*(<iframe\b[^>]*>.*?</iframe>)\s*</p>|(<iframe\b[^>]*>.*?</iframe>)~is',
+            function (array $match) use ($original): string {
+                $iframe = ($match[1][0] ?? '') ?: ($match[2][0] ?? '');
+                $url = self::attribute($iframe, 'src');
+                if (self::extension($url) !== 'pdf') {
+                    return $match[0][0];
+                }
+                $title = self::attribute($iframe, 'title');
+                if ($title === '') {
+                    preg_match_all('~<(?:h[1-6]|p|summary)\b[^>]*>(.*?)</(?:h[1-6]|p|summary)>~is', substr($original, 0, $match[0][1]), $headings);
+                    $title = self::text(end($headings[1]) ?: '');
+                }
+                if ($title === '') {
+                    $title = rawurldecode(basename(parse_url($url, PHP_URL_PATH) ?: $url));
+                }
+
+                return self::card($url, $title, 'pdf');
+            },
             $html,
+            -1,
+            $count,
+            PREG_OFFSET_CAPTURE
         ) ?? $html;
     }
 
-    private static function card(string $href, string $ext, string $label): string
+    public static function card(string $url, string $title, string $extension = 'pdf'): string
     {
-        $url = e(html_entity_decode($href, ENT_QUOTES | ENT_HTML5), false);
-        $icon = svg('heroicon-o-document-text', 'h-6 w-6')->toHtml();
-        $download = svg('heroicon-o-arrow-down-tray', 'h-4 w-4')->toHtml();
-        $title = trim(strip_tags($label, '<strong><b><em><i><br>'));
-        $aria = e(__('public.download').': '.trim(strip_tags($label)));
+        return view('components.file-card', [
+            'href' => $url, 'title' => $title, 'extension' => $extension,
+            'download' => str_starts_with($url, '/storage/'),
+            'attributes' => new ComponentAttributeBag,
+        ])->render();
+    }
 
-        return '<div class="file-card not-prose">'
-            .'<span class="file-card__icon" aria-hidden="true">'.$icon.'</span>'
-            .'<span class="file-card__body"><a href="'.$url.'" target="_blank" rel="noopener" class="file-card__title">'.$title.'</a>'
-            .'<span class="file-card__meta">'.strtoupper($ext).'</span></span>'
-            .'<a href="'.$url.'" target="_blank" rel="noopener" class="file-card__download" aria-label="'.$aria.'">'.$download.'<span class="file-card__download-label">'.e(__('public.download')).'</span></a>'
-            .'</div>';
+    private static function extension(string $url): ?string
+    {
+        $path = parse_url($url, PHP_URL_PATH) ?: '';
+
+        return preg_match('~\.('.self::EXTENSIONS.')$~i', $path, $match) ? strtolower($match[1]) : null;
+    }
+
+    private static function attribute(string $tag, string $name): string
+    {
+        preg_match_all('~\s+([\w:-]+)\s*=\s*(?:"([^"]*)"|\x27([^\x27]*)\x27|([^\s>]+))~', $tag, $attributes, PREG_SET_ORDER);
+        foreach ($attributes as $attribute) {
+            if (strtolower($attribute[1]) === $name) {
+                return html_entity_decode($attribute[2] ?: ($attribute[3] ?? '') ?: ($attribute[4] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+        }
+
+        return '';
+    }
+
+    private static function text(string $html): string
+    {
+        return trim(html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     }
 }

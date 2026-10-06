@@ -6,7 +6,7 @@
 
     // Сайдбар «Про розділ» розрахований на короткий опис; довгий текст (як-от «Виховна робота»)
     // у вузькій липкій колонці не читається — показуємо його статтею в основній колонці
-    $bodyIsLong = mb_strlen(trim(strip_tags((string) $page->localized('body')))) > 800;
+    $bodyIsLong = mb_strlen(trim(strip_tags((string) $page->publicBody()))) > 800;
 @endphp
 
 <section class="container-site py-10 lg:py-14">
@@ -112,12 +112,12 @@
                 <x-empty-state icon="document-text" title="{{ __('public.no_page_content') }}" />
             @endif
 
-            @if (filled($page->localized('body')) && $bodyIsLong)
+            @if (filled($page->publicBody()) && $bodyIsLong)
                 <div id="pro-rozdil" class="mt-12">
                     <h2 class="text-2xl font-extrabold text-brand-950">{{ __('feature.about_this_section') }}</h2>
                     <div class="accent-rule"></div>
                     <x-prose.article :drop-cap="false" class="mt-6 !max-w-none">
-                        {!! \App\Support\FileCards::render(\App\Support\LocalizedHtml::links($page->localized('body'))) !!}
+                        {!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->publicBody()))) !!}
                     </x-prose.article>
                 </div>
             @endif
@@ -125,12 +125,12 @@
 
         {{-- Сайдбар розділу: короткий опис зі сторінки + прямий контакт --}}
         <aside class="space-y-6 lg:sticky lg:top-24 lg:self-start">
-            @if (filled($page->localized('body')) && ! $bodyIsLong)
+            @if (filled($page->publicBody()) && ! $bodyIsLong)
                 <div class="card p-6">
                     <h2 class="text-lg font-bold text-brand-950">{{ __('feature.about_this_section') }}</h2>
                     <div class="accent-rule"></div>
                     <x-prose.article :drop-cap="false" class="mt-4 !max-w-none !bg-transparent !px-0 !py-0 !text-base !shadow-none !ring-0 prose-p:text-slate-600">
-                        {!! $page->localized('body') !!}
+                        {!! $page->publicBody() !!}
                     </x-prose.article>
                 </div>
             @endif

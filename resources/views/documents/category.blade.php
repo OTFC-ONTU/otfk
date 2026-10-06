@@ -73,7 +73,7 @@
                             <x-ico name="document-text" class="h-4 w-4" aria-hidden="true" />
                             {{ $totalCount }} {{ $documentWord($totalCount) }}
                         </span>
-                        <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 font-semibold text-rose-600 ring-1 ring-rose-100">
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 font-semibold text-brand-700 ring-1 ring-brand-100">
                             <x-ico name="arrow-down-tray" class="h-4 w-4" aria-hidden="true" />
                             {{ __('feature.pdf_format') }}
                         </span>
@@ -135,54 +135,11 @@
 
                     <ul class="space-y-3">
                         @foreach ($documents as $doc)
-                            <li class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80 transition hover:shadow-md hover:ring-brand-200 sm:p-5">
-                                <div class="flex items-start gap-4">
-                                    <span class="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-rose-100">
-                                        <x-ico name="document-text" class="h-6 w-6" aria-hidden="true" />
-                                    </span>
-
-                                    {{-- На вузькому екрані кнопки йдуть під назвою, від lg — праворуч від неї --}}
-                                    <div class="min-w-0 flex-1 lg:flex lg:items-start lg:justify-between lg:gap-6">
-                                        <div class="min-w-0">
-                                            @if ($doc->file_url)
-                                                <a href="{{ $doc->file_url }}" target="_blank" rel="noopener"
-                                                   class="font-semibold leading-snug text-brand-950 hover:text-brand-700">{{ $doc->localized('title') }}</a>
-                                            @else
-                                                <p class="font-semibold leading-snug text-brand-950">{{ $doc->localized('title') }}</p>
-                                            @endif
-
-                                            <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
-                                                @if ($doc->published_at)
-                                                    <span>{{ $doc->published_at->translatedFormat('j F Y') }}</span>
-                                                @endif
-                                                @if ($doc->file_extension)
-                                                    <span class="font-semibold text-rose-500">{{ $doc->file_extension }}</span>
-                                                @endif
-                                                @if ($doc->file_size_label)
-                                                    <span>{{ $doc->file_size_label }}</span>
-                                                @endif
-                                            </div>
-
-                                            @if ($doc->localized('description'))
-                                                <p class="mt-2 text-sm text-slate-500">{{ $doc->localized('description') }}</p>
-                                            @endif
-                                        </div>
-
-                                        @if ($doc->file_url)
-                                            <div class="mt-3 flex flex-wrap gap-2 lg:mt-0 lg:shrink-0 lg:flex-nowrap">
-                                                {{-- На вузькому екрані перегляд відкриває сама назва документа --}}
-                                                <a href="{{ $doc->file_url }}" target="_blank" rel="noopener"
-                                                   class="hidden min-h-11 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-semibold text-brand-700 ring-1 ring-slate-200 transition hover:bg-slate-50 sm:inline-flex">
-                                                    <x-ico name="eye" class="h-4 w-4" aria-hidden="true" /> {{ __('feature.view') }}
-                                                </a>
-                                                <a href="{{ $doc->file_url }}" @if ($doc->file_path) download @endif
-                                                   class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-brand-900 px-4 text-sm font-semibold text-white transition hover:bg-brand-800">
-                                                    <x-ico name="arrow-down-tray" class="h-4 w-4" aria-hidden="true" /> {{ __('public.download') }}
-                                                </a>
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
+                            <li>
+                                <x-file-card :href="$doc->file_url" :title="$doc->localized('title')"
+                                    :extension="$doc->file_extension ?: ''"
+                                    :meta="collect([$doc->file_size_label, $doc->published_at?->translatedFormat('j F Y')])->filter()->implode(' · ')"
+                                    :description="$doc->localized('description')" :download="(bool) $doc->file_path" />
                             </li>
                         @endforeach
                     </ul>
