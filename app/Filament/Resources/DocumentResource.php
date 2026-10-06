@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\DocumentResource\Pages;
+use App\Filament\Support\ViewOnSite;
 use App\Models\Document;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -45,11 +46,16 @@ class DocumentResource extends Resource
                 ])
                 ->maxSize(20480)
                 ->helperText('PDF, DOC(X), XLS(X), до 20 МБ. Або вкажіть зовнішнє посилання нижче.'),
-            Forms\Components\TextInput::make('external_url')->label('Зовнішнє посилання')->url()->maxLength(255),
-            Forms\Components\Textarea::make('description')->label('Опис')->rows(2)->columnSpanFull(),
-            Forms\Components\DatePicker::make('published_at')->label('Дата документа')->default(now()),
-            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
-            Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true),
+            Forms\Components\TextInput::make('external_url')->label('Зовнішнє посилання')->url()->maxLength(255)
+                ->helperText('Якщо документ розміщено на іншому сайті — замість файла.'),
+            Forms\Components\Textarea::make('description')->label('Опис')->rows(2)->columnSpanFull()
+                ->helperText('Короткий підпис під назвою документа. Необовʼязково.'),
+            Forms\Components\DatePicker::make('published_at')->label('Дата документа')->default(now())
+                ->helperText('Показується поруч із документом у списку.'),
+            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
+                ->helperText('Порядок усередині категорії: менше число — вище.'),
+            Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true)
+                ->helperText('Вимкнено — документ зникає зі сторінки «Публічна інформація», але лишається в адмінці.'),
         ]);
     }
 
@@ -64,10 +70,20 @@ class DocumentResource extends Resource
                 Tables\Columns\IconColumn::make('file_path')->label('Файл')->boolean()
                     ->getStateUsing(fn ($record) => filled($record->file_path) || filled($record->external_url)),
                 Tables\Columns\TextColumn::make('published_at')->label('Дата')->date('d.m.Y')->sortable(),
-                Tables\Columns\IconColumn::make('is_published')->label('Опубл.')->boolean(),
+                Tables\Columns\ToggleColumn::make('is_published')->label('Опубл.'),
             ])
             ->defaultSort('sort_order')
-            ->actions([Tables\Actions\EditAction::make()])
+            ->filters([
+                Tables\Filters\SelectFilter::make('document_category_id')->label('Категорія')
+                    ->relationship('category', 'title')->preload(),
+            ])
+            ->emptyStateHeading('Документів ще немає')
+            ->emptyStateDescription('Документи (PDF, DOC, XLS) показуються на сторінці «Публічна інформація» в своїх категоріях. Завантажте файл або додайте зовнішнє посилання.')
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                ViewOnSite::table(fn (Document $record) => route('documents.category', $record->category))
+                    ->visible(fn (Document $record) => $record->category !== null),
+            ])
             ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
     }
 

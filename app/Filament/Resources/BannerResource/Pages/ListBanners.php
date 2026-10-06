@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\BannerResource\Pages;
 
 use App\Filament\Resources\BannerResource;
+use App\Filament\Support\ViewOnSite;
 use App\Models\Setting;
 use Filament\Actions;
 use Filament\Forms\Components\Select;
@@ -61,6 +62,7 @@ class ListBanners extends ListRecords implements HasForms
     protected function getHeaderActions(): array
     {
         return [
+            ViewOnSite::header(route('home')),
             Actions\CreateAction::make(),
         ];
     }

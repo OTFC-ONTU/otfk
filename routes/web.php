@@ -3,6 +3,9 @@
 use App\Http\Controllers\SitemapController;
 use Illuminate\Support\Facades\Route;
 
+// Превʼю форми доступне лише адміністратору.
+Route::get('/admin-preview/{token}', [App\Http\Controllers\AdminPreviewController::class, 'show'])->name('admin.preview');
+
 // Службові SEO-адреси спільні для всього сайту.
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 

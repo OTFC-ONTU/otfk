@@ -27,20 +27,4 @@ class QuizTest extends TestCase
     {
         $this->get('/abituriyentu')->assertOk()->assertSee('Яка спеціальність мені підходить?');
     }
-
-    public function test_zayavka_preselects_specialty_from_query(): void
-    {
-        $specialty = \App\Models\Specialty::published()->first();
-
-        if (! $specialty) {
-            $this->markTestSkipped('Сидер не створив спеціальностей.');
-        }
-
-        $html = $this->get('/zayavka?specialty_id=' . $specialty->id)->assertOk()->getContent();
-
-        $this->assertStringContainsString(
-            'value="' . $specialty->id . '" selected',
-            $html
-        );
-    }
 }

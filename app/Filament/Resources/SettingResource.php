@@ -56,8 +56,11 @@ class SettingResource extends Resource
                     'announcement_text' => 'Текст термінового оголошення у смузі над шапкою сайту. Порожнє — смуга прихована.',
                     'announcement_type' => 'Колір смуги: info (синій), warning (золотий) або danger (червоний).',
                     'announcement_url' => 'Необовʼязкове посилання, куди веде оголошення (напр., новина).',
+                    'footer_about' => 'Текст «Про коледж» у підвалі сайту. Посилання-партнери підвалу редагуються у розділі «Швидкі посилання» (локація «Партнер у підвалі»).',
+                    'social_youtube' => 'Посилання на YouTube-канал коледжу. Показується у блоці-заклику на сторінці «Відео»; порожнє — блок приховано.',
                     'banner_overlay_opacity' => 'Затемнення фото банера (0–100). Зручніше змінювати в розділі «Банери».',
                     'holiday_theme', 'holiday_theme_until' => 'Зручніше змінювати на сторінці «Налаштування → Святкова тема».',
+                    'bells_second_shift' => 'Друга зміна в розкладі дзвінків: 1 — показувати, 0 — сховати. Зручніше перемикати кнопкою в розділі «Розклад дзвінків».',
                     default => null,
                 }),
             Forms\Components\TextInput::make('group')->label('Група')->default('general')->maxLength(255),
@@ -70,6 +73,7 @@ class SettingResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->description('Сирий key-value доступ на аварійний випадок. Звичайні налаштування зручніше міняти на сторінках «Контакти та соцмережі», «Оголошення», «Telegram», «Підвал і вигляд».')
             ->columns([
                 Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
                     ->state(fn (Setting $record) => Setting::supportsTranslation($record->key, $record->type) ? $record->translationStatus() : 'Не перекладається')->badge(),

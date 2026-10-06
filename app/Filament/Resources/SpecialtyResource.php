@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\SpecialtyResource\Pages;
+use App\Filament\Support\ViewOnSite;
 use App\Models\Specialty;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -32,18 +33,24 @@ class SpecialtyResource extends Resource
         return $form->schema([
             Forms\Components\Section::make('Основне')->schema([
                 Forms\Components\TextInput::make('title')->label('Назва спеціальності')->required()->maxLength(255)->columnSpanFull(),
-                Forms\Components\TextInput::make('code')->label('Код')->maxLength(255)->placeholder('напр., 121'),
+                Forms\Components\TextInput::make('code')->label('Код')->maxLength(255)->placeholder('напр., 121')
+                    ->helperText('Офіційний код спеціальності — бейдж на картці.'),
                 Forms\Components\TextInput::make('slug')->label('URL (slug)')->maxLength(255)
+                    ->prefix(url('/spetsialnosti') . '/')
                     ->helperText('Залиште порожнім - згенерується автоматично.'),
-                Forms\Components\Textarea::make('short_description')->label('Короткий опис')->rows(2)->columnSpanFull(),
-                Forms\Components\RichEditor::make('description')->label('Повний опис')->columnSpanFull(),
-                Forms\Components\FileUpload::make('cover_image')->label('Зображення')->image()->directory('specialties')->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('1600')->imageResizeTargetHeight('1600')->columnSpanFull(),
+                Forms\Components\Textarea::make('short_description')->label('Короткий опис')->rows(2)->columnSpanFull()
+                    ->helperText('1-2 речення в картці спеціальності у списку та в результаті квізу.'),
+                Forms\Components\RichEditor::make('description')->label('Повний опис')->columnSpanFull()
+                    ->helperText('Основний текст на сторінці спеціальності.'),
+                Forms\Components\FileUpload::make('cover_image')->label('Зображення')->image()->directory('specialties')->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('1600')->imageResizeTargetHeight('1600')->columnSpanFull()
+                    ->helperText('Горизонтальне фото в картці та вгорі сторінки спеціальності.'),
             ])->columns(2),
             Forms\Components\Section::make('Деталі навчання')->schema([
                 Forms\Components\TextInput::make('degree')->label('Освітній ступінь')->maxLength(255)->placeholder('Фаховий молодший бакалавр'),
                 Forms\Components\TextInput::make('study_form')->label('Форма навчання')->maxLength(255)->placeholder('Денна / Заочна'),
                 Forms\Components\TextInput::make('duration')->label('Термін навчання')->maxLength(255)->placeholder('3 роки 10 місяців'),
-                Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
+                Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
+                    ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
                 Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true),
             ])->columns(2),
             EnglishTranslation::academicSection(true),
@@ -64,7 +71,13 @@ class SpecialtyResource extends Resource
                 Tables\Columns\IconColumn::make('is_published')->label('Опубл.')->boolean(),
             ])
             ->defaultSort('sort_order')
-            ->actions([Tables\Actions\EditAction::make()])
+            ->reorderable('sort_order')
+            ->emptyStateHeading('Спеціальностей ще немає')
+            ->emptyStateDescription('Спеціальності показуються на сторінці «Спеціальності» та в квізі для вступників. Додайте першу спеціальність з кодом і описом.')
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                ViewOnSite::table(fn (Specialty $record) => route('specialties.show', $record)),
+            ])
             ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
     }
 

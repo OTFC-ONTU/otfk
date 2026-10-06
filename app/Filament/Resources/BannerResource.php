@@ -38,12 +38,16 @@ class BannerResource extends Resource
             Forms\Components\TextInput::make('image_alt')->label('Опис зображення (alt)')
                 ->maxLength(255)->columnSpanFull()
                 ->helperText('Для доступності та SEO. Якщо порожньо — використається заголовок банера.'),
-            Forms\Components\TextInput::make('link_url')->label('Посилання')->maxLength(255)->placeholder('/abituriyentu'),
+            Forms\Components\TextInput::make('link_url')->label('Посилання')->maxLength(255)->placeholder('/abituriyentu')
+                ->helperText('Куди веде кнопка банера. Порожнє — банер без кнопки.'),
             Forms\Components\TextInput::make('link_label')->label('Текст кнопки')->maxLength(255)->placeholder('Детальніше'),
-            Forms\Components\DatePicker::make('starts_at')->label('Показувати з'),
+            Forms\Components\DatePicker::make('starts_at')->label('Показувати з')
+                ->helperText('Порожні дати — банер показується постійно.'),
             Forms\Components\DatePicker::make('ends_at')->label('Показувати до'),
-            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
-            Forms\Components\Toggle::make('is_published')->label('Активний')->default(true),
+            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
+                ->helperText('Порядок слайдів у каруселі: менше число — раніше.'),
+            Forms\Components\Toggle::make('is_published')->label('Активний')->default(true)
+                ->helperText('Вимкнено — банер прибирається з головної, але лишається в адмінці.'),
         ]);
     }
 
@@ -59,6 +63,8 @@ class BannerResource extends Resource
                 Tables\Columns\TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
             ])
             ->defaultSort('sort_order')
+            ->emptyStateHeading('Банерів ще немає')
+            ->emptyStateDescription('Банери - великі слайди у верхній частині головної сторінки. Без жодного активного банера показується стандартна синя заставка.')
             ->actions([Tables\Actions\EditAction::make()])
             ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
     }

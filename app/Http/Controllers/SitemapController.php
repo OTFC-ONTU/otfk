@@ -7,6 +7,7 @@ use App\Models\Gallery;
 use App\Models\News;
 use App\Models\Page;
 use App\Models\Specialty;
+use App\Models\Staff;
 
 class SitemapController extends Controller
 {
@@ -16,7 +17,7 @@ class SitemapController extends Controller
 
         // Статичні розділи: пріоритет вручну, без точної дати зміни.
         $sections = [
-            'news.index' => '0.9', 'specialties.index' => '0.9', 'applicants.create' => '0.9',
+            'news.index' => '0.9', 'specialties.index' => '0.9',
             'events' => '0.8', 'documents.index' => '0.6', 'structure.index' => '0.6',
             'galleries.index' => '0.6', 'contacts' => '0.6', 'faq' => '0.6',
             'staff.administration' => '0.5', 'video.index' => '0.5', 'bells' => '0.5',
@@ -39,6 +40,9 @@ class SitemapController extends Controller
         }
         foreach (Gallery::published()->get() as $g) {
             $entries[] = ['loc' => route('galleries.show', $g), 'lastmod' => optional($g->updated_at)->toDateString(), 'changefreq' => 'monthly', 'priority' => '0.5'];
+        }
+        foreach (Staff::published()->whereNotNull('slug')->get() as $person) {
+            $entries[] = ['loc' => route('staff.show', $person), 'lastmod' => optional($person->updated_at)->toDateString(), 'changefreq' => 'monthly', 'priority' => '0.4'];
         }
         foreach (DocumentCategory::all() as $c) {
             $entries[] = ['loc' => route('documents.category', $c), 'lastmod' => optional($c->updated_at)->toDateString(), 'changefreq' => 'monthly', 'priority' => '0.5'];

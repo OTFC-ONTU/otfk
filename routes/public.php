@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\ApplicantRequestController;
 use App\Http\Controllers\BellScheduleController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DocumentController;
@@ -36,11 +35,6 @@ Route::get('/podiyi/{event}/ics', [EventController::class, 'ics'])->name('events
 Route::get('/faq', [FaqController::class, 'index'])->name('faq');
 Route::get('/kviz', [QuizController::class, 'index'])->name('quiz');
 
-// Заявка абітурієнта
-Route::get('/zayavka', [ApplicantRequestController::class, 'create'])->name('applicants.create');
-Route::post('/zayavka', [ApplicantRequestController::class, 'store'])
-    ->middleware('throttle:5,1')->name('applicants.store');
-
 // Публічна інформація (документи)
 Route::get('/dokumenty', [DocumentController::class, 'index'])->name('documents.index');
 Route::get('/dokumenty/{documentCategory:slug}', [DocumentController::class, 'category'])->name('documents.category');
@@ -52,6 +46,8 @@ Route::get('/spetsialnosti/{specialty:slug}', [SpecialtyController::class, 'show
 // Структура та персонал
 Route::get('/struktura', [StructureController::class, 'index'])->name('structure.index');
 Route::get('/struktura/{department:slug}', [StructureController::class, 'show'])->name('structure.show');
+Route::get('/personal/{staff:slug}', [StaffController::class, 'show'])->name('staff.show');
+
 Route::get('/administratsiya', [StaffController::class, 'administration'])->name('staff.administration');
 
 // Галерея
@@ -64,12 +60,11 @@ Route::get('/poshuk/pidkazky', [SearchController::class, 'suggest'])
     ->middleware('throttle:60,1')->name('search.suggest');
 
 Route::get('/kontakty', [ContactController::class, 'index'])->name('contacts');
-Route::post('/kontakty', [ContactController::class, 'store'])->middleware('throttle:5,1')->name('contacts.store');
 
 /*
  | Динамічна редагована сторінка (catch-all). Реєструється ОСТАННЬОЮ та
  | виключає службові префікси, щоб не перехоплювати /admin, /livewire тощо.
  */
 Route::get('/{page:slug}', [PageController::class, 'show'])
-    ->where('page', '^(?!(?:en|admin|livewire|novyny|video|kontakty|dokumenty|spetsialnosti|struktura|administratsiya|halereya|poshuk|sitemap|storage|up|build|vendor)$)[^/]+$')
+    ->where('page', '^(?!(?:en|admin|admin-preview|personal|livewire|novyny|video|kontakty|dokumenty|spetsialnosti|struktura|administratsiya|halereya|poshuk|sitemap|storage|up|build|vendor)$)[^/]+$')
     ->name('pages.show');

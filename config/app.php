@@ -78,7 +78,9 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    // Українська за замовчуванням: сайт і адмінка україномовні (дати через
+    // translatedFormat, хром Filament, lang/uk) — en лишається лише fallback-ом.
+    'locale' => env('APP_LOCALE', 'uk'),
 
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 

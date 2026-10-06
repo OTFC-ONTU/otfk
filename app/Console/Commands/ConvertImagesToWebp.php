@@ -20,7 +20,6 @@ class ConvertImagesToWebp extends Command
         'pages',
         'specialties',
         'staff',
-        'testimonials',
         'settings',
     ];
 

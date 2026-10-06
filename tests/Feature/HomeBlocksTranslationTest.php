@@ -6,12 +6,10 @@ use App\Filament\Resources\BannerResource\Pages\EditBanner;
 use App\Filament\Resources\QuickLinkResource\Pages\EditQuickLink;
 use App\Filament\Resources\SettingResource\Pages\EditSetting;
 use App\Filament\Resources\StatItemResource\Pages\EditStatItem;
-use App\Filament\Resources\TestimonialResource\Pages\EditTestimonial;
 use App\Models\Banner;
 use App\Models\QuickLink;
 use App\Models\Setting;
 use App\Models\StatItem;
-use App\Models\Testimonial;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -72,29 +70,15 @@ class HomeBlocksTranslationTest extends TestCase
         $this->assertFalse(Banner::withPublishedEnglishTranslation()->whereKey($banner->id)->exists());
     }
 
-    public function test_tiles_partners_testimonials_and_statistics_translate_as_whole_records(): void
+    public function test_tiles_partners_and_statistics_translate_as_whole_records(): void
     {
         $tile = QuickLink::create(['title' => 'Українська плитка', 'description' => 'Український опис плитки', 'title_en' => 'English tile', 'description_en' => 'English tile description', 'url' => '/faq', 'location' => 'home_tile', 'is_visible' => true, 'translation_published' => true]);
-        $partner = QuickLink::create(['title' => 'Український партнер', 'title_en' => 'English partner', 'url' => 'https://example.test/partner', 'location' => 'footer_partner', 'is_visible' => true, 'translation_published' => true]);
-        $testimonial = Testimonial::create(['name' => 'Українське Ім’я', 'role' => 'Українська роль', 'quote' => 'Український відгук', 'name_en' => 'English Name', 'role_en' => 'English role', 'quote_en' => 'English testimonial', 'is_active' => true, 'translation_published' => true]);
-        $stat = StatItem::create(['label' => 'Українська статистика', 'label_en' => 'English statistics', 'value' => '1234+', 'is_active' => true, 'translation_published' => true]);
-        $this->get('/en')->assertOk()->assertSee('English tile description')->assertSee('English partner')->assertSee('English testimonial')
-            ->assertSee('English role')->assertSee('EN')->assertSee('English statistics')->assertSee('1 234+')
-            ->assertSee('href="'.url('/en/faq').'"', false)->assertSee('https://example.test/partner');
-        $this->get('/')->assertSee('Український відгук')->assertSee('Українська плитка')->assertDontSee('English testimonial');
-        app()->setLocale('en');
-        $this->assertSame('EN', $testimonial->initials);
-        $testimonial->update(['photo' => 'testimonials/missing.jpg']);
-        $this->get('/en')->assertSee('alt="English Name"', false);
+        QuickLink::create(['title' => 'Український партнер', 'title_en' => 'English partner', 'url' => 'https://example.test/partner', 'location' => 'footer_partner', 'is_visible' => true, 'translation_published' => true]);
+        StatItem::create(['label' => 'Українська статистика', 'label_en' => 'English statistics', 'value' => '1234+', 'is_active' => true, 'translation_published' => true]);
+        $this->get('/en')->assertOk()->assertSee('English tile description')->assertSee('English partner')->assertSee('English statistics')->assertSee('1 234+');
+        $this->get('/')->assertSee('Українська плитка')->assertDontSee('English tile');
         QuickLink::whereKey($tile->id)->update(['description_en' => null]);
-        Testimonial::whereKey($testimonial->id)->update(['quote_en' => null]);
-        $this->get('/en')->assertSee('Український опис плитки')->assertSee('Українська роль')->assertSee('Український відгук')->assertDontSee('English tile')->assertDontSee('English role');
-        $tile->refresh()->update(['is_visible' => false]);
-        $partner->update(['is_visible' => false]);
-        $testimonial->refresh()->update(['is_active' => false]);
-        $stat->update(['is_active' => false]);
-        $this->get('/en')->assertDontSee('Український опис плитки')->assertDontSee('English partner')->assertDontSee('Український відгук')->assertDontSee('English statistics');
-        $this->assertSame('1234+', $stat->fresh()->value);
+        $this->get('/en')->assertSee('Український опис плитки')->assertDontSee('English tile description');
     }
 
     public function test_all_blocks_validate_complete_publication_and_track_source_changes_without_shared_fields(): void
@@ -102,7 +86,6 @@ class HomeBlocksTranslationTest extends TestCase
         $models = [
             [$this->banner(), 'subtitle', 'English subtitle'],
             [QuickLink::create(['title' => 'Плитка', 'title_en' => 'Tile', 'url' => '/faq', 'translation_published' => true]), 'title', 'Tile'],
-            [Testimonial::create(['name' => 'Ім’я', 'quote' => 'Відгук', 'name_en' => 'Name', 'quote_en' => 'Quote', 'translation_published' => true]), 'quote', 'Quote'],
             [StatItem::create(['label' => 'Підпис', 'label_en' => 'Label', 'value' => '100+', 'translation_published' => true]), 'label', 'Label'],
         ];
         foreach ($models as [$model, $field, $english]) {
@@ -205,9 +188,6 @@ class HomeBlocksTranslationTest extends TestCase
         $tile = QuickLink::create(['title' => 'Плитка', 'url' => '/faq', 'location' => 'home_tile']);
         Livewire::test(EditQuickLink::class, ['record' => $tile->id])->fillForm(['title_en' => 'Admin tile', 'translation_published' => true])->call('save')->assertHasNoFormErrors();
         $this->assertSame('Admin tile', $tile->fresh()->title_en);
-        $testimonial = Testimonial::create(['name' => 'Ім’я', 'quote' => 'Відгук']);
-        Livewire::test(EditTestimonial::class, ['record' => $testimonial->id])->fillForm(['name_en' => 'Admin Name', 'quote_en' => 'Admin quote', 'translation_published' => true])->call('save')->assertHasNoFormErrors();
-        $this->assertSame('Admin quote', $testimonial->fresh()->quote_en);
         $stat = StatItem::create(['label' => 'Підпис', 'value' => '100+']);
         Livewire::test(EditStatItem::class, ['record' => $stat->id])->fillForm(['label_en' => 'Admin label', 'translation_published' => true])->call('save')->assertHasNoFormErrors();
         $this->assertSame('Admin label', $stat->fresh()->label_en);

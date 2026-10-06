@@ -3,7 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Document;
-use App\Models\FeedbackMessage;
+use App\Models\Event;
 use App\Models\Gallery;
 use App\Models\News;
 use App\Models\Specialty;
@@ -17,13 +17,11 @@ class StatsOverview extends BaseWidget
 
     protected function getStats(): array
     {
-        $unread = FeedbackMessage::where('is_read', false)->count();
-
         return [
-            Stat::make('Нові звернення', $unread)
-                ->description('Усього звернень: ' . FeedbackMessage::count())
-                ->descriptionIcon('heroicon-m-envelope')
-                ->color($unread > 0 ? 'warning' : 'success'),
+            Stat::make('Події', Event::count())
+                ->description('Опубліковано: ' . Event::published()->count())
+                ->descriptionIcon('heroicon-m-calendar-days')
+                ->color('success'),
 
             Stat::make('Новини', News::count())
                 ->description('Опубліковано: ' . News::published()->count())

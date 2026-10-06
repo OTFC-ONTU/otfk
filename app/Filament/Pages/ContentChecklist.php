@@ -35,12 +35,22 @@ class ContentChecklist extends FilamentPage
     /** Скільки символів «живого» тексту вважаємо мінімумом, щоб сторінка не була заглушкою. */
     private const STUB_MIN_CHARS = 200;
 
+    /**
+     * Слаги сторінок-плиток: їх перехоплюють явні маршрути (розклад дзвінків,
+     * FAQ, квіз), тіло таких сторінок ніколи не рендериться — наповнювати нічого.
+     */
+    private const ROUTE_TILE_SLUGS = ['rozklad-dzvinkiv', 'faq', 'kviz'];
+
     /** Сторінки без змісту (порожні або дуже короткі / з маркерами «в розробці»). */
     public function stubPages(): array
     {
         $phrases = ['у розробці', 'в розробці', 'буде додано', 'готується', 'готуються', 'незабаром', 'невдовзі', 'матеріали готуються'];
 
-        return Page::query()->orderBy('section')->orderBy('title')->get()
+        // Хаби (сторінки з опублікованими дочірніми) рендерять плитки розділу — довге тіло їм не потрібне.
+        return Page::query()
+            ->whereNotIn('slug', self::ROUTE_TILE_SLUGS)
+            ->whereDoesntHave('children', fn ($q) => $q->where('is_published', true))
+            ->orderBy('section')->orderBy('title')->get()
             ->filter(function (Page $p) use ($phrases) {
                 $text = trim(strip_tags((string) $p->body));
                 $hasPhrase = collect($phrases)->contains(fn ($ph) => mb_stripos($text, $ph) !== false);
@@ -105,6 +115,7 @@ class ContentChecklist extends FilamentPage
             'map_embed' => 'Карта на сторінці контактів',
             'social_facebook' => 'Facebook',
             'social_instagram' => 'Instagram',
+            'social_youtube' => 'YouTube-канал',
             'site_description' => 'Опис сайту (SEO)',
         ];
 

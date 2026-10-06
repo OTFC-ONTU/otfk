@@ -15,8 +15,7 @@ class LocalizationPublicUiTest extends TestCase
     {
         foreach ([
             '/novyny' => ['College news', 'Новини коледжу'],
-            '/zayavka' => ['Submit application', 'Надіслати заявку'],
-            '/kontakty' => ['Contact form', 'Форма зворотного звʼязку'],
+            '/kontakty' => ['Contact the college', 'Звʼяжіться з коледжем'],
             '/poshuk' => ['Search the site', 'Пошук по сайту'],
             '/spetsialnosti' => ['Our specialties', 'Наші спеціальності'],
             '/struktura' => ['College structure', 'Структура коледжу'],
@@ -27,7 +26,7 @@ class LocalizationPublicUiTest extends TestCase
             '/podiyi' => ['College events', 'Події коледжу'],
             '/faq' => ['Frequently asked questions', 'Питання та відповіді'],
             '/kviz' => ['Start quiz', 'Почати тест'],
-            '/rozklad-dzvinkiv' => ['Class duration:', 'Тривалість пари'],
+            '/rozklad-dzvinkiv' => ['Shift 1', '1 зміна'],
         ] as $path => [$english, $ukrainian]) {
             $this->get('/en'.$path)->assertOk()->assertSee($english)->assertDontSee($ukrainian);
             $this->get($path)->assertOk()->assertSee($ukrainian);
@@ -38,15 +37,10 @@ class LocalizationPublicUiTest extends TestCase
         $this->get('/en/no-such-page')->assertNotFound()->assertSee('Page not found')->assertSee('Back to home');
     }
 
-    public function test_form_success_and_validation_messages_follow_the_form_language(): void
+    public function test_retired_forms_no_longer_accept_submissions(): void
     {
-        $this->post('/en/kontakty', ['name' => 'Test', 'message' => 'Question'])->assertRedirect('/en/kontakty')
-            ->assertSessionHas('status', 'Thank you! Your message has been sent.');
-        $this->post('/en/zayavka', ['name' => 'Test', 'phone' => '+380000000000'])->assertRedirect('/en/zayavka')
-            ->assertSessionHas('status', 'Thank you! Your application has been received. We will contact you soon.');
-        $this->post('/en/kontakty', ['website' => 'spam'])->assertSessionHas('status', 'Thank you! Your message has been sent.');
-        $this->post('/en/zayavka', ['website' => 'spam'])->assertSessionHas('status', 'Thank you! Your application has been received. We will contact you.');
-        $this->postJson('/en/kontakty', [])->assertUnprocessable()->assertJsonPath('errors.name.0', 'The name field is required.');
+        $this->post('/en/kontakty', [])->assertStatus(405);
+        $this->post('/en/zayavka', [])->assertStatus(405);
     }
 
     public function test_error_pages_work_without_database_or_locale_middleware(): void

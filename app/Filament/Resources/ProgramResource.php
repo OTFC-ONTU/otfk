@@ -33,10 +33,15 @@ class ProgramResource extends Resource
             Forms\Components\Select::make('specialty_id')->label('Спеціальність')
                 ->relationship('specialty', 'title')->searchable()->preload()->required(),
             Forms\Components\TextInput::make('title')->label('Назва програми')->required()->maxLength(255)->columnSpanFull(),
-            Forms\Components\FileUpload::make('file_path')->label('Файл програми')->directory('programs')->downloadable()->openable(),
-            Forms\Components\TextInput::make('external_url')->label('Зовнішнє посилання')->url()->maxLength(255),
-            Forms\Components\Textarea::make('description')->label('Опис')->rows(2)->columnSpanFull(),
-            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
+            Forms\Components\FileUpload::make('file_path')->label('Файл програми')->directory('programs')->downloadable()->openable()
+                ->helperText('PDF з освітньою програмою. Або вкажіть зовнішнє посилання нижче — достатньо одного з двох.'),
+            Forms\Components\TextInput::make('external_url')->label('Зовнішнє посилання')->url()->maxLength(255)
+                ->helperText('Якщо програма розміщена на іншому сайті — замість файла.'),
+            Forms\Components\Textarea::make('description')->label('Опис')->rows(2)->columnSpanFull()
+                ->helperText('Короткий підпис під назвою програми на сторінці спеціальності. Необовʼязково.'),
+            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
+                ->helperText('Порядок у списку програм спеціальності: менше число — вище.'),
+
             EnglishTranslation::academicSection(false, false),
         ]);
     }
@@ -54,6 +59,8 @@ class ProgramResource extends Resource
                 Tables\Columns\TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
             ])
             ->defaultSort('sort_order')
+            ->emptyStateHeading('Освітніх програм ще немає')
+            ->emptyStateDescription('Освітні програми (файли або посилання) показуються на сторінці своєї спеціальності. Спершу оберіть спеціальність, потім додайте програму.')
             ->actions([Tables\Actions\EditAction::make()])
             ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
     }

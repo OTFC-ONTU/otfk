@@ -12,8 +12,10 @@ class EventController extends Controller
     {
         $upcoming = Event::published()->upcoming()->get();
         $past = Event::published()->past()->limit(6)->get();
+        // Повна кількість минулих подій — для лічильника «N подій в архіві» у шапці
+        $pastCount = Event::published()->past()->count();
 
-        return view('events.index', compact('upcoming', 'past'));
+        return view('events.index', compact('upcoming', 'past', 'pastCount'));
     }
 
     /** Файл .ics — «Додати в календар» (Apple/Outlook/будь-який клієнт). */

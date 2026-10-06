@@ -34,7 +34,7 @@ class AcademicTranslationTest extends TestCase
     public function test_specialty_translation_reaches_details_cards_form_quiz_and_metadata(): void
     {
         $specialty = $this->specialty();
-        foreach (['/en/spetsialnosti', '/en/spetsialnosti/'.$specialty->slug, '/en/zayavka', '/en/kviz'] as $path) {
+        foreach (['/en/spetsialnosti', '/en/spetsialnosti/'.$specialty->slug, '/en/kviz'] as $path) {
             $this->get($path)->assertOk()->assertSee('English specialty')->assertDontSee('Українська спеціальність');
         }
         $this->get('/en/spetsialnosti/'.$specialty->slug)->assertOk()

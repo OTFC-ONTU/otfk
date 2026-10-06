@@ -5,19 +5,25 @@
 
     {{-- ===================== ШВИДКІ РОЗДІЛИ ===================== --}}
     @if ($tiles->isNotEmpty())
-        <section class="container-site mt-12">
-            <h2 class="sr-only">{{ __('public.quick_sections') }}</h2>
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section class="container-site mt-14">
+            <div class="text-center">
+                <h2 class="text-2xl sm:text-3xl">{{ __('public.quick_sections') }}</h2>
+                <div class="accent-rule mx-auto"></div>
+            </div>
+            <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
                 @foreach ($tiles as $tile)
                     <a href="{{ \App\Support\LocalizedUrl::to($tile->url) }}" @if ($tile->open_new_tab) target="_blank" rel="noopener" @endif
-                       class="card card-interactive group flex flex-col p-5">
-                        <span class="grid h-12 w-12 place-items-center rounded-xl bg-{{ $tile->color }}-50 text-{{ $tile->color }}-600 transition group-hover:bg-{{ $tile->color }}-600 group-hover:text-white">
+                       class="card card-interactive group flex flex-col p-6">
+                        <span class="grid h-12 w-12 place-items-center rounded-full bg-{{ $tile->color }}-50 text-{{ $tile->color }}-600 transition group-hover:bg-{{ $tile->color }}-600 group-hover:text-white">
                             <x-ico :name="$tile->icon ?: 'academic-cap'" class="h-6 w-6" />
                         </span>
                         <h3 class="mt-4 font-bold text-slate-900">{{ $tile->localized('title') }}</h3>
                         @if ($tile->localized('description'))
-                            <p class="mt-1 text-sm text-slate-500">{{ $tile->localized('description') }}</p>
+                            <p class="mt-1 text-sm leading-relaxed text-slate-500">{{ $tile->localized('description') }}</p>
                         @endif
+                        <span class="mt-auto self-end pt-4 text-gold-600 transition group-hover:translate-x-1">
+                            <x-ico name="arrow-right" class="h-5 w-5" />
+                        </span>
                     </a>
                 @endforeach
             </div>
@@ -111,38 +117,6 @@
         </section>
     @endif
 
-    {{-- ===================== ВІДГУКИ ===================== --}}
-    @if ($testimonials->isNotEmpty())
-        <section data-reveal class="container-site py-16">
-            <div class="text-center">
-                <h2 class="text-3xl font-extrabold text-slate-900">{{ __('public.testimonials') }}</h2>
-                <div class="accent-rule mx-auto"></div>
-            </div>
-            <div class="mt-10 grid gap-6 md:grid-cols-3">
-                @foreach ($testimonials as $t)
-                    <figure class="card flex flex-col p-6">
-                        <x-ico name="chat-bubble-bottom-center-text" variant="solid" class="h-7 w-7 text-gold-400" />
-                        <blockquote class="mt-4 flex-1 text-sm leading-relaxed text-slate-600">«{{ $t->localized('quote') }}»</blockquote>
-                        <figcaption class="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4">
-                            @if ($t->photo)
-                                <x-picture :path="$t->photo" :alt="$t->localized('name')" loading="lazy" decoding="async"
-                                           class="h-11 w-11 rounded-full object-cover ring-2 ring-brand-100" />
-                            @else
-                                <span class="grid h-11 w-11 place-items-center rounded-full bg-brand-700 text-sm font-bold text-white">{{ $t->initials }}</span>
-                            @endif
-                            <span>
-                                <span class="block text-sm font-bold text-slate-900">{{ $t->localized('name') }}</span>
-                                @if ($t->localized('role'))
-                                    <span class="block text-xs text-slate-500">{{ $t->localized('role') }}</span>
-                                @endif
-                            </span>
-                        </figcaption>
-                    </figure>
-                @endforeach
-            </div>
-        </section>
-    @endif
-
     {{-- ===================== ЦЬОГО ДНЯ В КОЛЕДЖІ ===================== --}}
     @if ($onThisDay)
         @php
@@ -179,7 +153,7 @@
                         'text-gold-600' => ! $heritageTeaser,
                     ])>
                         <x-ico name="sparkles" class="h-3.5 w-3.5" />
-                        {{ __($sameDay ? 'public.archive_day' : 'public.archive_days', ['year' => $onThisDay->published_at->year]) }}
+                        {{ __('feature.archive_year', ['label' => $sameDay ? __('feature.on_this_day') : __('feature.around_this_day'), 'year' => $onThisDay->published_at->year]) }}
                         @if ($heritageTeaser)
                             <span class="rounded-full bg-gold-200/60 px-2 py-0.5 text-[10px] normal-case tracking-normal text-gold-900 ring-1 ring-gold-400/50">{{ __('public.archive') }}</span>
                         @endif
@@ -193,7 +167,7 @@
                         'mt-0.5 text-xs',
                         'font-heritage-body italic text-brand-800/70' => $heritageTeaser,
                         'text-slate-400' => ! $heritageTeaser,
-                    ])>{{ $onThisDay->published_at->translatedFormat('j F Y') }} · {{ __('public.college_archive') }}</p>
+                    ])>{{ __('feature.archive_date', ['date' => $onThisDay->published_at->translatedFormat('j F Y')]) }}</p>
                 </div>
                 <x-ico name="arrow-right" @class([
                     'h-5 w-5 shrink-0 transition group-hover:translate-x-1',

@@ -8,7 +8,7 @@ class GalleryController extends Controller
 {
     public function index()
     {
-        $galleries = Gallery::published()->ordered()->with('photos')->withCount('photos')->get();
+        $galleries = Gallery::published()->ordered()->with('photos')->withCount('photos')->paginate(12);
 
         return view('galleries.index', compact('galleries'));
     }
@@ -19,6 +19,12 @@ class GalleryController extends Controller
 
         $gallery->load('photos');
 
-        return view('galleries.show', compact('gallery'));
+        // Інші альбоми — для блоку навігації внизу сторінки
+        $others = Gallery::published()->ordered()->with('photos')->withCount('photos')
+            ->whereKeyNot($gallery->getKey())
+            ->take(4)
+            ->get();
+
+        return view('galleries.show', compact('gallery', 'others'));
     }
 }

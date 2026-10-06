@@ -60,6 +60,14 @@ class News extends Model
         return (bool) $this->category?->is_heritage;
     }
 
+    /** Приблизний час читання статті у хвилинах (≈150 слів/хв). */
+    public function getReadingMinutesAttribute(): int
+    {
+        $words = preg_split('/\s+/u', trim(strip_tags((string) $this->body)), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        return max(1, (int) ceil(count($words) / 150));
+    }
+
     public function likeRecords()
     {
         return $this->hasMany(NewsLike::class);

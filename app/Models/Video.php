@@ -57,4 +57,10 @@ class Video extends Model
     {
         return $this->translationSourceFields();
     }
+
+    /** Плеєр без cookie-трекінгу — для вбудованого лайтбокса на сторінці /video. */
+    public function getPrivateEmbedUrlAttribute(): string
+    {
+        return "https://www.youtube-nocookie.com/embed/{$this->youtube_id}";
+    }
 }

@@ -36,7 +36,7 @@ class LocalizationNavigationTest extends TestCase
 
     public function test_public_navigation_and_forms_do_not_leave_english_locale(): void
     {
-        $paths = ['/en', '/en/novyny', '/en/kontakty', '/en/zayavka', '/en/kviz', '/en/faq',
+        $paths = ['/en', '/en/novyny', '/en/kontakty', '/en/kviz', '/en/faq',
             '/en/abituriyentu', '/en/studentu', '/en/spetsialnosti', '/en/struktura',
             '/en/dokumenty', '/en/halereya', '/en/podiyi', '/en/video', '/en/poshuk?q=коледж'];
         $paths[] = '/en/novyny/'.News::published()->firstOrFail()->slug;
@@ -93,15 +93,12 @@ class LocalizationNavigationTest extends TestCase
         $this->assertSame(url('/en/novyny?year=2026#list'), LocalizedUrl::to('../novyny?year=2026#list'));
     }
 
-    public function test_english_forms_return_to_their_language_without_referer(): void
+    public function test_retired_forms_do_not_accept_english_submissions(): void
     {
-        $this->post('/en/zayavka', ['name' => 'Test', 'phone' => '123'])->assertRedirect('/en/zayavka');
-        $this->post('/en/kontakty', ['name' => 'Test', 'message' => 'Hello'])->assertRedirect('/en/kontakty');
-        $this->post('/en/zayavka', ['website' => 'spam'])->assertRedirect('/en/zayavka');
-        $this->post('/en/kontakty', ['website' => 'spam'])->assertRedirect('/en/kontakty');
-        $this->assertDatabaseCount('applicant_requests', 1);
-        $this->assertDatabaseCount('feedback_messages', 1);
-        $this->from('/en/zayavka')->post('/en/zayavka', [])->assertRedirect('/en/zayavka')->assertSessionHasErrors('name');
+        $this->post('/en/zayavka', ['name' => 'Test', 'phone' => '123'])->assertStatus(405);
+        $this->post('/en/kontakty', ['name' => 'Test', 'message' => 'Hello'])->assertStatus(405);
+        $this->assertDatabaseCount('applicant_requests', 0);
+        $this->assertDatabaseCount('feedback_messages', 0);
     }
 
     public function test_pagination_and_feed_links_keep_their_locale(): void

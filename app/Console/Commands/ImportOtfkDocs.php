@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\ReadsOtfkExport;
 use App\Models\Document;
 use App\Models\DocumentCategory;
 use App\Models\Page;
@@ -12,7 +13,9 @@ use Illuminate\Support\Str;
 
 class ImportOtfkDocs extends Command
 {
-    protected $signature = 'otfk:import-docs {--dry-run : Показати, без завантаження} {--audit : Лише підрахувати всі PDF по розділах} {--fresh : Видалити попередній імпорт перед завантаженням}';
+    use ReadsOtfkExport;
+
+    protected $signature = 'otfk:import-docs {--dry-run : Показати, без завантаження} {--audit : Лише підрахувати всі PDF по розділах} {--from-export= : Читати з локального дзеркала site-audit/… замість HTTP} {--fresh : Видалити попередній імпорт перед завантаженням}';
 
     protected $description = 'Імпорт PDF зі старого сайту otfk.od.ua: у Документи (Публічна інформація) та у тіло сторінок (Абітурієнту/Студенту)';
 
@@ -37,6 +40,13 @@ class ImportOtfkDocs extends Command
         '/public_information/conditions_of_inclusiveness/' => 'vysnovok-inklyuzyvnist',
         '/public_information/vacant_positions/' => 'vakantni-posady',
         '/public_information/civil_control_labor_protection/' => 'tsyvilnyy-zahyst-ohorona-pratsi',
+        // Звірено із sitemap.json дзеркала site-audit/2026-08-28: єдиний розділ
+        // public_information/*, якого бракувало в мапі (категорія вже існує в БД).
+        '/public_information/tot_acception/' => 'vyznannya-rezultativ-tot',
+        // Освітньо-професійні програми та навчальні плани (~62 PDF) — окремий
+        // розділ «Абітурієнту» на старому сайті; категорію створює міграція
+        // 2026_08_28_190000_seed_opp_document_category_and_menu.
+        '/applicant/educational_and_professional_programs/' => 'osvitno-profesiyni-prohramy',
     ];
 
     /** Сторінка old-сайту => slug нашої СТОРІНКИ (файли вставляються в тіло сторінки). */
@@ -70,8 +80,18 @@ class ImportOtfkDocs extends Command
         '/structure/employment/' => 'vzayemodiya-z-robotodavtsyamy',
     ];
 
+    /** Мапа «стара сторінка public_information → slug категорії документів» (для інших команд). */
+    public function publicInformationMap(): array
+    {
+        return $this->docMap;
+    }
+
     public function handle(): int
     {
+        if (filled($this->option('from-export')) && ! $this->initExport((string) $this->option('from-export'))) {
+            return self::FAILURE;
+        }
+
         if ($this->option('audit')) {
             return $this->audit();
         }
@@ -234,12 +254,23 @@ class ImportOtfkDocs extends Command
     /** Знайти PDF-посилання на сторінці: [['url'=>.., 'title'=>..], ...]. */
     private function pdfLinks(string $pagePath): array
     {
-        try {
-            $html = Http::withoutVerifying()->timeout(30)->get($this->base . $pagePath)->body();
-        } catch (\Throwable $e) {
-            $this->error("  Сторінка недоступна {$pagePath}: " . $e->getMessage());
+        if ($this->exportRoot !== null) {
+            // Локальне дзеркало: збережений HTML з _raw/html/ замість HTTP.
+            $html = $this->exportRawHtml($pagePath);
 
-            return [];
+            if ($html === null) {
+                $this->error("  У дзеркалі немає збереженого HTML для {$pagePath}");
+
+                return [];
+            }
+        } else {
+            try {
+                $html = Http::withoutVerifying()->timeout(30)->get($this->base . $pagePath)->body();
+            } catch (\Throwable $e) {
+                $this->error("  Сторінка недоступна {$pagePath}: " . $e->getMessage());
+
+                return [];
+            }
         }
 
         $titles = []; // url => title
@@ -275,6 +306,30 @@ class ImportOtfkDocs extends Command
     /** Завантажити файл у public-диск. */
     private function download(string $url, string $storedPath): bool
     {
+        if ($this->exportRoot !== null) {
+            // Локальне дзеркало: копія з content-export/files/ (або за links-map.csv).
+            $file = $this->exportAssetFile($url);
+
+            if ($file === null) {
+                $this->warn('  ! немає у дзеркалі (пропущено): ' . $url);
+
+                return false;
+            }
+
+            $bytes = (string) file_get_contents($file);
+
+            if (strlen($bytes) < 200 || ! str_starts_with($bytes, '%PDF')) {
+                $this->warn('  ! не PDF (пропущено): ' . $url);
+
+                return false;
+            }
+
+            Storage::disk('public')->put($storedPath, $bytes);
+            $this->info('  + ' . basename($storedPath));
+
+            return true;
+        }
+
         try {
             $bytes = Http::withoutVerifying()->timeout(90)->get($url)->body();
             // Зберігаємо лише справжні PDF (а не HTML-сторінки помилок).

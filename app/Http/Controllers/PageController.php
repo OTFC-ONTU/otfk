@@ -8,7 +8,8 @@ class PageController extends Controller
 {
     public function show(Page $page)
     {
-        abort_unless($page->is_published, 404);
+        // Чернетки бачать лише залогінені адміністратори (превʼю з адмінки).
+        abort_unless($page->is_published || auth()->check(), 404);
 
         return view('pages.show', compact('page'));
     }

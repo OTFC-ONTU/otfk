@@ -199,7 +199,7 @@ class DocumentsAndMediaTranslationTest extends TestCase
         $gallery->photos()->firstOrFail()->update(['caption_en' => $caption]);
         $response = $this->get('/en/halereya/'.$gallery->slug)->assertOk();
         $response->assertSee('alt="'.e($caption).'"', false)->assertDontSee('</script><script>alert(1)</script>', false);
-        $response->assertSee('cap = '.Js::from($caption)->toHtml(), false);
+        $response->assertSee(Js::from($gallery->photos->map(fn ($photo) => ['src' => $photo->url, 'caption' => $gallery->publicCaption($photo)])->values())->toHtml(), false);
     }
 
     public function test_filament_saves_categories_documents_video_and_nested_photo_translations(): void

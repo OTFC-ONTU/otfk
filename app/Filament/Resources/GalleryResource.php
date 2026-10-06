@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\GalleryResource\Pages;
+use App\Filament\Support\ViewOnSite;
 use App\Models\Gallery;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -34,11 +35,16 @@ class GalleryResource extends Resource
                 ->description('Альбом на /en показується англійською лише після публікації його перекладу та всіх непорожніх підписів фото.'),
             Forms\Components\TextInput::make('title')->label('Назва альбому')->required()->maxLength(255)->columnSpanFull(),
             Forms\Components\TextInput::make('slug')->label('URL (slug)')->maxLength(255)
+                ->prefix(url('/halereya') . '/')
                 ->helperText('Залиште порожнім - згенерується автоматично.'),
-            Forms\Components\DatePicker::make('published_at')->label('Дата')->default(now()),
-            Forms\Components\Textarea::make('description')->label('Опис')->rows(2)->columnSpanFull(),
-            Forms\Components\FileUpload::make('cover_image')->label('Обкладинка')->image()->directory('gallery')->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('1600')->imageResizeTargetHeight('1600'),
-            Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true),
+            Forms\Components\DatePicker::make('published_at')->label('Дата')->default(now())
+                ->helperText('Дата альбому в картці; новіші альбоми показуються першими.'),
+            Forms\Components\Textarea::make('description')->label('Опис')->rows(2)->columnSpanFull()
+                ->helperText('1-2 речення під назвою альбому. Необовʼязково.'),
+            Forms\Components\FileUpload::make('cover_image')->label('Обкладинка')->image()->directory('gallery')->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('1600')->imageResizeTargetHeight('1600')
+                ->helperText('Картка альбому на сторінці «Галерея». Порожнє — використовується перше фото альбому.'),
+            Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true)
+                ->helperText('Вимкнено — альбом не видно на сайті, але він лишається в адмінці.'),
             Forms\Components\Toggle::make('is_archive')
                 ->label('Архівний стиль фото')
                 ->helperText('Сепія, рамки та «ламповий» вигляд для історичних альбомів.')
@@ -71,11 +77,16 @@ class GalleryResource extends Resource
                 Tables\Columns\TextColumn::make('title')->label('Назва')->searchable()->weight('bold'),
                 Tables\Columns\TextColumn::make('photos_count')->label('Фото')->counts('photos')->badge(),
                 Tables\Columns\TextColumn::make('published_at')->label('Дата')->date('d.m.Y')->sortable(),
-                Tables\Columns\IconColumn::make('is_published')->label('Опубл.')->boolean(),
+                Tables\Columns\ToggleColumn::make('is_published')->label('Опубл.'),
                 Tables\Columns\IconColumn::make('is_archive')->label('Архів')->boolean()->toggleable(),
             ])
             ->defaultSort('sort_order')
-            ->actions([Tables\Actions\EditAction::make()])
+            ->emptyStateHeading('Фотогалерей ще немає')
+            ->emptyStateDescription('Альбоми з фото показуються на сторінці «Галерея». Створіть альбом і додайте в нього фотографії з підписами.')
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                ViewOnSite::table(fn (Gallery $record) => route('galleries.show', $record)),
+            ])
             ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
     }
 

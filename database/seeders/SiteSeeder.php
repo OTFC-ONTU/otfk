@@ -56,10 +56,10 @@ class SiteSeeder extends Seeder
             ['contact_address', 'м. Одеса, вул. Прикладна, 1', 'contacts', 'text'],
             ['contact_phone', '+38 (048) 000-00-00', 'contacts', 'text'],
             ['contact_email', 'info@otfk.od.ua', 'contacts', 'text'],
-            ['feedback_email', '', 'contacts', 'text'],
             ['work_hours', 'Пн-Пт: 08:00-17:00', 'contacts', 'text'],
             ['social_facebook', 'https://www.facebook.com/', 'social', 'url'],
             ['social_instagram', 'https://www.instagram.com/', 'social', 'url'],
+            ['social_youtube', '', 'social', 'url'],
             ['map_embed', 'https://www.google.com/maps?q=Odesa&output=embed', 'contacts', 'url'],
         ];
 
@@ -76,7 +76,7 @@ class SiteSeeder extends Seeder
             ['home_tile', 'Студенту', 'Навчання, гуртожиток, життя коледжу', '/studentu', 'user-group', 'gold', 2],
             ['home_tile', 'Про коледж', 'Історія, адміністрація, структура', '/pro-koledzh', 'building-library', 'brand', 3],
             ['home_tile', 'Публічна інформація', 'Документи, звіти, нормативна база', '/dokumenty', 'document-text', 'gold', 4],
-            ['footer_partner', 'ОНТУ', null, 'https://onaft.edu.ua', null, 'brand', 1],
+            ['footer_partner', 'ОНТУ', null, 'https://ontu.edu.ua', null, 'brand', 1],
             ['footer_partner', 'МОН України', null, 'https://mon.gov.ua', null, 'brand', 2],
         ];
 
@@ -138,30 +138,39 @@ class SiteSeeder extends Seeder
     private function specialties(): void
     {
         $items = [
-            ['Інженерія програмного забезпечення', 'inzheneriya-programnoho-zabezpechennya', '121'],
-            ['Комп’ютерна інженерія', 'kompyuterna-inzheneriya', '123'],
-            ['Харчові технології', 'kharchovi-tekhnolohiyi', '181'],
-            ['Облік і оподаткування', 'oblik-i-opodatkuvannya', '071'],
+            ['Інженерія програмного забезпечення', 'inzheneriya-programnoho-zabezpechennya', 'F2'],
+            ['Комп’ютерна інженерія', 'kompyuterna-inzheneriya', 'F7'],
+            ['Харчові технології', 'kharchovi-tekhnolohiyi', 'G13'],
         ];
 
         foreach ($items as $i => [$title, $slug, $code]) {
-            $sp = Specialty::updateOrCreate(['slug' => $slug], [
-                'title' => $title,
-                'code' => $code,
-                'short_description' => 'Сучасна підготовка фахівців за спеціальністю «' . $title . '».',
-                'description' => $this->placeholder($title),
-                'degree' => 'Фаховий молодший бакалавр',
-                'study_form' => 'Денна, заочна',
-                'duration' => 'на основі 9 класів - 3 р. 10 міс.',
-                'sort_order' => $i,
-                'is_published' => true,
-            ]);
-            $sp->programs()->delete();
-            $sp->programs()->create([
-                'title' => 'Освітньо-професійна програма «' . $title . '»',
-                'description' => 'Демонстраційний запис. Завантажте файл програми через адмінпанель.',
-                'sort_order' => 0,
-            ]);
+            // Реальні описи та ОПП завозить міграція import_specialties_content —
+            // сидер їх не перетирає: заглушки й демо-програма лише для нових записів.
+            $sp = Specialty::firstOrNew(['slug' => $slug]);
+
+            if (! $sp->exists) {
+                $sp->fill([
+                    'title' => $title,
+                    'code' => $code,
+                    'short_description' => 'Сучасна підготовка фахівців за спеціальністю «' . $title . '».',
+                    'description' => $this->placeholder($title),
+                    'degree' => 'Фаховий молодший бакалавр',
+                    'study_form' => 'Денна, заочна',
+                    'duration' => 'на основі 9 класів - 3 р. 10 міс.',
+                    'sort_order' => $i,
+                    'is_published' => true,
+                ]);
+            }
+
+            $sp->save();
+
+            if ($sp->programs()->doesntExist()) {
+                $sp->programs()->create([
+                    'title' => 'Освітньо-професійна програма «' . $title . '»',
+                    'description' => 'Демонстраційний запис. Завантажте файл програми через адмінпанель.',
+                    'sort_order' => 0,
+                ]);
+            }
         }
     }
 
@@ -266,13 +275,12 @@ class SiteSeeder extends Seeder
                 'Взаємодія з роботодавцями' => 'vzayemodiya-z-robotodavtsyamy',
             ]],
             'abituriyentu' => ['title' => 'Абітурієнту', 'children' => [
-                // Сторінки-плитки: слаги перехоплюються маршрутами заявки, FAQ та квізу
-                'Залишити заявку' => 'zayavka',
+                // Сторінки-плитки: слаги перехоплюються маршрутами FAQ та квізу
                 'Питання та відповіді' => 'faq',
                 'Яка спеціальність мені підходить?' => 'kviz',
                 'Правила прийому' => 'pravyla-pryyomu', 'Вартість навчання' => 'vartist-navchannya',
                 'Наші спеціальності' => ['url', '/spetsialnosti'],
-                'Освітньо-професійні програми' => ['url', '/spetsialnosti'],
+                'Освітньо-професійні програми' => ['url', '/dokumenty/osvitno-profesiyni-prohramy'],
                 'Розклад вступних випробувань' => 'rozklad-vstupnykh-vyprobuvan',
                 'Результати вступних іспитів' => 'rezultaty-vstupnykh-ispytiv', 'Рейтингові списки' => 'reytynhovi-spysky',
             ]],

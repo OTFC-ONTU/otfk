@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\MenuItemResource\Pages;
+use App\Filament\Support\ViewOnSite;
 use App\Models\MenuItem;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -33,8 +34,10 @@ class MenuItemResource extends Resource
             Forms\Components\TextInput::make('label_en')->label('Підпис англійською')->maxLength(255)
                 ->helperText('Необов’язково. Без перекладу використовується словник стандартного меню або український підпис.'),
             Forms\Components\Select::make('parent_id')->label('Батьківський пункт')
-                ->relationship('parent', 'label')->searchable()->preload()
-                ->helperText('Залиште порожнім для пункту верхнього рівня.'),
+                ->relationship('parent', 'label', fn ($query) => $query->whereNull('parent_id')->orderBy('sort_order'))
+                ->searchable()->preload()
+                ->default(fn () => request()->integer('parent') ?: null)
+                ->helperText('Залиште порожнім для пункту верхнього рівня. Меню має два рівні: пункт і його підпункти.'),
             Forms\Components\Select::make('link_type')->label('Тип посилання')->required()->default('page')
                 ->options(['page' => 'Сторінка', 'url' => 'Зовнішнє посилання', 'route' => 'Системний маршрут']),
             Forms\Components\Select::make('page_id')->label('Сторінка')
@@ -42,7 +45,8 @@ class MenuItemResource extends Resource
                 ->helperText('Для типу «Сторінка».'),
             Forms\Components\TextInput::make('url')->label('Посилання / назва маршруту')->maxLength(255)
                 ->helperText('Для типів «Зовнішнє посилання» (URL) або «Системний маршрут» (напр. home, news.index).'),
-            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
+            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
+                ->helperText('Простіше змінити перетягуванням рядків у вкладці свого рівня (кнопка «Змінити порядок»).'),
             Forms\Components\Toggle::make('open_new_tab')->label('Відкривати в новій вкладці'),
             Forms\Components\Toggle::make('is_visible')->label('Видимий')->default(true),
         ]);
@@ -53,14 +57,23 @@ class MenuItemResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('label')->label('Підпис')->searchable()->weight('bold'),
-                Tables\Columns\TextColumn::make('parent.label')->label('Батьківський')->badge()->placeholder('- верхній рівень -'),
+                Tables\Columns\TextColumn::make('children_total')->label('Підпунктів')->badge()->color('gray')
+                    ->state(fn (MenuItem $record) => MenuItem::where('parent_id', $record->id)->count())
+                    ->visible(fn ($livewire) => ($livewire->activeTab ?? null) === 'top'),
                 Tables\Columns\TextColumn::make('link_type')->label('Тип')->badge()
                     ->formatStateUsing(fn ($state) => ['page' => 'Сторінка', 'url' => 'Посилання', 'route' => 'Маршрут'][$state] ?? $state),
-                Tables\Columns\IconColumn::make('is_visible')->label('Видимий')->boolean(),
+                Tables\Columns\ToggleColumn::make('is_visible')->label('Видимий'),
                 Tables\Columns\TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
             ])
             ->defaultSort('sort_order')
-            ->actions([Tables\Actions\EditAction::make()])
+            ->reorderable('sort_order')
+            ->emptyStateHeading('У цій вкладці поки порожньо')
+            ->emptyStateDescription('Пункти меню - це верхня навігація сайту. У вкладці «Верхній рівень» — головні пункти, у вкладці кожного пункту — його підпункти. Кнопка «Створити» одразу підставляє батьківський пункт відкритої вкладки.')
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                ViewOnSite::table(fn (MenuItem $record) => $record->href)
+                    ->visible(fn (MenuItem $record) => $record->href !== '#'),
+            ])
             ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
     }
 

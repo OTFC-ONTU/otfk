@@ -144,10 +144,10 @@
                         </a>
                     @endif
                     {{-- Жива позначка «зараз йде пара» (з розкладу дзвінків) --}}
-                    @php $bellPeriods = \App\Models\BellPeriod::active(); @endphp
+                    @php $bellPeriods = \App\Models\BellPeriod::chipEnabled() ? \App\Models\BellPeriod::active() : collect(); @endphp
                     @if ($bellPeriods->isNotEmpty())
                         <a href="{{ \App\Support\LocalizedUrl::route('bells') }}"
-                           x-data="bellChip(@js($bellPeriods->map(fn ($b) => ['id' => $b->id, 'n' => $b->number, 's' => substr($b->starts, 0, 5), 'e' => substr($b->ends, 0, 5)])->values()))"
+                           x-data="bellChip(@js($bellPeriods->map(fn ($b) => ['id' => $b->id, 'sh' => $b->shift, 'n' => $b->number, 's' => substr($b->starts, 0, 5), 'e' => substr($b->ends, 0, 5)])->values()))"
                            x-init="tick(); setInterval(() => tick(), 30000)" x-show="label" x-cloak
                            class="inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 px-2.5 py-0.5 font-medium text-gold-200 ring-1 ring-gold-400/30 transition hover:bg-gold-400/25">
                             <span class="relative flex h-1.5 w-1.5">
@@ -225,10 +225,10 @@
                         </div>
                     </div>
                     {{-- CTA --}}
-                    <a href="{{ \App\Support\LocalizedUrl::to('/abituriyentu') }}" class="btn-accent hidden whitespace-nowrap sm:inline-flex">{{ __('layout.applicants') }}</a>
+                    <a href="{{ \App\Support\LocalizedUrl::to('/abituriyentu') }}" class="btn-accent group h-11 whitespace-nowrap px-2.5 text-xs sm:h-auto sm:px-5 sm:text-sm">{{ __('layout.applicants') }}</a>
                     {{-- Мобільні дії --}}
                     <a href="{{ \App\Support\LocalizedUrl::route('search') }}" class="grid h-10 w-10 place-items-center rounded-xl text-brand-900 transition hover:bg-slate-100 lg:hidden" aria-label="{{ __('layout.search') }}"><x-ico name="magnifying-glass" class="h-5 w-5" /></a>
-                    <button type="button" @click="mobile = true" :aria-expanded="mobile" class="grid h-10 w-10 place-items-center rounded-xl bg-brand-900 text-white shadow-sm transition hover:bg-brand-800 xl:hidden" aria-label="{{ __('layout.menu') }}"><x-ico name="bars-3" class="h-6 w-6" /></button>
+                    <button type="button" @click="mobile = true" aria-controls="mobile-menu" :aria-expanded="mobile ? 'true' : 'false'" class="grid h-10 w-10 place-items-center rounded-xl bg-brand-900 text-white shadow-sm transition hover:bg-brand-800 xl:hidden" aria-label="{{ __('layout.menu') }}"><x-ico name="bars-3" class="h-6 w-6" /></button>
                 </div>
                 </div>
             </div>
@@ -331,7 +331,7 @@
         </div>
 
         {{-- Мобільне меню (off-canvas) --}}
-        <div x-show="mobile" x-cloak x-effect="document.documentElement.classList.toggle('overflow-hidden', mobile)"
+        <div id="mobile-menu" x-show="mobile" x-cloak x-effect="document.documentElement.classList.toggle('overflow-hidden', mobile); document.body.classList.toggle('overflow-hidden', mobile)"
              @keydown.escape.window="mobile = false" class="fixed inset-0 z-50 xl:hidden">
             <div @click="mobile = false" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
             <div class="absolute right-0 top-0 flex h-full w-80 max-w-[88%] flex-col bg-white shadow-2xl"
@@ -363,6 +363,18 @@
                         </div>
                     </div>
                     <a href="{{ \App\Support\LocalizedUrl::to('/abituriyentu') }}" class="btn-accent mt-3 w-full">{{ __('layout.applicants') }}</a>
+                    <div class="mt-3 grid grid-cols-2 gap-2">
+                        <a href="{{ \App\Support\LocalizedUrl::route('bells') }}" class="btn-outline px-2 text-xs">{{ __('public.bells') }}</a>
+                        <a href="{{ \App\Support\LocalizedUrl::route('contacts') }}" class="btn-outline px-2 text-xs">{{ __('public.contacts') }}</a>
+                    </div>
+                    <div class="mt-3 space-y-2 text-sm text-slate-600">
+                        @if (! empty($s['contact_phone']))
+                            <a href="tel:{{ preg_replace('/[^+\d]/', '', $s['contact_phone']) }}" class="block hover:text-brand-700">{{ $s['contact_phone'] }}</a>
+                        @endif
+                        @if (! empty($s['contact_email']))
+                            <a href="mailto:{{ $s['contact_email'] }}" class="block break-all hover:text-brand-700">{{ $s['contact_email'] }}</a>
+                        @endif
+                    </div>
                 </div>
                 <nav class="flex-1 overflow-y-auto p-3">
                     @foreach ($menu as $item)
@@ -516,44 +528,55 @@
     <script>
         (function () {
             const ORD = { 1: '1-ша', 2: '2-га', 3: '3-тя', 4: '4-та', 5: '5-та', 6: '6-та', 7: '7-ма', 8: '8-ма' };
-            const bellMessages = @js(['current' => __('layout.bell_current'), 'next' => __('layout.bell_next'), 'break' => __('layout.bell_break')]);
+            const bellMessages = @js(['shift' => __('feature.bell_shift'), 'class' => __('feature.bell_class'), 'remaining' => __('feature.bell_remaining'), 'next' => __('feature.bell_next'), 'break' => __('feature.bell_break'), 'done' => __('feature.bell_done')]);
+            const bellMessage = (key, values) => Object.entries(values).reduce((text, [name, value]) => text.replace(':' + name, value), bellMessages[key]);
             const ordinal = n => @js(app()->getLocale()) === 'en' ? n : (ORD[n] ?? n);
-            const bellMessage = (key, n, minutes = '', time = '') => bellMessages[key].replace(':number', ordinal(n)).replace(':minutes', minutes).replace(':time', time);
             const toMin = t => +t.slice(0, 2) * 60 + +t.slice(3, 5);
 
-            // Повертає {current, status}: current — ID запису пари (або null), status — текст.
+            // ID запису відрізняє однакові номери; зміни можуть тривати одночасно.
             window.bellState = function (periods) {
+                const empty = { current: [], gaps: [], status: '', short: '', left: {}, pct: {} };
                 const d = new Date();
-                if (d.getDay() === 0 || !periods.length) return { current: null, status: '' }; // неділя
+                if (d.getDay() === 0 || !periods.length) return empty;
                 const cur = d.getHours() * 60 + d.getMinutes();
-
-                for (const p of periods) {
-                    const s = toMin(p.s), e = toMin(p.e);
-                    if (cur >= s && cur < e) {
-                        return { current: p.id, status: bellMessage('current', p.n, e - cur) };
-                    }
+                const multi = new Set(periods.map(p => p.sh)).size > 1;
+                const key = p => String(p.id);
+                const name = p => bellMessage('class', { number: ordinal(p.n) }) + (multi ? ' (' + bellMessage('shift', { number: p.sh }) + ')' : '');
+                const gaps = [];
+                for (const shift of new Set(periods.map(p => p.sh))) {
+                    const rows = periods.filter(p => p.sh === shift).sort((a, b) => toMin(a.s) - toMin(b.s));
+                    let latestEnd = 0;
+                    rows.forEach((p, i) => {
+                        latestEnd = Math.max(latestEnd, toMin(p.e));
+                        const next = rows[i + 1];
+                        if (next && cur >= latestEnd && cur < toMin(next.s)) gaps.push(key(p));
+                    });
                 }
-
-                const next = periods.find(p => toMin(p.s) > cur);
+                const running = periods.filter(p => cur >= toMin(p.s) && cur < toMin(p.e));
+                if (running.length) {
+                    const left = {}, pct = {};
+                    running.forEach(p => {
+                        const start = toMin(p.s), end = toMin(p.e);
+                        left[key(p)] = end - cur;
+                        pct[key(p)] = Math.round((cur - start) / (end - start) * 100);
+                    });
+                    const text = bellMessage('remaining', { names: running.map(name).join(' · '), minutes: Math.min(...Object.values(left)) });
+                    return { current: running.map(key), gaps, status: text, short: text, left, pct };
+                }
+                const next = periods.filter(p => toMin(p.s) > cur).sort((a, b) => toMin(a.s) - toMin(b.s))[0];
                 if (next) {
-                    // зранку показуємо за годину до першої пари; між парами — завжди
-                    const isBreak = cur >= toMin(periods[0].s);
-                    if (isBreak) return { current: null, status: bellMessage('break', next.n, '', next.s) };
-                    if (toMin(next.s) - cur <= 60) return { current: null, status: bellMessage('next', next.n, '', next.s) };
+                    const started = cur >= Math.min(...periods.map(p => toMin(p.s)));
+                    const text = bellMessage(started ? 'break' : 'next', { name: name(next), time: next.s });
+                    return started || toMin(next.s) - cur <= 60 ? { ...empty, gaps, status: text, short: text } : empty;
                 }
-
-                return { current: null, status: '' };
+                return { ...empty, status: bellMessages.done };
             };
-
-            window.bellChip = periods => ({
-                label: '',
-                tick() { this.label = window.bellState(periods).status; },
-            });
-
+            window.bellChip = periods => ({ label: '', tick() { this.label = window.bellState(periods).short; } });
             window.bellSchedule = periods => ({
-                current: null,
-                status: '',
-                tick() { const st = window.bellState(periods); this.current = st.current; this.status = st.status; },
+                current: [], gaps: [], status: '', left: {}, pct: {},
+                isNow(key) { return this.current.includes(key); },
+                isGapNow(key) { return this.gaps.includes(key); },
+                tick() { Object.assign(this, window.bellState(periods)); },
             });
 
             // Прелоад сторінок при наведенні: клік відчувається миттєвим.

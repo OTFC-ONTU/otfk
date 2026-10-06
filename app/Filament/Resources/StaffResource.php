@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\StaffResource\Pages;
+use App\Filament\Support\ViewOnSite;
 use App\Models\Staff;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -13,6 +14,8 @@ use Filament\Tables\Table;
 
 class StaffResource extends Resource
 {
+    protected static ?string $recordRouteKeyName = 'id';
+
     protected static ?string $model = Staff::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-users';
@@ -32,9 +35,14 @@ class StaffResource extends Resource
         return $form->schema([
             Forms\Components\FileUpload::make('photo')->label('Фото')->image()->avatar()->directory('staff')->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('600')->imageResizeTargetHeight('600'),
             Forms\Components\TextInput::make('full_name')->label('ПІБ')->required()->maxLength(255)->columnSpanFull(),
-            Forms\Components\TextInput::make('position')->label('Посада')->maxLength(255)->columnSpanFull(),
+            Forms\Components\TextInput::make('slug')->label('Слаг (URL персональної сторінки)')->maxLength(255)->unique(ignoreRecord: true)
+                ->prefix(url('/personal') . '/')
+                ->helperText('Порожній — згенерується з ПІБ.')->columnSpanFull(),
+            Forms\Components\TextInput::make('position')->label('Посада')->maxLength(255)->columnSpanFull()
+                ->helperText('Показується під ПІБ. На сторінці «Адміністрація» за посадою людей групують у блоки.'),
             Forms\Components\Select::make('category')->label('Категорія')->required()->default('teacher')
-                ->options(Staff::CATEGORIES),
+                ->options(Staff::CATEGORIES)
+                ->helperText('«Адміністрація» — людина показується на сторінці «Адміністрація»; «Викладач» — на сторінці свого підрозділу.'),
             Forms\Components\Select::make('department_id')->label('Підрозділ')
                 ->relationship('department', 'title')->searchable()->preload(),
             Forms\Components\Select::make('profile_page_id')->label('Сторінка: результати професійної діяльності')
@@ -42,10 +50,13 @@ class StaffResource extends Resource
             Forms\Components\Select::make('qualification_page_id')->label('Сторінка: підвищення кваліфікації')
                 ->relationship('qualificationPage', 'title')->searchable()->preload(),
             Forms\Components\TextInput::make('academic_degree')->label('Науковий ступінь / звання')->maxLength(255),
-            Forms\Components\TextInput::make('email')->label('Email')->email()->maxLength(255),
+            Forms\Components\TextInput::make('email')->label('Email')->email()->maxLength(255)
+                ->helperText('Показується на персональній сторінці працівника. Необовʼязково.'),
             Forms\Components\TextInput::make('phone')->label('Телефон')->maxLength(255),
-            Forms\Components\Textarea::make('bio')->label('Біографія')->rows(3)->columnSpanFull(),
-            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
+            Forms\Components\Textarea::make('bio')->label('Біографія')->rows(3)->columnSpanFull()
+                ->helperText('Кілька речень на персональній сторінці працівника. Необовʼязково.'),
+            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
+                ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
             Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true),
             EnglishTranslation::section(contentFields: [
                 'position' => ['label' => 'Посада англійською'],
@@ -67,10 +78,22 @@ class StaffResource extends Resource
                 Tables\Columns\TextColumn::make('category')->label('Категорія')->badge()
                     ->formatStateUsing(fn ($state) => Staff::CATEGORIES[$state] ?? $state),
                 Tables\Columns\TextColumn::make('department.title')->label('Підрозділ')->placeholder('-')->toggleable(),
-                Tables\Columns\IconColumn::make('is_published')->label('Опубл.')->boolean(),
+                Tables\Columns\ToggleColumn::make('is_published')->label('Опубл.'),
             ])
             ->defaultSort('sort_order')
-            ->actions([Tables\Actions\EditAction::make()])
+            ->reorderable('sort_order')
+            ->filters([
+                Tables\Filters\SelectFilter::make('department_id')->label('Підрозділ')
+                    ->relationship('department', 'title')->searchable()->preload(),
+                Tables\Filters\SelectFilter::make('category')->label('Категорія')
+                    ->options(Staff::CATEGORIES),
+            ])
+            ->emptyStateHeading('Працівників ще немає')
+            ->emptyStateDescription('Персонал показується на сторінках «Адміністрація» та в підрозділах. Додайте працівника з фото, посадою і підрозділом.')
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                ViewOnSite::table(fn (Staff $record) => route('staff.show', $record)),
+            ])
             ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
     }
 

@@ -20,7 +20,7 @@ class LegacyContentParityTest extends TestCase
 
     public function test_contacts_page_shows_cms_page_text_instead_of_settings_block(): void
     {
-        $this->get('/kontakty')->assertOk()->assertSee(__('public.contact_us'));
+        $this->get('/kontakty')->assertOk()->assertSee(__('feature.contact_the_college'));
 
         Page::create([
             'title' => 'Контакти', 'slug' => 'kontakty', 'is_published' => true,
@@ -32,7 +32,7 @@ class LegacyContentParityTest extends TestCase
         $this->get('/kontakty')->assertOk()
             ->assertSee('Поштова адреса коледжу для подання інформаційного запиту:')
             ->assertDontSee(__('public.contact_intro'))
-            ->assertSee('name="message"', false);
+            ->assertDontSee('name="message"', false);
         $this->get('/en/kontakty')->assertOk()->assertSee('Postal address of the college for information requests:');
     }
 

@@ -22,7 +22,7 @@ class LocalizationRoutingTest extends TestCase
             '/en/spetsialnosti', '/en/struktura', '/en/administratsiya',
             '/en/halereya', '/en/poshuk?q=коледж', '/en/kontakty',
             '/en/abituriyentu', '/en/faq', '/en/kviz', '/en/podiyi',
-            '/en/rozklad-dzvinkiv', '/en/zayavka', '/en/novyny/feed.xml',
+            '/en/rozklad-dzvinkiv', '/en/novyny/feed.xml',
         ]);
     }
 
@@ -93,11 +93,10 @@ class LocalizationRoutingTest extends TestCase
         $this->postJson('/en/novyny/'.$news->slug.'/vpodobayka')->assertOk()->assertJson(['liked' => true]);
         $this->postJson('/novyny/'.$news->slug.'/vpodobayka')->assertOk()->assertJson(['liked' => false]);
         $this->assertSame(0, $news->likeRecords()->count());
-        $this->from('/en/kontakty')->post('/en/kontakty', ['website' => 'spam'])->assertRedirect('/en/kontakty');
-        $this->from('/en/zayavka')->post('/en/zayavka', ['website' => 'spam'])->assertRedirect('/en/zayavka');
+        $this->postJson('/en/kontakty', [])->assertStatus(405);
+        $this->postJson('/en/zayavka', [])->assertStatus(405);
         $this->assertDatabaseCount('feedback_messages', 0);
         $this->assertDatabaseCount('applicant_requests', 0);
-        $this->postJson('/en/kontakty', [])->assertUnprocessable()->assertJsonValidationErrors(['name', 'message']);
     }
 
     public function test_english_search_suggestions_do_not_count_as_page_visits(): void

@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\DepartmentResource\Pages;
+use App\Filament\Support\ViewOnSite;
 use App\Models\Department;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -32,12 +33,18 @@ class DepartmentResource extends Resource
         return $form->schema([
             Forms\Components\TextInput::make('title')->label('Назва')->required()->maxLength(255)->columnSpanFull(),
             Forms\Components\Select::make('type')->label('Тип')->required()->default('kafedra')
-                ->options(Department::TYPES),
+                ->options(Department::TYPES)
+                ->helperText('Визначає, у якій групі підрозділ показується на сторінці «Структура».'),
             Forms\Components\TextInput::make('slug')->label('URL (slug)')->maxLength(255)
+                ->prefix(url('/struktura') . '/')
                 ->helperText('Залиште порожнім - згенерується автоматично.'),
-            Forms\Components\RichEditor::make('description')->label('Опис')->columnSpanFull(),
-            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
-            Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true),
+            Forms\Components\RichEditor::make('description')->label('Опис')->columnSpanFull()
+                ->helperText('Основний текст на сторінці підрозділу; перші речення видно в його картці на сторінці «Структура».'),
+            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
+                ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
+            Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true)
+                ->helperText('Вимкнено — підрозділ і його сторінка не видні на сайті, але лишаються в адмінці.'),
+
             EnglishTranslation::academicSection(),
         ]);
     }
@@ -56,7 +63,13 @@ class DepartmentResource extends Resource
                 Tables\Columns\TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(),
             ])
             ->defaultSort('sort_order')
-            ->actions([Tables\Actions\EditAction::make()])
+            ->reorderable('sort_order')
+            ->emptyStateHeading('Підрозділів ще немає')
+            ->emptyStateDescription('Підрозділи - це циклові комісії, відділення та служби на сторінці «Структура». Додайте підрозділ, щоб закріплювати за ним працівників.')
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                ViewOnSite::table(fn (Department $record) => route('structure.show', $record)),
+            ])
             ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
     }
 

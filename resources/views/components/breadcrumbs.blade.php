@@ -1,4 +1,4 @@
-@props(['items' => []])
+@props(['items' => [], 'tone' => 'dark'])
 
 @php
     $items = array_map(fn ($item) => ! empty($item['url'])
@@ -17,7 +17,7 @@
     ];
 @endphp
 
-<nav aria-label="{{ __('public.breadcrumbs') }}" class="flex flex-wrap items-center gap-2 text-sm text-brand-300">
+<nav aria-label="{{ __('public.breadcrumbs') }}" class="flex flex-wrap items-center gap-2 text-sm {{ $tone === 'light' ? 'text-slate-500' : 'text-brand-300' }}">
     @foreach ($items as $i => $item)
         @if ($i > 0)
             <x-ico name="chevron-right" class="h-4 w-4 shrink-0" aria-hidden="true" />

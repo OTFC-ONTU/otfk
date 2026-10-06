@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\EventResource\Pages;
 
 use App\Filament\Resources\EventResource;
+use App\Filament\Support\ViewOnSite;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
@@ -12,6 +13,9 @@ class ListEvents extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [Actions\CreateAction::make()];
+        return [
+            ViewOnSite::header(route('events')),
+            Actions\CreateAction::make(),
+        ];
     }
 }

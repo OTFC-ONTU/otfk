@@ -39,7 +39,8 @@ class StatItemResource extends Resource
             Forms\Components\TextInput::make('icon')->label('Іконка (heroicon)')->maxLength(100)
                 ->placeholder('user-group')
                 ->helperText('Назва іконки з heroicons.com (необовʼязково).'),
-            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
+            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
+                ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
             Forms\Components\Toggle::make('is_active')->label('Показувати')->default(true),
         ]);
     }
@@ -56,6 +57,9 @@ class StatItemResource extends Resource
                 Tables\Columns\IconColumn::make('is_active')->label('Активна')->boolean(),
             ])
             ->defaultSort('sort_order')
+            ->reorderable('sort_order')
+            ->emptyStateHeading('Цифр ще немає')
+            ->emptyStateDescription('Блок «Коледж у цифрах» на головній сторінці: кількість студентів, викладачів, років історії. Додайте перший показник.')
             ->actions([Tables\Actions\EditAction::make()])
             ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
     }

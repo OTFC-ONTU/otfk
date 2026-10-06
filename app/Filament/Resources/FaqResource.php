@@ -33,8 +33,11 @@ class FaqResource extends Resource
             Forms\Components\TextInput::make('question')->label('Питання')->required()->maxLength(255)->columnSpanFull(),
             Forms\Components\Textarea::make('answer')->label('Відповідь')->rows(5)->required()->columnSpanFull()
                 ->helperText('Звичайний текст; перенесення рядків зберігаються.'),
-            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
-            Forms\Components\Toggle::make('is_active')->label('Показувати')->default(true),
+            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
+                ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
+            Forms\Components\Toggle::make('is_active')->label('Показувати')->default(true)
+                ->helperText('Вимкнено — питання зникає зі сторінки «Питання та відповіді», але лишається в адмінці.'),
+
             EnglishTranslation::section(contentFields: ['answer' => ['label' => 'Англійська відповідь', 'rows' => 5]], primaryField: 'question', primaryLabel: 'Англійське питання'),
         ]);
     }
@@ -50,6 +53,9 @@ class FaqResource extends Resource
                 Tables\Columns\IconColumn::make('is_active')->label('Активне')->boolean(),
             ])
             ->defaultSort('sort_order')
+            ->reorderable('sort_order')
+            ->emptyStateHeading('Питань ще немає')
+            ->emptyStateDescription('Це розділ «Питання та відповіді» на сторінці /faq. Додайте типові питання вступників і батьків з короткими відповідями.')
             ->actions([Tables\Actions\EditAction::make()])
             ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
     }

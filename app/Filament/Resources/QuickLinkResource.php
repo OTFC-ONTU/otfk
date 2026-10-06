@@ -10,7 +10,13 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
+/**
+ * Ресурс керує лише плитками головної (location=home_tile). Посилання-партнери
+ * підвалу (location=footer_partner) редагуються на сторінці «Налаштування →
+ * Підвал і вигляд» — щоб усі частини підвалу жили в одному місці.
+ */
 class QuickLinkResource extends Resource
 {
     protected static ?string $model = QuickLink::class;
@@ -20,12 +26,9 @@ class QuickLinkResource extends Resource
     protected static ?string $navigationGroup = 'Контент';
 
     protected static ?int $navigationSort = 5;
-
-    protected static ?string $navigationLabel = 'Плитки та партнери';
-
-    protected static ?string $modelLabel = 'блок';
-
-    protected static ?string $pluralModelLabel = 'Плитки та партнери';
+    protected static ?string $navigationLabel = 'Плитки на головній';
+    protected static ?string $modelLabel = 'плитку';
+    protected static ?string $pluralModelLabel = 'Плитки на головній';
 
     /** Доступні іконки для плиток (короткі назви heroicons). */
     public static function iconOptions(): array
@@ -50,6 +53,11 @@ class QuickLinkResource extends Resource
         ];
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->where('location', 'home_tile');
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([
@@ -62,26 +70,25 @@ class QuickLinkResource extends Resource
                 ->default('home_tile')->required()->live()
                 ->helperText('Плитки - 4 кольорові картки під банером. Партнери - посилання в підвалі сайту.'),
 
-            Forms\Components\TextInput::make('title')->label('Заголовок / назва')->required()->maxLength(255)->columnSpanFull(),
+            Forms\Components\TextInput::make('title')->label('Заголовок')->required()->maxLength(255)->columnSpanFull()
+                ->helperText('Плитки - 4 кольорові картки під банером на головній.'),
 
             Forms\Components\Textarea::make('description')->label('Опис')->rows(2)->maxLength(255)->columnSpanFull()
-                ->visible(fn (Forms\Get $get) => $get('location') === 'home_tile')
                 ->helperText('Короткий підпис під заголовком плитки.'),
 
             Forms\Components\TextInput::make('url')->label('Посилання')->required()->maxLength(255)
                 ->placeholder('/abituriyentu або https://...'),
 
             Forms\Components\Select::make('icon')->label('Іконка')
-                ->options(static::iconOptions())->searchable()->native(false)
-                ->visible(fn (Forms\Get $get) => $get('location') === 'home_tile'),
+                ->options(static::iconOptions())->searchable()->native(false),
 
             Forms\Components\Select::make('color')->label('Колір')
                 ->options(['brand' => 'Синій (фірмовий)', 'gold' => 'Золотий'])
-                ->default('brand')
-                ->visible(fn (Forms\Get $get) => $get('location') === 'home_tile'),
+                ->default('brand'),
 
             Forms\Components\Toggle::make('open_new_tab')->label('Відкривати у новій вкладці')->default(false),
-            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
+            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
+                ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
             Forms\Components\Toggle::make('is_visible')->label('Показувати')->default(true),
         ]);
     }
@@ -100,12 +107,10 @@ class QuickLinkResource extends Resource
                 Tables\Columns\IconColumn::make('is_visible')->label('Показ')->boolean(),
                 Tables\Columns\TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
             ])
-            ->defaultSort('location')
+            ->defaultSort('sort_order')
             ->reorderable('sort_order')
-            ->filters([
-                Tables\Filters\SelectFilter::make('location')->label('Розташування')
-                    ->options(['home_tile' => 'Плитки', 'footer_partner' => 'Партнери']),
-            ])
+            ->emptyStateHeading('Плиток ще немає')
+            ->emptyStateDescription('Плитки - 4 кольорові картки під банером на головній. Посилання-партнери підвалу редагуються в «Налаштування → Підвал і вигляд».')
             ->actions([Tables\Actions\EditAction::make()])
             ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
     }

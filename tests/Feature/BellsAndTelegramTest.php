@@ -44,10 +44,10 @@ class BellsAndTelegramTest extends TestCase
 
         foreach (['/rozklad-dzvinkiv', '/en/rozklad-dzvinkiv'] as $url) {
             $this->get($url)->assertOk()
-                ->assertSeeInOrder(['>08:30</td>', '>09:50</td>', '>13:00</td>'], false)
-                ->assertSee('current === '.$morning->id, false)
-                ->assertSee('current === '.$afternoon->id, false)
-                ->assertDontSee('>07:00</td>', false);
+                ->assertSeeInOrder(['08:30 – 09:40', '09:50 – 11:00', '13:00 – 14:10'], false)
+                ->assertSee("isNow('".$morning->id."')", false)
+                ->assertSee("isNow('".$afternoon->id."')", false)
+                ->assertDontSee('07:00 – 08:00', false);
         }
     }
 
@@ -60,7 +60,7 @@ class BellsAndTelegramTest extends TestCase
         BellPeriod::create(['number' => 3, 'starts' => '15:40', 'ends' => '16:50', 'is_active' => true]);
 
         $response = $this->get('/rozklad-dzvinkiv')->assertOk();
-        $this->assertSame(1, substr_count($response->getContent(), 'colspan="4"'));
+        $this->assertSame(1, preg_match_all('/<li class="[^"]*bg-slate-50[^"]*"\s+:class=/u', $response->getContent()));
         $response->assertSee('Перерва · 10 хв')
             ->assertDontSee('Велика перерва ·');
     }

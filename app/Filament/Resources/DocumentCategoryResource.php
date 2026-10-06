@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\DocumentCategoryResource\Pages;
+use App\Filament\Support\ViewOnSite;
 use App\Models\DocumentCategory;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -33,8 +34,10 @@ class DocumentCategoryResource extends Resource
             EnglishTranslation::section(contentFields: []),
             Forms\Components\TextInput::make('title')->label('Назва')->required()->maxLength(255),
             Forms\Components\TextInput::make('slug')->label('URL (slug)')->maxLength(255)
+                ->prefix(url('/dokumenty') . '/')
                 ->helperText('Залиште порожнім - згенерується автоматично.'),
-            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0),
+            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
+                ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
         ]);
     }
 
@@ -49,7 +52,13 @@ class DocumentCategoryResource extends Resource
                 Tables\Columns\TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
             ])
             ->defaultSort('sort_order')
-            ->actions([Tables\Actions\EditAction::make()])
+            ->reorderable('sort_order')
+            ->emptyStateHeading('Категорій документів ще немає')
+            ->emptyStateDescription('Категорії групують документи на сторінці «Публічна інформація»: установчі документи, звіти, положення тощо. Спершу створіть категорію, потім додавайте в неї документи.')
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                ViewOnSite::table(fn (DocumentCategory $record) => route('documents.category', $record)),
+            ])
             ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
     }
 

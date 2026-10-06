@@ -32,10 +32,10 @@ class ContactSettings extends SettingsFormPage
             'contact_phone' => 'text',
             'contact_email' => 'text',
             'work_hours' => 'text',
-            'feedback_email' => 'text',
             'map_embed' => 'url',
             'social_facebook' => 'url',
             'social_instagram' => 'url',
+            'social_youtube' => 'url',
         ];
     }
 
@@ -55,8 +55,6 @@ class ContactSettings extends SettingsFormPage
                         Forms\Components\TextInput::make('work_hours')->label('Години роботи')
                             ->helperText('Напр. «Пн–Пт 8:30–17:00». Порожнє — рядок приховано.'),
                         static::englishField('work_hours', 'Години роботи'),
-                        Forms\Components\TextInput::make('feedback_email')->label('E-mail для звернень з сайту')->email()
-                            ->helperText('Куди надсилати листи з форм «Контакти» та заявок абітурієнтів. Порожнє — на адресу з поля «E-mail» вище.'),
                     ]),
                 Forms\Components\Section::make('Карта')
                     ->schema([
@@ -69,6 +67,7 @@ class ContactSettings extends SettingsFormPage
                     ->schema([
                         Forms\Components\TextInput::make('social_facebook')->label('Facebook')->url(),
                         Forms\Components\TextInput::make('social_instagram')->label('Instagram')->url(),
+                        Forms\Components\TextInput::make('social_youtube')->label('YouTube')->url(),
                     ]),
             ])
             ->statePath('data');

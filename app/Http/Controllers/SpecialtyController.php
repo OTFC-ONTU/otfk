@@ -15,7 +15,8 @@ class SpecialtyController extends Controller
 
     public function show(Specialty $specialty)
     {
-        abort_unless($specialty->is_published, 404);
+        // Чернетки бачать лише залогінені адміністратори (превʼю з адмінки).
+        abort_unless($specialty->is_published || auth()->check(), 404);
 
         $specialty->load('programs');
 
