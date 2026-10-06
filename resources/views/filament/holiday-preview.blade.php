@@ -29,10 +29,7 @@
         </div>
         <div style="height:120px;background:linear-gradient(135deg,#e2e8f0,#f1f5f9);"></div>
         <div style="border-top:3px solid {{ $accent }};background:{{ $top }};">
-            <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 20px;color:{{ $accent }};font-weight:700;font-size:17px;text-align:center;">
-                <x-holiday.badge :theme="$theme" :size="28" />
-                {{ __('layout.holiday.'.$key) }}
-            </div>
+            <x-holiday.greeting :theme="$theme" :holiday-key="$key" />
             <div style="height:36px;background:rgb(0 0 0 / .15);"></div>
         </div>
     </div>

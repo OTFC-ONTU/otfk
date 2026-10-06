@@ -18,7 +18,7 @@ class FileCards
         }
 
         return preg_replace_callback(
-            '#<p>\s*<a\s+([^>]*?)href="([^"]+\.('.self::EXTENSIONS.'))(?:[?\#][^"]*)?"([^>]*)>((?:(?!</a>).)+)</a>\s*</p>#isu',
+            '#<p>\s*<a\s+([^>]*?)href="([^"]+\.('.self::EXTENSIONS.')(?:[?\#][^"]*)?)"([^>]*)>((?:(?!</a>).)+)</a>\s*</p>#isu',
             fn (array $m) => self::card($m[2], strtolower($m[3]), $m[5]),
             $html,
         ) ?? $html;
@@ -33,10 +33,10 @@ class FileCards
         $aria = e(__('public.download').': '.trim(strip_tags($label)));
 
         return '<div class="file-card not-prose">'
-            .'<span class="file-card__icon">'.$icon.'</span>'
+            .'<span class="file-card__icon" aria-hidden="true">'.$icon.'</span>'
             .'<span class="file-card__body"><a href="'.$url.'" target="_blank" rel="noopener" class="file-card__title">'.$title.'</a>'
             .'<span class="file-card__meta">'.strtoupper($ext).'</span></span>'
-            .'<a href="'.$url.'" target="_blank" rel="noopener" class="btn-outline file-card__download" aria-label="'.$aria.'">'.$download.' '.e(__('public.download')).'</a>'
+            .'<a href="'.$url.'" target="_blank" rel="noopener" class="file-card__download" aria-label="'.$aria.'">'.$download.'<span class="file-card__download-label">'.e(__('public.download')).'</span></a>'
             .'</div>';
     }
 }

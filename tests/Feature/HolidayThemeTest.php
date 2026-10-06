@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\HolidayTheme;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Blade;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -48,6 +49,16 @@ class HolidayThemeTest extends TestCase
             ->assertSee('З Новим роком і Різдвом Христовим!');
 
         $this->get('/en')->assertOk()->assertSee('Happy New Year and Merry Christmas!');
+    }
+
+    public function test_admin_preview_and_public_footer_share_the_greeting_component(): void
+    {
+        foreach (HolidayTheme::all() as $key => $theme) {
+            $greeting = Blade::render('<x-holiday.greeting :theme="$theme" :holiday-key="$key" />', ['theme' => $theme, 'key' => $key]);
+            $preview = view('filament.holiday-preview', ['theme' => $theme, 'key' => $key])->render();
+            $normalize = fn (string $html) => trim(preg_replace('/>\s+</', '><', preg_replace('#<style>.*?</style>#s', '', $html)));
+            $this->assertStringContainsString($normalize($greeting), $normalize($preview));
+        }
     }
 
     public function test_unknown_or_expired_theme_is_ignored(): void

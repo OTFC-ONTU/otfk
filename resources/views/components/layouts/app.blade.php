@@ -420,13 +420,7 @@
     <footer class="border-t border-white/15 bg-brand-950 text-brand-100">
         @if ($holiday)
             {{-- Святкове вітання над підвалом --}}
-            <div class="holiday-greeting">
-                <x-holiday.garland :theme="$holiday" :tiles="18" class="holiday-greeting-garland" />
-                <p class="container-site flex items-center justify-center gap-3 py-5 text-center">
-                    <x-holiday.badge :theme="$holiday" :size="30" />
-                    <span class="font-display text-lg font-bold sm:text-xl">{{ __('layout.holiday.'.$holidayKey) }}</span>
-                </p>
-            </div>
+            <x-holiday.greeting :theme="$holiday" :holiday-key="$holidayKey" />
         @endif
         <div class="container-site grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-4">
             <div class="lg:col-span-1">

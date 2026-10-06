@@ -18,7 +18,7 @@ function makeParticle(type, colors, w, h, initial) {
         rot: rand(0, Math.PI * 2),
         vr: rand(-0.03, 0.03),
         phase: rand(0, Math.PI * 2),
-        alpha: rand(0.65, 0.95),
+        alpha: rand(0.4, 0.7),
     };
     if (type === 'snow') { p.size = rand(5, 12); p.vy = rand(0.5, 1.2); }
     if (type === 'leaves') { p.size = rand(9, 16); p.vy = rand(0.8, 1.5); p.vr = rand(-0.04, 0.04); }
@@ -61,7 +61,7 @@ function draw(ctx, type, p, t) {
         ctx.quadraticCurveTo(p.size * 0.7, 0, 0, p.size);
         ctx.quadraticCurveTo(-p.size * 0.7, 0, 0, -p.size);
         ctx.fill();
-        ctx.globalAlpha = p.alpha * 0.5;
+        ctx.globalAlpha *= 0.5;
         ctx.strokeStyle = 'rgba(0,0,0,.35)';
         ctx.lineWidth = 0.8;
         ctx.beginPath();
@@ -102,19 +102,21 @@ export function startHolidayParticles(body = document.body) {
     const type = body.dataset.holidayParticles;
     const colors = (body.dataset.holidayColors || '').split(',').filter(Boolean);
     if (!theme || !type || !colors.length) return;
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const motion = matchMedia('(prefers-reduced-motion: reduce)');
+    if (motion.matches || document.hidden) return;
 
     const key = 'hd-shown-' + theme;
     try {
         if (sessionStorage.getItem(key)) return;
-        sessionStorage.setItem(key, '1');
     } catch (e) { /* приватний режим — просто граємо */ }
 
     const canvas = document.createElement('canvas');
     canvas.className = 'holiday-particles';
     canvas.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(canvas);
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    body.appendChild(canvas);
+    try { sessionStorage.setItem(key, '1'); } catch (e) { /* приватний режим */ }
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     let w = 0;
     let h = 0;
@@ -130,20 +132,35 @@ export function startHolidayParticles(body = document.body) {
     resize();
     window.addEventListener('resize', resize);
 
-    const count = Math.round(Math.min(70, Math.max(24, w / 22)));
+    const count = Math.round(Math.min(50, Math.max(12, w / 30)));
     const particles = Array.from({ length: count }, () => makeParticle(type, colors, w, h, true));
     const spawnUntil = performance.now() + 9000;
     let fading = false;
+    let previous = performance.now();
+    let frameId;
+    const stop = () => {
+        cancelAnimationFrame(frameId);
+        window.removeEventListener('resize', resize);
+        motion.removeEventListener('change', stop);
+        document.removeEventListener('visibilitychange', onVisibility);
+        canvas.remove();
+    };
+    const onVisibility = () => { if (document.hidden) stop(); };
+    motion.addEventListener('change', stop);
+    document.addEventListener('visibilitychange', onVisibility);
 
     const frame = (t) => {
+        // Швидкість однакова на екранах 60/120/144 Гц; довгу паузу не наздоганяємо.
+        const step = Math.min(3, Math.max(0, (t - previous) / (1000 / 60)));
+        previous = t;
         ctx.clearRect(0, 0, w, h);
         let alive = 0;
         for (const p of particles) {
             if (p.dead) continue;
-            p.age++;
-            p.y += p.vy * 1.6;
-            p.x += p.vx + Math.sin(t * 0.0012 + p.phase) * 0.4;
-            p.rot += p.vr;
+            p.age += step;
+            p.y += p.vy * 1.6 * step;
+            p.x += (p.vx + Math.sin(t * 0.0012 + p.phase) * 0.4) * step;
+            p.rot += p.vr * step;
             if (p.y > h + 30) {
                 if (t < spawnUntil) Object.assign(p, makeParticle(type, colors, w, h, false));
                 else { p.dead = true; continue; }
@@ -157,11 +174,10 @@ export function startHolidayParticles(body = document.body) {
             canvas.style.opacity = '0';
         }
         if (alive > 0 && t < spawnUntil + 4200) {
-            requestAnimationFrame(frame);
+            frameId = requestAnimationFrame(frame);
         } else {
-            window.removeEventListener('resize', resize);
-            canvas.remove();
+            stop();
         }
     };
-    requestAnimationFrame(frame);
+    frameId = requestAnimationFrame(frame);
 }

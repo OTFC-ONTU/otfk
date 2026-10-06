@@ -23,9 +23,9 @@
             <x-ico name="chevron-right" class="h-4 w-4 shrink-0" aria-hidden="true" />
         @endif
         @if (! empty($item['url']) && $i < $count - 1)
-            <a href="{{ $item['url'] }}" class="hover:text-white">{{ $item['label'] }}</a>
+            <a href="{{ $item['url'] }}" class="{{ $tone === 'light' ? 'hover:text-brand-700' : 'hover:text-white' }}">{{ $item['label'] }}</a>
         @else
-            <span class="text-white" @if ($i === $count - 1) aria-current="page" @endif>{{ $item['label'] }}</span>
+            <span class="{{ $tone === 'light' ? 'text-slate-700' : 'text-white' }}" @if ($i === $count - 1) aria-current="page" @endif>{{ $item['label'] }}</span>
         @endif
     @endforeach
 </nav>

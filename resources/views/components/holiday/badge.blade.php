@@ -3,24 +3,9 @@
 @php
     // Святковий значок біля логотипа: лінійна іконка акцентного кольору в колі
     // кольору навігації теми (стилі inline — працює й у прев'ю адмінки).
-    $icons = [
-        'snowflake' => '<path d="M12 2.5v19M3.8 7.25l16.4 9.5M3.8 16.75l16.4-9.5"/><path d="M9.6 4.3 12 6.6l2.4-2.3M9.6 19.7 12 17.4l2.4 2.3M4.6 10.6l3.2.8-.9 3.1M19.4 13.4l-3.2-.8.9-3.1M4.6 13.4l3.2-.8-.9-3.1M19.4 10.6l-3.2.8.9 3.1"/>',
-        'egg' => '<path d="M12 3c3.6 0 6.2 5.3 6.2 10.1a6.2 6.2 0 0 1-12.4 0C5.8 8.3 8.4 3 12 3z"/><path d="M6.2 11.6c1.9 1 3.9 1 5.8 0s3.9-1 5.8 0M6 15.6c2 .9 4 .9 6 0s4-.9 6 0"/>',
-        'ornament' => '<path d="m12 3 3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/><path d="M12 9.5 14.5 12 12 14.5 9.5 12z"/>',
-        'heart' => '<path d="M12 20s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 7.6 4.2 4.2 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z"/>',
-        'bell' => '<path d="M18 15.5V10a6 6 0 1 0-12 0v5.5L4.5 18h15z"/><path d="M10 20.5a2 2 0 0 0 4 0M12 4V2.5"/>',
-        'code' => '<path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15"/>',
-        'leaf' => '<path d="M5 19C5 10.5 10.5 5 19.5 4.5 19 13.5 13.5 19 5 19z"/><path d="M5 19l8-8"/>',
-        'wheat' => '<path d="M12 21.5V8"/><path d="M12 8c-1.9-.9-2.5-3-1.9-5 1.9.7 2.5 3 1.9 5zm0 0c1.9-.9 2.5-3 1.9-5-1.9.7-2.5 3-1.9 5zM12 13.2c-2.2-.3-3.6-2-3.6-4.2 2.2.3 3.6 2 3.6 4.2zm0 0c2.2-.3 3.6-2 3.6-4.2-2.2.3-3.6 2-3.6 4.2zM12 18.2c-2.2-.3-3.6-2-3.6-4.2 2.2.3 3.6 2 3.6 4.2zm0 0c2.2-.3 3.6-2 3.6-4.2-2.2.3-3.6 2-3.6 4.2z"/>',
-        'pumpkin' => '<path d="M12 7.2c-4.6 0-7.4 2.9-7.4 6.6S7.4 20.5 12 20.5s7.4-3 7.4-6.7S16.6 7.2 12 7.2z"/><path d="M8.6 7.8c-1.3 2-1.3 10.4 0 12.2M15.4 7.8c1.3 2 1.3 10.4 0 12.2M12 7.2c0-1.8.9-3.1 2.4-3.7"/>',
-        'bolt' => '<path d="M13.5 2.5 4.5 13.5H12l-1.5 8 9-11H12z"/>',
-    ];
     $bg = $theme['nav'] ?? '#1f3568';
 @endphp
 
 <span {{ $attributes->class('hd-badge')->merge(['style' => "display:inline-grid;place-items:center;flex:none;width:{$size}px;height:{$size}px;border-radius:9999px;background:{$bg};box-shadow:0 0 0 2px #fff,0 2px 6px rgb(15 23 42 / .25);"]) }} aria-hidden="true">
-    <svg width="{{ round($size * 0.62) }}" height="{{ round($size * 0.62) }}" viewBox="0 0 24 24" fill="none"
-         stroke="{{ $theme['accent'] }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        {!! $icons[$theme['badge']] ?? $icons['snowflake'] !!}
-    </svg>
+    <x-holiday.motif :theme="$theme" :width="round($size * 0.62)" :height="round($size * 0.62)" style="color:{{ $theme['accent'] }}" />
 </span>
