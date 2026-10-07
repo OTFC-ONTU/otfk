@@ -3,6 +3,9 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Auth\Login;
+use App\Filament\Auth\TwoFactorChallenge;
+use App\Filament\Auth\TwoFactorSetup;
+use App\Http\Middleware\RequireTwoFactor;
 use App\Http\Middleware\SecurityHeaders;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -50,6 +53,9 @@ class AdminPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
                 Pages\Dashboard::class,
+                // Сторінки другого фактора (поза auto-discovery: без навігації, лише за маршрутом).
+                TwoFactorChallenge::class,
+                TwoFactorSetup::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
@@ -70,6 +76,11 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                RequireTwoFactor::class,
+            ])
+            // Другий фактор перевіряється і на Livewire-викликах компонентів панелі.
+            ->persistentMiddleware([
+                RequireTwoFactor::class,
             ]);
     }
 }

@@ -2,6 +2,10 @@
 
 namespace Tests;
 
+use App\Models\User;
+use App\Support\TwoFactor;
+use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\Authenticatable as UserContract;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Pagination\Paginator;
 
@@ -30,5 +34,36 @@ abstract class TestCase extends BaseTestCase
         // (SupportPagination) і не відновлює його, якщо монтування завершилось
         // 403 — наступний публічний тест втратив би посилання ?page=2.
         Paginator::useTailwind();
+    }
+
+    /**
+     * Фікстура входу: адмінка вимагає підтверджений другий фактор, тож
+     * користувач без нього отримує тестовий секрет, а сесія позначається як
+     * така, що пройшла код. Самі перевірки фактора (TwoFactorTest) входять
+     * через parent-метод і не отримують цієї позначки.
+     */
+    public function actingAs(UserContract $user, $guard = null)
+    {
+        if ($user instanceof User && ! $user->hasTwoFactor()) {
+            $user->forceFill([
+                'two_factor_secret' => UserFactory::TEST_TOTP_SECRET,
+                'two_factor_recovery_codes' => ['AAAAA-BBBBB', 'CCCCC-DDDDD'],
+                'two_factor_confirmed_at' => now(),
+            ])->saveQuietly();
+        }
+
+        parent::actingAs($user, $guard);
+        session([TwoFactor::SESSION_KEY => $user->getAuthIdentifier()]);
+
+        return $this;
+    }
+
+    /** Вхід без позначки другого фактора — для тестів самого фактора. */
+    public function actingAsWithoutTwoFactor(UserContract $user, $guard = null): static
+    {
+        parent::actingAs($user, $guard);
+        session()->forget(TwoFactor::SESSION_KEY);
+
+        return $this;
     }
 }

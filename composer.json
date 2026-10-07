@@ -7,10 +7,12 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "bacon/bacon-qr-code": "3.0",
         "blade-ui-kit/blade-heroicons": "^2.7",
         "filament/filament": "^3.0",
         "laravel/framework": "^12.0",
-        "laravel/tinker": "^2.10.1"
+        "laravel/tinker": "^2.10.1",
+        "pragmarx/google2fa": "8.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

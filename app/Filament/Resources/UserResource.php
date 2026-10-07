@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
+use App\Support\TwoFactor;
 use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -76,6 +77,9 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('role')->label('Роль')->badge()
                     ->formatStateUsing(fn (string $state) => User::ROLES[$state] ?? $state)
                     ->color(fn (string $state) => $state === User::ROLE_ADMIN ? 'danger' : 'gray'),
+                Tables\Columns\IconColumn::make('two_factor_confirmed_at')->label('2FA')->boolean()
+                    ->getStateUsing(fn (User $record) => $record->hasTwoFactor())
+                    ->tooltip(fn (User $record) => $record->hasTwoFactor() ? 'Застосунок підключено' : 'Підключить при наступному вході'),
                 Tables\Columns\TextColumn::make('last_login_at')->label('Останній вхід')
                     ->dateTime('d.m.Y H:i', 'Europe/Kyiv')->placeholder('ще не входив')->sortable(),
                 Tables\Columns\TextColumn::make('created_at')->label('Створено')->dateTime('d.m.Y')->sortable(),
@@ -83,6 +87,19 @@ class UserResource extends Resource
             ->defaultSort('id')
             ->actions([
                 Tables\Actions\EditAction::make(),
+                // Втрачений телефон і коди відновлення: адміністратор скидає фактор, користувач підключає застосунок заново при вході.
+                Tables\Actions\Action::make('resetTwoFactor')
+                    ->label('Скинути 2FA')
+                    ->icon('heroicon-o-device-phone-mobile')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading('Скинути двофакторний захист?')
+                    ->modalDescription('Користувач підключить застосунок заново при наступному вході. Робіть це лише після перевірки особи (телефон, зустріч), а не за листом.')
+                    ->visible(fn (User $record) => $record->hasTwoFactor() && $record->id !== auth()->id())
+                    ->action(function (User $record): void {
+                        app(TwoFactor::class)->reset($record, 'admin:'.auth()->user()?->email);
+                        Notification::make()->title('2FA скинуто')->body('Користувач підключить застосунок при наступному вході.')->success()->send();
+                    }),
                 Tables\Actions\DeleteAction::make()
                     ->visible(fn (User $record) => $record->id !== auth()->id()) // не дати видалити себе
                     ->before(fn (Tables\Actions\DeleteAction $action, User $record) => static::guardDeletion($action, $record)),

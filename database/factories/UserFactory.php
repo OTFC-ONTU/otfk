@@ -22,6 +22,9 @@ class UserFactory extends Factory
      *
      * @return array<string, mixed>
      */
+    /** Base32-секрет для тестів 2FA (не для реальних облікових записів). */
+    public const TEST_TOTP_SECRET = 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP';
+
     public function definition(): array
     {
         return [
@@ -37,6 +40,16 @@ class UserFactory extends Factory
     /**
      * Indicate that the model's email address should be unverified.
      */
+    /** Підключений і підтверджений другий фактор (секрет фіксований, щоб тести могли генерувати коди). */
+    public function withTwoFactor(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'two_factor_secret' => self::TEST_TOTP_SECRET,
+            'two_factor_recovery_codes' => ['AAAAA-BBBBB', 'CCCCC-DDDDD'],
+            'two_factor_confirmed_at' => now(),
+        ]);
+    }
+
     /** Редактор контенту без доступу до користувачів, налаштувань і меню. */
     public function editor(): static
     {
