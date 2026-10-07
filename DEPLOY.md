@@ -155,6 +155,15 @@ php artisan otfk:backup
 5. Добрати дзеркальні файли, яких немає або які пошкоджені: `php artisan otfk:mirror-files --verify --limit=1000` (із джерела otfk.od.ua). Якщо оригінал уже недоступний, а старий хостинг ще працює: `php artisan otfk:mirror-files --verify --from=https://СТАРИЙ-ДОМЕН --limit=1000` — файл береться з `/storage/...` старого хостингу і приймається лише за збігу записаного sha256. Повторювати, доки в черзі нічого не лишиться.
 6. Додати cron `schedule:run` на новому хостингу, оновити `APP_URL`, `php artisan optimize`. Перевірити `/`, `/en`, `/admin` і кілька сторінок з файлами.
 
+**Безпека при переїзді (інакше адмінка не впустить нікого):**
+
+- **`APP_KEY` — той самий, що на старому сервері.** Ним зашифровані секрети й коди відновлення 2FA в БД (а також cookie/сесії). Новий `key:generate` зламає вхід усім користувачам; якщо це вже сталося — `TWO_FACTOR_ENFORCE=false`, увійти, `php artisan otfk:two-factor <пошта> --reset` кожному, повернути `true`.
+- `.env`: `TWO_FACTOR_ENFORCE=true`, `SESSION_SECURE_COOKIE=true`, `APP_DEBUG=false`, `APP_URL` з новим доменом (шаблон — `.env.production.example`).
+- Точний час сервера (NTP): TOTP-коди живуть 30 с, розбіжність понад хвилину = «невірний код» у всіх. Перевірка: `date -u`.
+- Document root = `public/`; повторити пробу `storage/app/public/_probe.php` → 403 (розділ 6 `docs/security-audit.md`). Якщо новий хостинг на nginx без Apache, `.htaccess` не діє — заборону скриптів у `/storage/` прописати в конфігу nginx (`location ~* ^/storage/.*\.php$ { return 403; }`); білий список завантажень у застосунку працює незалежно.
+- `storage/logs/security-*.log` і `storage/app/private/sanitize-backup-*.json` у `storage-export` не входять — за потреби скопіювати вручну.
+- Секрети GitHub Actions (`REMOTE_HOST`, `REMOTE_USER`, `REMOTE_KEY`, `REMOTE_PATH`, `REMOTE_PORT`) перевести на новий сервер, інакше автодеплой і далі йтиме на старий.
+
 ## Моніторинг доступності (без коду)
 
 Безкоштовно: [UptimeRobot](https://uptimerobot.com) або Better Stack — пінг `https://ваш-домен/` кожні 5 хв. Сповіщення на email/Telegram, якщо сайт лежить.

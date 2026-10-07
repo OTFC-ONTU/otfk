@@ -97,8 +97,8 @@
 ## Последняя завершённая задача
 
 - **2026-10-07 (push + двофакторний захист):** работа по аудиту закоммичена и запушена в `master` (`3a94547`), CI-шлюз сработал на расхождении HTML-парсера между PHP 8.4 (локально) и 8.3 (CI/хостинг) — исправлено явным `MastermindsParser` и экранированием «голых» `<` (`57c5595`, деплой прошёл). Реализован обязательный TOTP для всех пользователей админки: `App\Support\TwoFactor`, middleware `RequireTwoFactor` (authMiddleware + persistentMiddleware, Livewire-вызовы без фактора → 403), страницы `TwoFactorSetup`/`TwoFactorChallenge`, миграция `2026_10_07_120000`, 10 одноразовых кодов восстановления, «Скинути 2FA» в `UserResource` (не для себя), `otfk:two-factor --status|--reset`, аварийный `TWO_FACTOR_ENFORCE`, журнал `2fa.*`. Зависимости: `pragmarx/google2fa`, `bacon/bacon-qr-code` (audit = 0).
-- Документы: аудит (раздел 19, С1 закрыт), roadmap (этап 2 п. 1 сделан), посібник (вхід, втрата телефону), DEPLOY (отновлення доступу), `.env.production.example` (`TWO_FACTOR_ENFORCE`), ARCHITECTURE.
-- Проверки: `TwoFactorTest` 8 passed, полный `php artisan test` — 420 passed (6870 assertions), Pint, `node DocsHtml/generate.mjs`, `git diff --check`; браузер на локальном сервере: подключение по QR, коды восстановления, страница кода. 2FA ещё не запушен — по команде пользователя; после деплоя все пользователи подключают приложение при первом входе.
+- Документы: аудит (раздел 19, С1 закрыт), roadmap (этап 2 п. 1 сделан), посібник (вхід, втрата телефону), DEPLOY (відновлення доступу + блок «Безпека при переїзді»: той самий `APP_KEY`, NTP, nginx без `.htaccess`, секрети Actions), `.env.production.example` (`TWO_FACTOR_ENFORCE`), ARCHITECTURE.
+- Проверки: `TwoFactorTest` 8 passed, полный `php artisan test` — 420 passed (6870 assertions), Pint, `node DocsHtml/generate.mjs`, `git diff --check`; браузер на локальном сервере: подключение по QR, коды восстановления, страница кода. 2FA запушен в `master` (`ae551e9`) по команде пользователя; после деплоя все пользователи подключают приложение при первом входе.
 
 ## Прочее
 
