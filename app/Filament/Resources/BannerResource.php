@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\BannerResource\Pages;
 use App\Models\Banner;
+use App\Rules\SafeUrl;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -38,7 +39,7 @@ class BannerResource extends Resource
             Forms\Components\TextInput::make('image_alt')->label('Опис зображення (alt)')
                 ->maxLength(255)->columnSpanFull()
                 ->helperText('Для доступності та SEO. Якщо порожньо — використається заголовок банера.'),
-            Forms\Components\TextInput::make('link_url')->label('Посилання')->maxLength(255)->placeholder('/abituriyentu')
+            Forms\Components\TextInput::make('link_url')->label('Посилання')->maxLength(255)->placeholder('/abituriyentu')->rule(new SafeUrl)
                 ->helperText('Куди веде кнопка банера. Порожнє — банер без кнопки.'),
             Forms\Components\TextInput::make('link_label')->label('Текст кнопки')->maxLength(255)->placeholder('Детальніше'),
             Forms\Components\DatePicker::make('starts_at')->label('Показувати з')

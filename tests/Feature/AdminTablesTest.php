@@ -2,12 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\NewsResource;
+use App\Models\MenuItem;
+use App\Models\QuickLink;
 use App\Models\User;
+use Filament\Resources\Pages\ListRecords;
+use Filament\Tables\Columns\ToggleColumn;
+use Filament\Tables\Table;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Смоук-тест списків адмінки після UX-правок Етапу 1 (ADMIN-UX-PLAN.md):
+ * Смоук-тест списків адмінки після UX-правок таблиць:
  * перетягування порядку, тумблери публікації, фільтри та порожні стани
  * не повинні ламати рендер жодної List-сторінки ресурсів.
  */
@@ -28,7 +34,7 @@ class AdminTablesTest extends TestCase
         $this->actingAs(User::factory()->create());
 
         foreach (self::RESOURCE_PATHS as $path) {
-            $this->get('/admin/' . $path)->assertOk();
+            $this->get('/admin/'.$path)->assertOk();
         }
     }
 
@@ -36,8 +42,8 @@ class AdminTablesTest extends TestCase
     {
         // Меню редагується вкладками рівнів: «Верхній рівень» + вкладка
         // підпунктів на кожен головний пункт (замість однієї плоскої таблиці).
-        $root = \App\Models\MenuItem::create(['label' => 'Тестовий пункт меню', 'link_type' => 'url', 'url' => '#']);
-        \App\Models\MenuItem::create(['label' => 'Тестовий підпункт', 'link_type' => 'url', 'url' => '#', 'parent_id' => $root->id]);
+        $root = MenuItem::create(['label' => 'Тестовий пункт меню', 'link_type' => 'url', 'url' => '#']);
+        MenuItem::create(['label' => 'Тестовий підпункт', 'link_type' => 'url', 'url' => '#', 'parent_id' => $root->id]);
 
         $this->actingAs(User::factory()->create())
             ->get('/admin/menu-items')
@@ -49,8 +55,8 @@ class AdminTablesTest extends TestCase
     public function test_quick_links_resource_lists_only_home_tiles(): void
     {
         // Партнери підвалу редагуються у «Підвал і вигляд», а не в цьому ресурсі.
-        \App\Models\QuickLink::create(['location' => 'home_tile', 'title' => 'Тестова плитка', 'url' => '/']);
-        \App\Models\QuickLink::create(['location' => 'footer_partner', 'title' => 'Тестовий партнер підвалу', 'url' => 'https://example.com']);
+        QuickLink::create(['location' => 'home_tile', 'title' => 'Тестова плитка', 'url' => '/']);
+        QuickLink::create(['location' => 'footer_partner', 'title' => 'Тестовий партнер підвалу', 'url' => 'https://example.com']);
 
         $this->actingAs(User::factory()->create())
             ->get('/admin/quick-links')
@@ -64,13 +70,13 @@ class AdminTablesTest extends TestCase
         // Тумблер публікації новин у таблиці свідомо відсутній:
         // NewsObserver шле автопост у Telegram при «оживленні» новини,
         // тож перемикання доступне лише у формі редагування.
-        $columns = \App\Filament\Resources\NewsResource::table(
-            \Filament\Tables\Table::make(new class extends \Filament\Resources\Pages\ListRecords
+        $columns = NewsResource::table(
+            Table::make(new class extends ListRecords
             {
-                protected static string $resource = \App\Filament\Resources\NewsResource::class;
+                protected static string $resource = NewsResource::class;
             })
         )->getColumns();
 
-        $this->assertNotInstanceOf(\Filament\Tables\Columns\ToggleColumn::class, $columns['is_published']);
+        $this->assertNotInstanceOf(ToggleColumn::class, $columns['is_published']);
     }
 }

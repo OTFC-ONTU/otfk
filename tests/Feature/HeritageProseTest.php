@@ -61,7 +61,7 @@ class HeritageProseTest extends TestCase
             'is_heritage' => true,
         ]);
 
-        $this->get('/' . $page->slug)
+        $this->get('/'.$page->slug)
             ->assertOk()
             ->assertSee('heritage-frame', escape: false)
             ->assertSee('prose-heritage', escape: false)
@@ -81,5 +81,14 @@ class HeritageProseTest extends TestCase
         $this->get('/abituriyentu')
             ->assertOk()
             ->assertSee('prose-site--no-dropcap', escape: false);
+    }
+
+    /** Текст сторінки без бічної колонки займає всю ширину контейнера, а не вузьку смугу 65ch зліва. */
+    public function test_prose_card_fills_available_width(): void
+    {
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        $this->assertMatchesRegularExpression('/\.prose-site \{\s*@apply prose prose-slate prose-lg max-w-none/', $css);
+        $this->assertDoesNotMatchRegularExpression('/\.heritage-frame \{[^}]*max-w-\[65ch\]/', $css);
     }
 }

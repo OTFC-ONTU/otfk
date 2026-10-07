@@ -14,7 +14,8 @@ class EditUser extends EditRecord
     {
         return [
             Actions\DeleteAction::make()
-                ->visible(fn () => $this->record->id !== auth()->id()),
+                ->visible(fn () => $this->record->id !== auth()->id())
+                ->before(fn (Actions\DeleteAction $action) => UserResource::guardDeletion($action, $this->record)),
         ];
     }
 }

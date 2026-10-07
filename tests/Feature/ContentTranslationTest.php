@@ -120,7 +120,7 @@ class ContentTranslationTest extends TestCase
         $this->get('/en/novyny/feed.xml')->assertOk()->assertDontSee('English news card')->assertSee('Оригінальний заголовок');
     }
 
-    public function test_filament_saves_exact_html_and_validates_publication_for_both_resources(): void
+    public function test_filament_saves_sanitized_html_and_validates_publication_for_both_resources(): void
     {
         $this->actingAs(User::firstOrFail());
         foreach ([Page::class => EditPage::class, News::class => EditNews::class] as $model => $component) {
@@ -132,7 +132,11 @@ class ContentTranslationTest extends TestCase
             Livewire::test($component, ['record' => $material->slug])
                 ->fillForm(['translation_published' => true, 'title_en' => 'Admin translation', 'body_en' => $html])
                 ->call('save')->assertHasNoFormErrors();
-            $this->assertSame($html, $material->fresh()->body_en);
+            // Збережений HTML — після SafeHtml: структура, класи, посилання й файли ті самі, розмітка нормалізована.
+            $this->assertSame(
+                str_replace(['<table><tr>', '</tr></table>', '<img src="/storage/photo.jpg">'], ['<table><tbody><tr>', '</tr></tbody></table>', '<img src="/storage/photo.jpg" />'], $html),
+                $material->fresh()->body_en,
+            );
             $this->assertTrue($material->fresh()->translation_published);
         }
     }

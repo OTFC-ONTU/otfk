@@ -10,8 +10,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Шлюз: без зелених тестів і чистого composer audit для цього ж SHA викладка не стартує.
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, sqlite3, bcmath, gd, zip, intl, fileinfo
+          coverage: none
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: composer audit --no-interaction --locked
+      - run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan test
+
   deploy:
     runs-on: ubuntu-latest
+    needs: tests
 
     steps:
       - uses: actions/checkout@v4
@@ -32,14 +53,16 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p ${{ secrets.REMOTE_PORT || 22 }} -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
 
-      # Репозиторій публічний — сервер тягне код по https без deploy key
+      # Репозиторій публічний — сервер тягне код по https без deploy key.
+      # Встановлюється саме той SHA, для якого пройшли тести і зібрано фронтенд
+      # (не «поточний master», який міг піти далі за час збірки).
       - name: Pull code and install dependencies
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.REMOTE_PORT || 22 }} ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} '
             set -e
             cd ${{ secrets.REMOTE_PATH }}
-            git fetch origin master
-            git reset --hard origin/master
+            git fetch origin ${{ github.sha }}
+            git reset --hard ${{ github.sha }}
             composer install --no-dev --optimize-autoloader --no-interaction
           '
 

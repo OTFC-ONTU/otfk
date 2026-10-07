@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\SettingResource\Pages;
 use App\Models\Setting;
+use App\Rules\SafeUrl;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -27,6 +28,12 @@ class SettingResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Розширені налаштування';
 
+    /** Сирий доступ до settings (включно з токеном Telegram) — лише адміністратору; див. також SettingPolicy. */
+    public static function canAccess(): bool
+    {
+        return (bool) auth()->user()?->isAdmin();
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([
@@ -47,6 +54,7 @@ class SettingResource extends Resource
                 ->helperText('Напр. логотип сайту. Рекомендований формат - PNG з прозорим тлом.'),
             Forms\Components\Textarea::make('value')->label('Значення')->rows(3)->columnSpanFull()
                 ->visible(fn (Forms\Get $get) => $get('type') !== 'image')
+                ->rule(fn (Forms\Get $get) => $get('type') === 'url' ? new SafeUrl : null)
                 ->helperText(fn (Forms\Get $get) => match ($get('key')) {
                     'site_version_label' => 'Напис у підвалі сайту (напр., «Бета-версія»). Порожнє значення — приховати позначку.',
                     'site_version_color' => 'Колір позначки версії: gold (золотий), green (зелений), blue (синій), red (червоний) або gray (сірий).',

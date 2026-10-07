@@ -165,9 +165,6 @@
                     @if (! empty($s['social_instagram']))
                         <a href="{{ $s['social_instagram'] }}" target="_blank" rel="noopener" class="hover:text-white">Instagram</a>
                     @endif
-                    <a href="{{ url('/admin') }}" class="inline-flex items-center gap-1.5 text-gold-300 hover:text-gold-200">
-                        <x-ico name="lock-closed" class="h-3.5 w-3.5" /> {{ __('layout.admin') }}
-                    </a>
                 </div>
             </div>
         </div>

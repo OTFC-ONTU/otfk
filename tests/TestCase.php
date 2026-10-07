@@ -3,6 +3,7 @@
 namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Pagination\Paginator;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -24,5 +25,10 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         $this->withoutVite();
+
+        // Livewire::test() компонента з таблицею підміняє статичний вид пагінації
+        // (SupportPagination) і не відновлює його, якщо монтування завершилось
+        // 403 — наступний публічний тест втратив би посилання ?page=2.
+        Paginator::useTailwind();
     }
 }

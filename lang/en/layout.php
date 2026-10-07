@@ -8,7 +8,6 @@ return [
     'announcement_more' => 'Read more',
     'nav_more' => 'More',
     'close_menu' => 'Close menu',
-    'admin' => 'Admin panel',
     'brand_short' => 'OTPC ONTU',
     'brand_name' => 'Odesa Technical Professional College',
     'about' => 'Odesa Technical Professional College of Odesa National University of Technology.',

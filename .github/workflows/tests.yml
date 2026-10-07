@@ -34,9 +34,9 @@ jobs:
       - name: Встановлення залежностей
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      - name: Перевірка вразливостей залежностей (попереджувальна)
-        run: composer audit --no-interaction
-        continue-on-error: true
+      # Блокуюча: відома вразливість у залежностях = червоний CI (оновити lock, див. docs/security-audit.md)
+      - name: Перевірка вразливостей залежностей
+        run: composer audit --no-interaction --locked
 
       - name: Підготовка середовища
         run: |

@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\MenuItemResource\Pages;
 use App\Filament\Support\ViewOnSite;
 use App\Models\MenuItem;
+use App\Rules\SafeUrl;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -14,6 +15,12 @@ use Filament\Tables\Table;
 class MenuItemResource extends Resource
 {
     protected static ?string $model = MenuItem::class;
+
+    /** Структура меню сайту — лише адміністратору (MenuItemPolicy): редактор не може підмінити пункти навігації. */
+    public static function canAccess(): bool
+    {
+        return (bool) auth()->user()?->isAdmin();
+    }
 
     protected static ?string $navigationIcon = 'heroicon-o-bars-3';
 
@@ -43,7 +50,7 @@ class MenuItemResource extends Resource
             Forms\Components\Select::make('page_id')->label('Сторінка')
                 ->relationship('page', 'title')->searchable()->preload()
                 ->helperText('Для типу «Сторінка».'),
-            Forms\Components\TextInput::make('url')->label('Посилання / назва маршруту')->maxLength(255)
+            Forms\Components\TextInput::make('url')->label('Посилання / назва маршруту')->maxLength(255)->rule(new SafeUrl)
                 ->helperText('Для типів «Зовнішнє посилання» (URL) або «Системний маршрут» (напр. home, news.index).'),
             Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
                 ->helperText('Простіше змінити перетягуванням рядків у вкладці свого рівня (кнопка «Змінити порядок»).'),

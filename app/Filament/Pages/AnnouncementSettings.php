@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Support\SettingsFormPage;
+use App\Rules\SafeUrl;
 use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -66,7 +67,7 @@ class AnnouncementSettings extends SettingsFormPage
                             ])
                             ->selectablePlaceholder(false)
                             ->live(),
-                        Forms\Components\TextInput::make('announcement_url')->label('Посилання (необов’язково)')
+                        Forms\Components\TextInput::make('announcement_url')->label('Посилання (необов’язково)')->rule(new SafeUrl)
                             ->helperText('Куди веде клік по оголошенню, напр. /novyny/... або повна адреса.'),
                         Forms\Components\Placeholder::make('preview')
                             ->label('Попередній перегляд')

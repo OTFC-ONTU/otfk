@@ -6,8 +6,10 @@ use App\Filament\Pages\BrokenLinks;
 use App\Filament\Resources\NewsResource\Pages\ListNews;
 use App\Filament\Resources\PageResource\Pages\ListPages;
 use App\Filament\Widgets\Drafts;
+use App\Models\Department;
 use App\Models\News;
 use App\Models\Page;
+use App\Models\Specialty;
 use App\Models\User;
 use App\Support\LinkChecker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,7 +17,7 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * Етап 3 ADMIN-UX-PLAN: дія «Дублювати» для сторінок/новин, перевірка битих
+ * Інструменти редагування: дія «Дублювати» для сторінок/новин, перевірка битих
  * внутрішніх посилань (LinkChecker + otfk:check-links + сторінка адмінки),
  * віджет «Чернетки» на дашборді.
  */
@@ -92,13 +94,13 @@ class AdminEditingToolsTest extends TestCase
             'slug' => 'storinka-z-posylannyamy',
             'is_published' => true,
             'body' => '<p><a href="/zhyva-storinka">ок</a>'
-                . '<a href="/neisnuyucha-storinka">битий</a>'
-                . '<a href="/chernetka-storinka">чернетка</a>'
-                . '<a href="/storage/documents/nemaye-takogo.pdf">файл</a>'
-                . '<a href="https://otfk.od.ua/stara">старий сайт</a>'
-                . '<a href="https://example.com/x">зовнішній</a>'
-                . '<a href="#yakir">якір</a>'
-                . '<a href="mailto:a@b.c">пошта</a></p>',
+                .'<a href="/neisnuyucha-storinka">битий</a>'
+                .'<a href="/chernetka-storinka">чернетка</a>'
+                .'<a href="/storage/documents/nemaye-takogo.pdf">файл</a>'
+                .'<a href="https://otfk.od.ua/stara">старий сайт</a>'
+                .'<a href="https://example.com/x">зовнішній</a>'
+                .'<a href="#yakir">якір</a>'
+                .'<a href="mailto:a@b.c">пошта</a></p>',
         ]);
 
         $reasons = collect((new LinkChecker)->scan())
@@ -139,8 +141,8 @@ class AdminEditingToolsTest extends TestCase
     {
         Page::create(['title' => 'Чернетка сторінки', 'slug' => 'chernetka-vidzhet-1', 'is_published' => false]);
         News::create(['title' => 'Чернетка новини', 'slug' => 'chernetka-vidzhet-2', 'is_published' => false, 'published_at' => now()]);
-        \App\Models\Specialty::create(['title' => 'Чернетка спеціальності', 'slug' => 'chernetka-vidzhet-3', 'is_published' => false]);
-        \App\Models\Department::create(['title' => 'Чернетка підрозділу', 'slug' => 'chernetka-vidzhet-4', 'type' => 'kafedra', 'is_published' => false]);
+        Specialty::create(['title' => 'Чернетка спеціальності', 'slug' => 'chernetka-vidzhet-3', 'is_published' => false]);
+        Department::create(['title' => 'Чернетка підрозділу', 'slug' => 'chernetka-vidzhet-4', 'type' => 'kafedra', 'is_published' => false]);
 
         $this->assertTrue(Drafts::canView());
 

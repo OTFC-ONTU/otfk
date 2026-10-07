@@ -22,7 +22,6 @@ class LocalizationShellTest extends TestCase
             ->assertSee('href="'.url('/en/abituriyentu').'"', false)
             ->assertSee('action="'.url('/en/poshuk').'"', false)
             ->assertSee('href="'.url('/en/novyny').'"', false)
-            ->assertSee('href="'.url('/admin').'"', false)
             ->assertHeader('X-Robots-Tag', 'noindex, follow');
 
         $this->get('/faq')->assertOk()

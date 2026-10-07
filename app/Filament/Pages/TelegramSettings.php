@@ -78,6 +78,8 @@ class TelegramSettings extends SettingsFormPage
     /** Тестова відправка з поточних (навіть незбережених) значень форми. */
     public function sendTest(): void
     {
+        abort_unless(static::canAccess(), 403);
+
         $state = $this->form->getState();
         $token = trim((string) ($state['telegram_bot_token'] ?? ''));
         $channel = trim((string) ($state['telegram_channel'] ?? ''));

@@ -4,7 +4,9 @@
 
 > ✅ Перед прод-деплоем уже сделано в коде: `User::canAccessPanel()` (иначе Filament отдаёт 403 на проде) и шаблон `.env.production.example`.
 
-> 🚀 **Автодеплой:** после первичной настройки по этому документу обновления едут сами — workflow `.github/workflows/deploy.yml` на каждый push в `master` (или вручную через Run workflow): собирает фронтенд в CI, по SSH делает `git reset --hard origin/master` + `composer install`, заливает `public/build/` rsync-ом и выполняет `migrate --force` + пересборку кэшей. Нужны секреты репозитория `REMOTE_KEY` (приватный SSH-ключ), `REMOTE_HOST`, `REMOTE_USER`, `REMOTE_PATH` (каталог сайта), опционально `REMOTE_PORT`. Раздел «Обновление сайта потом» ниже — ручной запасной путь.
+> 🚀 **Автодеплой:** после первичной настройки по этому документу обновления едут сами — workflow `.github/workflows/deploy.yml` на каждый push в `master` (или вручную через Run workflow): после успешных тестов и аудита того же workflow собирает фронтенд в CI, по SSH делает `git reset --hard ${{ github.sha }}` + `composer install`, заливает `public/build/` rsync-ом и выполняет `migrate --force` + пересборку кэшей. Нужны секреты репозитория `REMOTE_KEY` (приватный SSH-ключ), `REMOTE_HOST`, `REMOTE_USER`, `REMOTE_PATH` (каталог сайта), опционально `REMOTE_PORT`. Раздел «Обновление сайта потом» ниже — ручной запасной путь.
+> Переревью безопасности 06.10.2026: в `deploy.yml` реализован собственный job `tests`, `deploy` зависит от него и устанавливает тот же SHA. Ручной запуск вне master требует отдельной проверки получения выбранного SHA. Атомарность проверки и записи `otfk:sanitize-content --apply` реализована условным UPDATE (разделы 16–17 аудита). Приёмка на хостинге остаётся обязательной; локальный тест команды требует изоляции storage, чтобы не удалять рабочие бэкапы.
+>
 > ⚠️ `public/build/` больше **не** коммитится в git — сборка живёт только в CI/деплое; локально `npm run build` или `npm run dev`.
 
 ---
@@ -19,7 +21,7 @@ npm run build
 #    он уже есть в локальном .env, строка APP_KEY=base64:...
 ```
 
-Версия PHP: проект на **Laravel 12 → нужен PHP 8.2+** (лучше 8.3).
+Версия PHP: **8.3** (в `composer.json` зафиксировано `platform.php = 8.3.0`, CI тестирует на 8.3; `composer.lock` собирается под эту версию).
 
 ---
 
@@ -50,8 +52,9 @@ nano .env
 ### 3. База данных
 В панели хостинга: **MySQL → создать базу + пользователя**, дать пользователю права на базу. Подставить их в `.env` (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_HOST=localhost`).
 
-> ⚠️ Репозиторий публичный — в `.env` задайте свои `ADMIN_EMAIL` и `ADMIN_PASSWORD` **до** этой команды
-> (иначе создастся админ с дефолтным паролем `password`, который виден в коде). Делайте seed **до** `php artisan optimize` (кэш конфига ломает чтение env в сидере).
+> ⚠️ В `.env` задайте свои `ADMIN_EMAIL` и `ADMIN_PASSWORD` **до** этой команды: вне окружений `local`/`testing`
+> сидер без `ADMIN_PASSWORD` останавливается с ошибкой (дефолтного пароля на сервере нет). Пароль — минимум 12 символов,
+> буквы и цифры. Делайте seed **до** `php artisan optimize` (кэш конфига ломает чтение env в сидере).
 
 ```bash
 # создаст все таблицы И наполнит сайт (меню, страницы, демо-контент) + админа из ADMIN_EMAIL/ADMIN_PASSWORD
@@ -90,7 +93,7 @@ php artisan optimize             # кеш конфигов/роутов/вью (
 - [ ] PHP **8.2+** выбран для сайта
 - [ ] PHP-расширение **GD с поддержкой WebP** (для авто-оптимизации картинок). Если нет — сайт работает, но изображения не сжимаются в WebP (молча пропускается). Проверка: `php -r "var_dump(function_exists('imagewebp'));"`
 - [ ] Корень сайта = **`public`**
-- [ ] `.env`: `APP_ENV=production`, `APP_DEBUG=false`, `APP_KEY` заполнен, `APP_URL=https://домен`, `DB_*`
+- [ ] `.env`: `APP_ENV=production`, `APP_DEBUG=false`, `APP_KEY` заполнен, `APP_URL=https://домен`, `DB_*`, `SESSION_SECURE_COOKIE=true`, `ADMIN_EMAIL`/`ADMIN_PASSWORD`
 - [ ] `php artisan migrate --seed --force` (или импорт `otfk.sql`)
 - [ ] `php artisan storage:link` (фото из админки)
 - [ ] `php artisan filament:assets` (стили админки)
@@ -100,7 +103,8 @@ php artisan optimize             # кеш конфигов/роутов/вью (
 ## Проверить после деплоя
 
 1. `https://домен/` — сайт, плитки, новости
-2. `https://домен/admin` — вход `admin@otfk.od.ua` / `password` → **сразу сменить пароль** (Профіль в правом верхнем углу)
+2. `https://домен/admin` — вход под `ADMIN_EMAIL` / `ADMIN_PASSWORD` из `.env` → сменить пароль в профиле, создать личные учётки сотрудников с ролью «Редактор» (`Налаштування → Користувачі`)
+4. Чек-лист безопасности после деплоя — раздел 6 [`docs/security-audit.md`](docs/security-audit.md): заголовки на `/admin/login`, проба `storage/app/public/_probe.php` → 403, журнал `storage/logs/security-*.log`; затем `php artisan otfk:sanitize-content` (отчёт) и `php artisan otfk:sanitize-content --apply` (очистка старого HTML с бэкапом)
 3. Загрузить логотип, баннер, пару новостей — проверить, что фото отображаются (нужен `storage:link`)
 
 ## Cron на хостингу (бекапи + розклад Laravel)

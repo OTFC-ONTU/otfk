@@ -9,23 +9,24 @@
 - **Стек (подтверждён по коду, НЕ «чистый PHP»):** PHP ^8.2 (CI/прод — 8.3), **Laravel 12**, **Filament 3** (вся админка), Blade + **Tailwind CSS v4** + **Alpine.js 3**, Vite 7. БД: SQLite в dev/тестах, **MySQL в проде**. Composer + npm.
 - **Хостинг:** shared-хостинг ukraine.com.ua (SSH, без Node, без queue-воркера) — отсюда ключевые паттерны: фронтенд собирается в CI и заливается на сервер rsync-ом (деплой-workflow), фоновые задачи только через `dispatch(...)->afterResponse()`.
 - **Локально:** `php artisan serve --port=8002` (см. `.claude/launch.json`), или `composer run dev` (также запускает queue:listen, pail и Vite; очередь только для dev, на проде воркера нет). Тесты: `composer test` (SQLite `:memory:`).
-- **PoC-статус:** ролей нет (любой пользователь = полный админ), сид-данные фейковые, в футере бейдж «Альфа-версія». Полный список — в разделе [PoC-only](#poc-only).
+- **PoC-статус:** сид-данные фейковые, в футере бейдж «Альфа-версія»; роли `admin`/`editor` и базовая защита админки введены 06.10.2026 (см. «Авторизация и роли», `docs/security-audit.md`). Полный список — в разделе [PoC-only](#poc-only).
 
 ## Структура репозитория
 
 | Директория / файл | Что там |
 |---|---|
 | `app/Http/Controllers/` | Контроллеры публичной части (админка их не использует) |
-| `app/Http/Middleware/` | `SetPublicLocale` (глобально); `SecurityHeaders`, `TrackVisits` (только `web`-группа) |
+| `app/Http/Middleware/` | `SetPublicLocale` (глобально); `SecurityHeaders` (группа `web` **и** стек панели Filament); `TrackVisits` (только `web`) |
 | `app/Filament/` | Вся админка: Resources (20 шт.), Pages (`ContentChecklist`, `BrokenLinks`, `BellSchedule` + страницы-формы настроек), `Support/SettingsFormPage`, Widgets |
-| `app/Models/` | 26 Eloquent-моделей + трейты `Concerns/OptimizesUploadedImages`, `Concerns/HasEnglishTranslation` |
+| `app/Models/` | 26 Eloquent-моделей + трейты `Concerns/OptimizesUploadedImages`, `Concerns/HasEnglishTranslation`; `User` — роли `admin`/`editor` и запобежники |
+| `app/Policies/`, `app/Rules/`, `app/Casts/`, `app/Listeners/`, `app/Filament/Auth/` | `AdminOnlyPolicy` (+ `UserPolicy`, `SettingPolicy`, `MenuItemPolicy`), правило `SafeUrl`, каст `SafeHtml`, слушатель `LogAuthenticationEvents` (журнал входов), `Auth/Login` (журнал блокировок) |
 | `app/Services/` | `TelegramPoster` — исходящий постинг новостей в Telegram-канал |
-| `app/Support/` | `ImageOptimizer` (GD → WebP), `BannerOverlay` (inline-CSS градиенты), `AdminPreview`, `LinkChecker`, `UniqueSlug` |
+| `app/Support/` | `ImageOptimizer` (GD → WebP), `BannerOverlay` (inline-CSS градиенты), `AdminPreview`, `LinkChecker`, `UniqueSlug`, `HtmlSanitizer` + `Sanitizer/IframeSourceSanitizer` (очистка HTML редактора при сохранении через `symfony/html-sanitizer`) |
 | `app/Jobs/`, `app/Mail/` | `PostNewsToTelegram`; встроенные формы контактов и заявки сняты, служебные письма удалены |
 | `app/Observers/` | `NewsObserver` — триггер Telegram-автопоста (подключён атрибутом на модели!) |
-| `app/Console/Commands/` | `otfk:backup`, `images:webp`, `otfk:import-docs`, `otfk:import-news`, `otfk:mirror-files`, `otfk:storage-export`, `otfk:storage-import` |
+| `app/Console/Commands/` | `otfk:backup`, `images:webp`, `otfk:import-docs`, `otfk:import-news`, `otfk:mirror-files`, `otfk:storage-export`, `otfk:storage-import`, `otfk:sanitize-content` (отчёт/очистка старого HTML: проход на чтение → уникальный бэкап JSON с хешами переводов, `updated_at` и именем соединения → запись атомарным условным UPDATE (все отсканированные значения в WHERE, BINARY на MySQL), конфликт = пропуск и код выхода 1; DOM-классификатор «удалено/нормализация» учитывает значения `style`/`class`; `--connection=`, `--backup-dir=` — тесты пишут бэкапы во временный каталог, не в `storage/app/private`) |
 | `bootstrap/app.php` | Регистрация роутов, health `/up`, кастомные middleware |
-| `config/` | Сток Laravel 12, кроме `blade-icons.php` (отключён дефолтный `<x-icon>`) |
+| `config/` | Сток Laravel 12, кроме `blade-icons.php` (отключён дефолтный `<x-icon>`), `livewire.php` (белый список расширений/MIME и 20 МБ для всех загрузок админки) и канала `security` в `logging.php` |
 | `database/migrations/` | Схема **и контент-фикстуры** (см. «Миграции как контент») |
 | `database/seeders/` | `DatabaseSeeder` (админ), `SiteSeeder` (демо-данные, деструктивен!), `QuizSeeder` |
 | `routes/web.php` | Общие SEO-адреса и регистрация `routes/public.php` для `/` и `/en` (API/webhook-роутов нет) |
@@ -34,7 +35,9 @@
 | `resources/css/app.css`, `resources/js/app.js` | Tailwind v4 тема + Alpine; весь кастомный JS — inline в layout |
 | `public/build/` | Прод-бандл Vite; **в git не входит** — собирается локально (`npm run build`) и в CI при деплое |
 | `tests/Feature/` | Feature-тесты; многие фиксируют поведенческие контракты |
-| `docs/posibnyk-administratora.html` | Ручной (не генерируемый) мануал админа для персонала |
+| `docs/posibnyk-administratora.md` | Посібник адміністратора для персонала (UK): вход, роли, правила, разделы, типовые задачи, инциденты |
+| `docs/security-audit.md`, `docs/admin-roadmap.md` | Аудит безопасности админки (06.10.2026, RU; высокие находки исправлены в той же правке) и план дальнейших улучшений (2FA, профиль, журнал изменений, бэкапы) |
+| `storage/app/public/.htaccess`, `public/.htaccess` | Запрет исполнения скриптов в `/storage/` двумя механизмами: `RewriteRule … [F]` в `public/.htaccess` (mod_rewrite) и `Require`/`Deny` + CSP `sandbox` для HTML/SVG в каталоге загрузок |
 | `DocsHtml/generate.mjs` | Генератор HTML-твинов этой документации |
 | `.github/workflows/` | `tests.yml` (тесты + сборка фронта) и `deploy.yml` (автодеплой `master` на хостинг) |
 | `DEPLOY.md`, `README.md` | Деплой на ukraine.com.ua; обзор фич |
@@ -133,10 +136,15 @@ flowchart LR
 
 ## Авторизация и роли
 
-- Вход: встроенный Filament Login по `/admin/login`. Учётки — таблица `users`, пароль bcrypt (`'password' => 'hashed'`).
-- Сессии: драйвер `database` (таблица `sessions`); `AuthenticateSession` в панели.
-- **Ролей нет вообще.** `User::canAccessPanel()` возвращает `true` — каждая запись в `users` = полный админ на все ресурсы, включая `UserResource`. Это задокументировано в докблоке как осознанное PoC-решение. Gates/Policies отсутствуют.
-- Первый админ создаётся `DatabaseSeeder`: `env('ADMIN_EMAIL', 'admin@otfk.od.ua')` / `env('ADMIN_PASSWORD', 'password')` — **дефолт-фоллбек `password` в публичном репо** (см. PoC-only).
+- Вход: встроенный Filament Login по `/admin/login` (5 попыток/мин на IP). Учётки — таблица `users`, пароль bcrypt (`'password' => 'hashed'`); политика паролей `Password::defaults()` в `AppServiceProvider` — 12+ символов, буквы и цифры, в production `uncompromised()`.
+- Сессии: драйвер `database` (таблица `sessions`); `AuthenticateSession` в панели; прод-шаблон задаёт `SESSION_SECURE_COOKIE=true`.
+- **Роли** (миграция `2026_10_06_220000`): `users.role` = `admin` | `editor` (`User::ROLES`, default `editor`; существующие пользователи стали `admin`). `canAccessPanel()` пускает обе роли; что доступно внутри — `canAccess()` ресурсов/страниц + политики: `UserResource`, `SettingResource`, `MenuItemResource` и все страницы-наследники `SettingsFormPage` (с повторной проверкой в `save()`/`sendTest()`) — только `admin`. Политики наследуют `App\Policies\AdminOnlyPolicy` и находятся авто-обнаружением (`UserPolicy`, `SettingPolicy`, `MenuItemPolicy`). Контентные ресурсы, «Сторінки», «Що наповнити», «Биті посилання», «Розклад дзвінків» (пишет `settings` напрямую, без политики) — доступны редактору.
+- Запобежники `User::booted()`: неизвестная роль, понижение последнего `admin`, удаление себя или последнего `admin` → `ValidationException` (роль берётся из `getOriginal`); `User::$attributes` даёт `editor` по умолчанию для `create()` без роли. В `UserResource` действия удаления проходят `guardDeletion()` (уведомление + отмена до исключения), массовое удаление выключено; собственная роль в форме недоступна и не дегидрируется.
+- Журнал безопасности: `App\Listeners\LogAuthenticationEvents` (event discovery) пишет `auth.login|failed|logout`, собственная страница входа `App\Filament\Auth\Login` (`->login(Login::class)`, вне auto-discovery `Filament/Pages`) — `auth.lockout` (пакет rate-limiting Filament событие `Lockout` не шлёт) в канал `security` (`storage/logs/security-YYYY-MM-DD.log`, `info`, 90 дней; e-mail/IP/UA, без паролей) и обновляет `users.last_login_at/last_login_ip`.
+- Первый админ создаётся `DatabaseSeeder` через `firstOrCreate` (пароль не перезаписывается) с ролью `admin`; вне `local`/`testing` пустой `ADMIN_PASSWORD` → `RuntimeException`, фоллбек `password` только для dev/тестов. `UserFactory` по умолчанию создаёт `admin` (контракт существующих тестов), состояние `->editor()`.
+- Защита загрузок и контента (детали — `docs/security-audit.md`): `config/livewire.php` — `extensions:` + `mimetypes:` + `max:20480` для всех временных загрузок (SVG/HTML/PHP отклоняются), `preview_mimes` без `svg`; `ProgramResource`/`DocumentResource` — `acceptedFileTypes`; `storage/app/public/.htaccess` — `Require all denied` для скриптов, `php_flag engine off`, CSP `sandbox` для HTML/SVG/JS. Каст `App\Casts\SafeHtml` (→ `HtmlSanitizer` на `symfony/html-sanitizer`, DOM-парсер с белым списком W3C; `IframeSourceSanitizer` пропускает iframe только YouTube `/embed`, Google Maps, Google Docs `(document|presentation|spreadsheets)`, Drive `/file`, PDF старого сайта `otfk.od.ua` и относительные `/storage/...`; `StyleAttributeSanitizer` оставляет в `style` только оформление — без `position`/`z-index`/`inset`/`transform`/`opacity`/`display`/`url()`; `ClassAttributeSanitizer` отбрасывает утилиты Tailwind позиционирования/слоёв/прозрачности/трансформаций/полноэкранных размеров) на `body`/`body_en` Page/News, `description`/`description_en` Specialty/Department, `bio`/`bio_en` Staff удаляет `<script>`/`<style>`/`<object>`, `on*`, `javascript:`-ссылки, чужие `<iframe>`; маркеры `<!--imported-from:…-->` сохраняются отдельно (парсер отбрасывает комментарии), legacy-таблицы/details/inline-стили остаются; применяется при записи атрибута, в т.ч. `saveQuietly()`; уже сохранённый контент чистит `otfk:sanitize-content` (dry-run → `--apply`: бэкап JSON в `storage/app/private`, атомарный условный UPDATE через Query Builder без observers и изменения updated_at, хеш актуального перевода пересчитывается). Правило `App\Rules\SafeUrl` — URL меню, плиток, баннеров, оголошення, `type=url` в «Розширені налаштування». Все JSON-LD — с `JSON_HEX_TAG`.
+- Заголовки: `SecurityHeaders` в группе `web` и в стеке панели: `X-Frame-Options`, `nosniff`, `Content-Security-Policy: frame-ancestors 'self'`, `Referrer-Policy`, `Permissions-Policy`, HSTS по HTTPS, `X-Robots-Tag: noindex, nofollow` для `/admin*`, `/admin-preview/*`, `/livewire/*`. Публичной ссылки на `/admin` нет (`AdminExposureTest`).
+- Тесты контрактов: `AdminRolesTest`, `AdminSecurityTest`, `AdminExposureTest`.
 
 ## Схема данных
 
@@ -198,12 +206,12 @@ Telegram-автопост: `NewsObserver` (подключён PHP-атрибут
 
 Триггер: каждый `push` и `pull_request` (без фильтров). Секретов не использует.
 
-- **Job `tests`** (ubuntu, PHP 8.3): checkout → setup-php (pdo_sqlite, gd, intl...) → composer-кэш → `composer install` → `composer audit` (advisory, `continue-on-error`) → `cp .env.example .env` + `key:generate` → `php artisan test`. Заметь: тесты на SQLite, прод на MySQL — MySQL-специфика CI не ловится.
+- **Job `tests`** (ubuntu, PHP 8.3): checkout → setup-php (pdo_sqlite, gd, intl...) → composer-кэш → `composer install` → `composer audit --locked` (**блокирующий**: известная уязвимость = красный CI; `composer.json` фиксирует `platform.php = 8.3.0`) → `cp .env.example .env` + `key:generate` → `php artisan test`. Заметь: тесты на SQLite, прод на MySQL — MySQL-специфика CI не ловится.
 - **Job `assets`** (ubuntu, Node 20): `npm ci` → `npm run build` — smoke-проверка, что фронтенд собирается.
 
 ### `.github/workflows/deploy.yml` — CD («Deploy to production»)
 
-Триггер: push в `master` или ручной `workflow_dispatch`; `concurrency: deploy-production` (без отмены запущенного). Шаги: сборка фронта в CI (Node 22, `npm ci && npm run build`) → SSH на хостинг (`git fetch` + `git reset --hard origin/master`, `composer install --no-dev`) → rsync `public/build/` на сервер (`--delete`) → `migrate --force` + `optimize:clear` + `config:cache`/`route:cache`/`view:cache`. Репозиторий публичный, поэтому сервер тянет код по https без deploy key. Секреты: `REMOTE_KEY` (приватный SSH-ключ), `REMOTE_HOST`, `REMOTE_USER`, `REMOTE_PATH`, опционально `REMOTE_PORT` (дефолт 22). Деплой feature-веток не настроен — окружение одно.
+Триггер: push в `master` или ручной `workflow_dispatch`; `concurrency: deploy-production` (без отмены запущенного). Job `tests` (PHP 8.3: `composer install`, `composer audit --locked`, `php artisan test`) — шлюз: `deploy` стартует только после него (`needs`). Шаги: сборка фронта в CI (Node 22, `npm ci && npm run build`) → SSH на хостинг (`git fetch origin <sha>` + `git reset --hard ${{ github.sha }}` — тот же коммит, что прошёл тесты и для которого собран бандл, `composer install --no-dev`) → rsync `public/build/` на сервер (`--delete`) → `migrate --force` + `optimize:clear` + `config:cache`/`route:cache`/`view:cache`. Репозиторий публичный, поэтому сервер тянет код по https без deploy key. Секреты: `REMOTE_KEY` (приватный SSH-ключ), `REMOTE_HOST`, `REMOTE_USER`, `REMOTE_PATH`, опционально `REMOTE_PORT` (дефолт 22). Деплой feature-веток не настроен — окружение одно.
 
 ### Фронтенд-бандл
 
@@ -229,16 +237,16 @@ Telegram-автопост: `NewsObserver` (подключён PHP-атрибут
 11a. **Святкові теми.** `App\Support\HolidayTheme::active()` (тема из `holiday_theme`, игнорирует неизвестный ключ и прошедшую `holiday_theme_until` по Europe/Kyiv, включительно) → layout ставит на `<body>` `data-holiday*` и CSS-переменные `--hd-top/--hd-nav/--hd-accent` (стили в конце `resources/css/app.css` перекрашивают `header .bg-brand-950`, `nav.bg-brand-900`, `footer.bg-brand-950`), SVG-гирлянду `<x-holiday.garland>` под липкой шапкой (lights/bunting/embroidery, скрывается при прокрутке), значок `<x-holiday.badge>` у логотипа и приветствие `layout.holiday.<key>` над подвалом. Общий `<x-holiday.motif>` рисует символы праздника; lights чередует лампочки с тематическими медальонами, bunting — подвески с символами (Пасха — расписные яйца), embroidery — вышитый орнамент. Приветствие оформляет общий `<x-holiday.greeting>` для сайта и админского превью; кнопка мобильного меню принимает цвет темы. Частицы — отдельный Vite-чанк `resources/js/holiday.js` (canvas: появление частиц 9 с, затем плавное затухание и удаление до ~13 с; раз за сессию на тему через sessionStorage, не при prefers-reduced-motion; скорость зависит от времени, а не числа кадров, эффект прекращается при скрытии вкладки/изменении motion-предпочтения). Компоненты стилизованы inline — их же рисует превью в админке (`filament/holiday-preview`). Новая тема = запись в `HolidayTheme::all()` + приветствие в обоих `lang/*/layout.php` (тест `HolidayThemeTest` проверяет полноту).
 12. **Layout ходит в БД:** `app.blade.php` дергает `MenuItem::navigation()`, `Setting::publicMap()`, `QuickLink`, `BellPeriod::active()` на каждой странице (частично кэшировано на 600с). Миграции и прямые SQL-правки `settings` обязаны сбрасывать `settings.map` и `settings.translations`; локаль не включается в общий кеш.
 13. **Карточки файлов:** общий Blade-компонент `x-file-card` используется каталогом документов и программами специальностей; `FileCards::render()` применяет его к отдельным файловым ссылкам в абзацах/списках и заменяет PDF-iframe при публичном выводе CMS, новостей, подразделений, специальностей и персонала. Название встроенного PDF берётся из title iframe или ближайшего заголовка/абзаца. Ссылки внутри предложений и не-PDF iframe сохраняются; комментарии/script/style/textarea не преобразуются. HTML и переводы в БД не меняются, query/fragment сохраняются во всех трёх ссылках (название/просмотр/скачивание). На ПК — ряд с одним синим значком; на телефоне — название на всю ширину и действия ниже. Размеры/даты каталога сохраняются.
-13a. **Неэкранированный HTML:** `{!! $news->body !!}`, `{!! $page->body !!}`, `map_embed` → iframe. Контент админский, но санитизации нет.
+13a. **Неэкранированный HTML:** `{!! $news->body !!}`, `{!! $page->body !!}` выводятся как есть, но поля редактора очищаются кастом `SafeHtml` **при сохранении** (уже сохранённый контент не переписывается до следующего сохранения); `map_embed` → iframe с экранированным `src`, без allowlist origin (план).
 13b. **Таблицы импортированного контента:** `ResponsiveTables::render()` оборачивает таблицы при публичном выводе после `LocalizedHtml::links()` (CMS/хабы, контакты, новости, подразделения, специальности, персонал). Таблица остаётся `display:table`, ширина 100% перекрывает старые inline-width; `.content-table-scroll` отвечает за прокрутку, рамку и фокус с клавиатуры. `contain:inline-size` не даёт широким таблицам растягивать родительский grid на телефонах. `display:block` на самой таблице сжимает шапку/строки по тексту — не возвращать. HTML в БД не меняется; комментарии/script/style/textarea сохраняются.
 13c. **Лицензирование и аккредитация:** `Page::publicBody()` использует `AccreditationContent::restore()` только для slug `litsenzuvannya-ta-akredytatsiya` и маркера исходного `licensing_and_accreditation`. Старый Markdown-импорт потерял native details/summary и оставил пары одинаковых заголовков перед ol/iframe/реестром; адаптер восстанавливает четыре основных и двенадцать вложенных панелей при выводе обеих локалей. 26 ссылок PDF, два PDF-iframe и внешний реестр сохраняются; повторный заголовок панели убирается. Уже существующие details не преобразуются. Раскрытие — native details без JS; данные/переводы/хеши не переписываются.
 14. **Sitemap без кэша** — 5 полных `->get()` по таблицам на каждый запрос; деградирует с ростом архива новостей (импортирован с 2014).
 15. **Импорт-команды `otfk:import-news|docs` ходят на живой legacy-сайт** otfk.od.ua; `--fresh` удаляет ранее импортированное. Не запускать бездумно. `otfk:mirror-files` тоже ходит на legacy-сайт, но только по очереди `file_mirrors` и ничего не удаляет.
 16. **`FILESYSTEM_DISK=local`** в env, но все загрузки/URL рассчитаны на диск `public` (Filament по умолчанию грузит в `public`). Код, использующий default-диск, запишет в недоступное место.
 17. **Тесты ловят контракты** — перед правкой поведения читай соответствующий Feature-тест (excerpt-дедупликация, heritage-типографика, чеклист контента, light-only и т.д.).
-18. **`SecurityHeaders` намеренно без CSP** (инлайн-скрипты Livewire/Alpine/Filament); `SESSION_SECURE_COOKIE` в прод-шаблоне не задан.
+18. **`SecurityHeaders` намеренно без полного CSP** (инлайн-скрипты Livewire/Alpine/Filament) — только `frame-ancestors 'self'`; применяется и к панели через стек middleware `AdminPanelProvider`. Новый `FileUpload` обязан укладываться в белый список `config/livewire.php`, иначе загрузка отклоняется.
 19. **DEPLOY.md** — смесь русского и украинского языка; описывает первичный ручной деплой, обновления едут автодеплоем (`deploy.yml`).
-20. **`docs/posibnyk-administratora.html`** — ручной, без генератора, шрифты с внешнего CDN; дрейфует от админки при изменении фич.
+20. **`docs/posibnyk-administratora.md`** — ручной мануал персонала; дрейфует от админки при изменении фич (обновлять вместе с ресурсами).
 
 ## PoC-only (удалить/заменить перед продом)
 
@@ -246,10 +254,8 @@ Telegram-автопост: `NewsObserver` (подключён PHP-атрибут
 
 | # | Что | Где | Действие перед продом |
 |---|---|---|---|
-| 1 | Дефолт-креды админа `admin@otfk.od.ua` / `password` | `database/seeders/DatabaseSeeder.php` | Убрать фоллбек; требовать env. DEPLOY.md даже предлагает логиниться этими кредами — поправить |
-| 2 | Нет ролей: каждый user — полный админ | `app/Models/User.php` `canAccessPanel()` | Ввести роли/политики или хотя бы ограничить `UserResource` |
+| 1 | Фоллбек пароля `password` в сидере остался только для `local`/`testing`; e-mail по умолчанию `admin@otfk.od.ua` | `database/seeders/DatabaseSeeder.php` | На проде `ADMIN_EMAIL`/`ADMIN_PASSWORD` обязательны (сидер падает без пароля) — перед продом переименовать учётку в личную |
 | 3 | Бейдж «Альфа-версія» в футере | настройки `site_version_label/color` (сид в `2026_06_10_150000`) | Очистить label (пустой = скрыт) |
-| 4 | Ссылка «Адмінпанель» в публичной шапке | `components/layouts/app.blade.php` (utility bar) | Убрать |
 | 5 | Фейковый персонал (8 выдуманных людей), фейковые документы «документ №N», демо-программы, демо-новости, демо-баннеры «Вступ 2026» | `database/seeders/SiteSeeder.php` | Заменить реальным контентом; сидер на прод не гонять повторно |
 | 6 | Чужие YouTube-ролики (M7lc1UVf-VE и др.) | `SiteSeeder` | Заменить видео колледжа |
 | 7 | Плейсхолдер-контакты `+38 (048) 000-00-00`, `info@otfk.od.ua`, generic-карта Одессы | настройки из `SiteSeeder` | Реальные контакты в админке |
@@ -259,7 +265,7 @@ Telegram-автопост: `NewsObserver` (подключён PHP-атрибут
 | 11 | Импортированные тексты старого сайта (не вычитаны) | миграции `import_*_content` | Редакторская вычитка |
 | 12 | Импорт-команды со скрейпингом legacy-сайта | `app/Console/Commands/ImportOtfk*` | Удалить после финального импорта |
 | 17 | Ежеминутная задача зеркалирования файлов legacy-сайта и каталог `storage/app/public/mirror/` | `otfk:mirror-files`, `routes/console.php`, `file_mirrors` | После финального переноса файлов можно убрать из расписания; таблицу и файлы сохранить (на них ссылается контент) |
-| 13 | Telegram-токен плейнтекстом в `settings` (на странице «Telegram» поле маскировано, в «Розширені налаштування» — открыто) | `SettingResource`, `TelegramSettings` | Перенести в env |
+| 13 | Telegram-токен плейнтекстом в `settings` (страница «Telegram» маскирует, «Розширені налаштування» показывает; обе — только `admin`) | `SettingResource`, `TelegramSettings` | Перенести в env (`docs/admin-roadmap.md`, этап 3) |
 | 15 | `/en` имеет переведённый интерфейс, переводы Page/News/Specialty/Department/Program/FAQ/Event/NewsCategory/Staff/QuizQuestion/QuizOption/DocumentCategory/Document/Video/Gallery/Photo/Banner/QuickLink/StatItem и текстовых Setting, поиск Page/News/Specialty/Document, на тестовой БД just-test.shop материалы переведены 2026-10-05, нужна вычитка; `noindex` | `SetPublicLocale`, `routes/public.php` | Вычитать переводы тестовой БД, отдельно проверить наполнение целевого прод-окружения и SEO; затем решить снятие `noindex` |
 | 16 | Самостоятельный альбом редизайна: демонстрационные показатели, тексты и действия; не подключён к приложению | `docs/redesign-2026-10-05/` | Использовать для согласования; переносить в Blade/Filament отдельной задачей, не публиковать как готовый сайт |
 | 14 | Мёртвый груз: axios в бандле (не используется, всё на fetch), `laravel/sail` без compose.yaml, pest-plugin в allow-plugins | `resources/js/bootstrap.js`, `composer.json` | Удалить |

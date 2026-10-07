@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Casts\SafeHtml;
 use App\Models\Concerns\HasEnglishTranslation;
 use App\Models\Concerns\OptimizesUploadedImages;
+use App\Support\LocalizedHtml;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -30,7 +32,7 @@ class Staff extends Model
 
     protected function casts(): array
     {
-        return ['is_published' => 'boolean', 'translation_published' => 'boolean'];
+        return ['is_published' => 'boolean', 'translation_published' => 'boolean', 'bio' => SafeHtml::class, 'bio_en' => SafeHtml::class];
     }
 
     public function getRouteKeyName(): string
@@ -77,7 +79,7 @@ class Staff extends Model
         $slug = $base;
 
         for ($i = 2; static::query()->where('slug', $slug)->when($ignoreId, fn ($q) => $q->whereKeyNot($ignoreId))->exists(); $i++) {
-            $slug = $base . '-' . $i;
+            $slug = $base.'-'.$i;
         }
 
         return $slug;
@@ -125,7 +127,7 @@ class Staff extends Model
      */
     private function splitBio(): array
     {
-        $bio = (string) \App\Support\LocalizedHtml::links($this->localized('bio'));
+        $bio = (string) LocalizedHtml::links($this->localized('bio'));
 
         if (blank($bio)) {
             return ['', []];
@@ -155,7 +157,7 @@ class Staff extends Model
             $cursor = $wholeOffset + strlen($whole);
         }
 
-        return [$clean . substr($bio, $cursor), $links];
+        return [$clean.substr($bio, $cursor), $links];
     }
 
     /**

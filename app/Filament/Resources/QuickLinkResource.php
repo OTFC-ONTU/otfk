@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\QuickLinkResource\Pages;
 use App\Models\QuickLink;
+use App\Rules\SafeUrl;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -26,8 +27,11 @@ class QuickLinkResource extends Resource
     protected static ?string $navigationGroup = 'Контент';
 
     protected static ?int $navigationSort = 5;
+
     protected static ?string $navigationLabel = 'Плитки на головній';
+
     protected static ?string $modelLabel = 'плитку';
+
     protected static ?string $pluralModelLabel = 'Плитки на головній';
 
     /** Доступні іконки для плиток (короткі назви heroicons). */
@@ -76,7 +80,7 @@ class QuickLinkResource extends Resource
             Forms\Components\Textarea::make('description')->label('Опис')->rows(2)->maxLength(255)->columnSpanFull()
                 ->helperText('Короткий підпис під заголовком плитки.'),
 
-            Forms\Components\TextInput::make('url')->label('Посилання')->required()->maxLength(255)
+            Forms\Components\TextInput::make('url')->label('Посилання')->required()->maxLength(255)->rule(new SafeUrl)
                 ->placeholder('/abituriyentu або https://...'),
 
             Forms\Components\Select::make('icon')->label('Іконка')

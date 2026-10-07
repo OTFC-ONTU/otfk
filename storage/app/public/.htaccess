@@ -1,0 +1,31 @@
+# Каталог завантажень адмінки (public/storage → storage/app/public). Тут лише
+# дані: жоден файл не виконується як скрипт, навіть якщо його розширення
+# пройшло повз перевірки застосунку. Другий шар захисту після валідації
+# завантажень (config/livewire.php, acceptedFileTypes у Filament-формах).
+# Кожна директива — під IfModule, щоб на хостингу без відповідного модуля
+# не отримати 500 для всіх файлів /storage/.
+<FilesMatch "(?i)\.(php|phtml|php[0-9]|phar|pl|py|cgi|sh|shtml|phps)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    # HTML/SVG/XML з каталогу завантажень відкриваються в ізольованому origin:
+    # скрипти в них не бачать cookie сайту і не можуть викликати адмінку.
+    <FilesMatch "(?i)\.(html?|xhtml|xml|svgz?|js|mjs)$">
+        Header set Content-Security-Policy "sandbox allow-scripts allow-popups"
+    </FilesMatch>
+</IfModule>

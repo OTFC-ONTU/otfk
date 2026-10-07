@@ -37,6 +37,12 @@ abstract class SettingsFormPage extends FilamentPage implements HasForms
     /** @var array<string, mixed> */
     public ?array $data = [];
 
+    /** Сторінки налаштувань — лише адміністратору; редактор не бачить групу і отримує 403. */
+    public static function canAccess(): bool
+    {
+        return (bool) auth()->user()?->isAdmin();
+    }
+
     /** @return array<string, string> ключ settings => тип для нового запису */
     abstract protected static function keys(): array;
 
@@ -97,6 +103,9 @@ abstract class SettingsFormPage extends FilamentPage implements HasForms
 
     public function save(): void
     {
+        // Повторна перевірка на Livewire-виклик: роль могла змінитися після відкриття сторінки.
+        abort_unless(static::canAccess(), 403);
+
         $state = $this->toSettings($this->form->getState());
         $translatable = static::translatableKeys();
 

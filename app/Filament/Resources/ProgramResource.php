@@ -34,7 +34,9 @@ class ProgramResource extends Resource
                 ->relationship('specialty', 'title')->searchable()->preload()->required(),
             Forms\Components\TextInput::make('title')->label('Назва програми')->required()->maxLength(255)->columnSpanFull(),
             Forms\Components\FileUpload::make('file_path')->label('Файл програми')->directory('programs')->downloadable()->openable()
-                ->helperText('PDF з освітньою програмою. Або вкажіть зовнішнє посилання нижче — достатньо одного з двох.'),
+                ->acceptedFileTypes(['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
+                ->maxSize(20480)
+                ->helperText('PDF або DOC/DOCX з освітньою програмою (до 20 МБ). Або вкажіть зовнішнє посилання нижче — достатньо одного з двох.'),
             Forms\Components\TextInput::make('external_url')->label('Зовнішнє посилання')->url()->maxLength(255)
                 ->helperText('Якщо програма розміщена на іншому сайті — замість файла.'),
             Forms\Components\Textarea::make('description')->label('Опис')->rows(2)->columnSpanFull()

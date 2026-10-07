@@ -5,6 +5,11 @@
 
     RewriteEngine On
 
+    # Каталог завантажень (/storage → storage/app/public) — лише дані: скрипти
+    # там ніколи не виконуються. Рівень mod_rewrite обрано тому, що він гарантовано
+    # працює на хостингу (цей же файл маршрутизує всі запити у index.php).
+    RewriteRule ^storage/.*\.(?i:php|phtml|php[0-9]|phar|pl|py|cgi|sh|shtml|phps)(?:\.|$) - [F,L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

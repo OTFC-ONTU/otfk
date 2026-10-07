@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\SafeHtml;
 use App\Models\Concerns\HasEnglishTranslation;
 use App\Models\Concerns\OptimizesUploadedImages;
 use App\Observers\NewsObserver;
@@ -37,6 +38,8 @@ class News extends Model
             'is_featured' => 'boolean',
             'is_heritage' => 'boolean',
             'telegram_posted_at' => 'datetime',
+            'body' => SafeHtml::class,
+            'body_en' => SafeHtml::class,
         ];
     }
 

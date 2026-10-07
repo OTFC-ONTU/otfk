@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\SafeHtml;
 use App\Models\Concerns\HasEnglishTranslation;
 use App\Models\Concerns\OptimizesUploadedImages;
 use App\Support\AccreditationContent;
@@ -32,6 +33,8 @@ class Page extends Model
             'translation_published' => 'boolean',
             'is_heritage' => 'boolean',
             'is_featured' => 'boolean',
+            'body' => SafeHtml::class,
+            'body_en' => SafeHtml::class,
         ];
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\SafeHtml;
 use App\Models\Concerns\HasEnglishTranslation;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -21,7 +22,7 @@ class Department extends Model
 
     protected function casts(): array
     {
-        return ['is_published' => 'boolean', 'translation_published' => 'boolean'];
+        return ['is_published' => 'boolean', 'translation_published' => 'boolean', 'description' => SafeHtml::class, 'description_en' => SafeHtml::class];
     }
 
     public function getRouteKeyName(): string

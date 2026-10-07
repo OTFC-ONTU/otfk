@@ -81,7 +81,9 @@ class LocalizationNavigationTest extends TestCase
             ->assertSee('href="https://example.org/faq"', false)
             ->assertSee('href="#section"', false)
             ->assertSee('src="/storage/image.jpg"', false);
-        $this->assertSame($body, $page->fresh()->body);
+        // Збережене тіло — після санітайзера (SafeHtml): лише нормалізація розмітки
+        // (лапки в атрибутах, самозакриваючий <img />), жодних змін посилань чи файлів.
+        $this->assertSame(str_replace(['href=../novyny>', '<img src="/storage/image.jpg">'], ['href="../novyny">', '<img src="/storage/image.jpg" />'], $body), $page->fresh()->body);
 
         $untouched = '<!-- <a href="/faq"> -->'
             .'<script>const html = \'<a href="/faq">\';</script>'

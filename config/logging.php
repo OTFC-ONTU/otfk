@@ -73,6 +73,16 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Журнал безпеки адмінки (входи, невдалі спроби, блокування, виходи) —
+        // рівень info фіксований, бо LOG_LEVEL на проді зазвичай error.
+        'security' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/security.log'),
+            'level' => 'info',
+            'days' => 90,
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
