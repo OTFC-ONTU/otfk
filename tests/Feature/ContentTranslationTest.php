@@ -134,7 +134,7 @@ class ContentTranslationTest extends TestCase
                 ->call('save')->assertHasNoFormErrors();
             // Збережений HTML — після SafeHtml: структура, класи, посилання й файли ті самі, розмітка нормалізована.
             $this->assertSame(
-                str_replace(['<table><tr>', '</tr></table>', '<img src="/storage/photo.jpg">'], ['<table><tbody><tr>', '</tr></tbody></table>', '<img src="/storage/photo.jpg" />'], $html),
+                str_replace('<img src="/storage/photo.jpg">', '<img src="/storage/photo.jpg" />', $html),
                 $material->fresh()->body_en,
             );
             $this->assertTrue($material->fresh()->translation_published);

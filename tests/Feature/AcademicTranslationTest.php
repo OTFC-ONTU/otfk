@@ -164,8 +164,7 @@ class AcademicTranslationTest extends TestCase
             Livewire::test($component, ['record' => $record->getRouteKey()])
                 ->fillForm(['translation_published' => true, 'title_en' => 'Admin title', 'description_en' => $description])
                 ->call('save')->assertHasNoFormErrors();
-            // Program.description — звичайний текст; HTML-описи проходять SafeHtml (нормалізація <tbody>).
-            $expected = $record instanceof Program ? $description : str_replace(['<table><tr>', '</tr></table>'], ['<table><tbody><tr>', '</tr></tbody></table>'], $html);
+            $expected = $description; // HTML проходить SafeHtml без змін: таблиця, клас і посилання вже в канонічній формі
             $this->assertSame($expected, $record->fresh()->description_en);
             $this->assertSame('Опубліковано', $record->fresh()->translationStatus());
             $record->refresh();

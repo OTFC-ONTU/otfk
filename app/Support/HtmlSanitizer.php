@@ -7,6 +7,7 @@ use App\Support\Sanitizer\IframeSourceSanitizer;
 use App\Support\Sanitizer\StyleAttributeSanitizer;
 use Symfony\Component\HtmlSanitizer\HtmlSanitizer as SymfonySanitizer;
 use Symfony\Component\HtmlSanitizer\HtmlSanitizerConfig;
+use Symfony\Component\HtmlSanitizer\Parser\MastermindsParser;
 
 /**
  * Очищення HTML редактора (тіла сторінок/новин, описи спеціальностей і
@@ -49,6 +50,10 @@ class HtmlSanitizer
 
         // Парсер кодує «=» та «@» в атрибутах як &#61;/&#64; — у лапках вони безпечні,
         // а читабельний href потрібен LocalizedHtml/LinkChecker і скриптам синхронізації.
+        // «Голий» знак «<» у тексті (a < b) Masterminds сприймає як початок тега і губить текст —
+        // екрануємо все, що не схоже на тег, коментар чи декларацію.
+        $html = preg_replace('/<(?![a-zA-Z\/!?])/u', '&lt;', $html) ?? $html;
+
         $clean = str_replace(['&#61;', '&#64;'], ['=', '@'], self::sanitizer()->sanitizeFor('body', $html));
 
         $seen = [];
@@ -65,7 +70,9 @@ class HtmlSanitizer
 
     private static function sanitizer(): SymfonySanitizer
     {
-        return self::$sanitizer ??= new SymfonySanitizer(self::config());
+        // Парсер задано явно: інакше Symfony на PHP ≥ 8.4 бере нативний парсер, а на 8.3
+        // (CI, хостинг) — Masterminds, і результати (напр. <tbody>) розходяться між середовищами.
+        return self::$sanitizer ??= new SymfonySanitizer(self::config(), new MastermindsParser);
     }
 
     private static function config(): HtmlSanitizerConfig
