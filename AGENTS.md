@@ -105,9 +105,9 @@
 
 ## Последняя завершённая задача
 
-- **2026-10-08 (запуск new.otfk.od.ua на Plesk):** приложение установлено Laravel Toolkit из ветки `plesk-build`, `.env` production/MySQL с `APP_KEY` тестового хостинга, БД — дамп just-test.shop (39 таблиц), файлы `storage/app/public` (3,1 ГБ, 6090 файлов) перенесены по FTP и `storage:link`; сценарий развёртывания — с полным путём к PHP 8.3. Секрет `PLESK_DEPLOY_WEBHOOK` добавлен, DEPLOY.md/ARCHITECTURE.md описывают фактическую раскладку и грабли (SQLite-шаблон `.env`, `master` по умолчанию в мастере Toolkit, FTP в `httpdocs`).
-- Проверки: снаружи `/` с реальным контентом, `X-Robots-Tag: noindex, nofollow`, `/storage/...` (логотип, баннеры, `mirror`) — 200. Полная цепочка CD проверяется пушем этого коммита.
-- Открыто: в `httpdocs` старого сайта осталась папка `new.otfk.od.ua` от первой заливки (otfk.od.ua/new.otfk.od.ua/… → 500) — удалить; полные дампы — в игнорируемых `storage/app/private/db-backups/` и `plesk-2026-10-08/`; решить, делать ли `prod` веткой по умолчанию. Из прошлых задач: «Урядовий контактний центр»/«Повідом про корупцію!» ведут на один `ukc.gov.ua`, у ссылок подвала нет `title_en`.
+- **2026-10-08 (стрелки слайдера на телефоне + запуск Plesk):** при 12 баннерах ряд «стрелка + 12 точек по 32px + стрелка» был шире 375px и стрелки обрезались. В `components/home/hero-slider.blade.php` при `$count > 7` на ширине `<sm` точки скрыты (`max-sm:hidden`), вместо них счётчик «N / всего»; от `sm` — точки как раньше. Тест `BannerOverlayTest::test_many_banners_use_slide_counter_on_phones_so_arrows_fit`. До этого: new.otfk.od.ua запущен через Laravel Toolkit (ветка `plesk-build`, БД и файлы перенесены, секрет `PLESK_DEPLOY_WEBHOOK` добавлен, раскладка и грабли — DEPLOY.md).
+- Проверки: `php artisan test --filter='BannerOverlayTest|HomeBlocksTranslationTest|MobileHeaderTest|FrontendPolishTest'` — 23 passed (локальный PHP 8.5); превью 375px с 12 временными баннерами — стрелки 100–276px, счётчик листает (1 → 4 / 12), 768px — точки; временные баннеры удалены.
+- Открыто: убедиться, что Toolkit в режиме «Автоматичний» (иначе вебхук не разворачивает); в `httpdocs` старого сайта осталась папка `new.otfk.od.ua` от первой заливки (otfk.od.ua/new.otfk.od.ua/… → 500) — удалить; решить, делать ли `prod` веткой по умолчанию. Из прошлых задач: «Урядовий контактний центр»/«Повідом про корупцію!» ведут на один `ukc.gov.ua`, у ссылок подвала нет `title_en`.
 
 ## Прочее
 
