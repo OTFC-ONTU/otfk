@@ -188,4 +188,25 @@ class SearchPageTest extends TestCase
             ->assertSee('Pages')->assertSee('Documents')->assertSee('Specialties')
             ->assertDontSee('public.')->assertDontSee('feature.');
     }
+
+    public function test_query_and_titles_are_escaped_and_highlight_does_not_break_entities(): void
+    {
+        $this->makeNews('R&D <b>лабораторія</b> "amp"');
+        $payloads = ['"><script>alert(1)</script>', '<img src=x onerror=alert(1)>', "' OR 1=1 --"];
+
+        foreach ($payloads as $payload) {
+            $html = $this->get('/poshuk?q='.urlencode($payload))->assertOk()->getContent();
+            $this->assertStringNotContainsString($payload, $html);
+            $this->assertStringContainsString(e($payload), $html);
+            $this->getJson('/poshuk/pidkazky?q='.urlencode($payload))->assertOk()->assertJsonPath('total', 0);
+        }
+
+        // Запит «amp» не вклинюється в &amp;, а заголовок з тегами лишається текстом.
+        $html = $this->get('/poshuk?q=amp')->assertOk()->getContent();
+        $this->assertStringContainsString('R&amp;D &lt;b&gt;лабораторія&lt;/b&gt; &quot;<mark class="rounded bg-gold-100 px-0.5 text-brand-950">amp</mark>&quot;', $html);
+        $this->assertStringNotContainsString('&<mark', $html);
+
+        $this->get('/poshuk?q=test&type='.urlencode("news' OR 1=1"))->assertOk();
+        $this->get('/poshuk?q=test&page='.urlencode('1 OR 1=1'))->assertOk();
+    }
 }

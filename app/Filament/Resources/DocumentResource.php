@@ -46,7 +46,7 @@ class DocumentResource extends Resource
                 ])
                 ->maxSize(20480)
                 ->helperText('PDF, DOC(X), XLS(X), до 20 МБ. Або вкажіть зовнішнє посилання нижче.'),
-            Forms\Components\TextInput::make('external_url')->label('Зовнішнє посилання')->url()->maxLength(255)
+            Forms\Components\TextInput::make('external_url')->label('Зовнішнє посилання')->url()->rule(new \App\Rules\SafeUrl)->maxLength(255)
                 ->helperText('Якщо документ розміщено на іншому сайті — замість файла.'),
             Forms\Components\Textarea::make('description')->label('Опис')->rows(2)->columnSpanFull()
                 ->helperText('Короткий підпис під назвою документа. Необовʼязково.'),
