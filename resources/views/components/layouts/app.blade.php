@@ -221,7 +221,7 @@
                          class="relative hidden lg:block">
                         <form action="{{ \App\Support\LocalizedUrl::route('search') }}" method="GET" class="relative">
                             <x-ico name="magnifying-glass" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                            <input type="search" name="q" placeholder="{{ __('layout.search_placeholder') }}" autocomplete="off"
+                            <input type="search" name="q" maxlength="{{ \App\Support\SearchQuery::MAX_LENGTH }}" placeholder="{{ __('layout.search_placeholder') }}" autocomplete="off"
                                    x-model="q" @input.debounce.250ms="suggest()" @focus="items.length && (open = true)"
                                    class="w-48 rounded-full border-0 bg-slate-100 py-2 pl-9 pr-4 text-sm text-slate-700 ring-1 ring-transparent transition focus:w-64 focus:bg-white focus:ring-2 focus:ring-brand-500" />
                         </form>
@@ -364,7 +364,7 @@
                     <div x-data="liveSearch(@js(\App\Support\LocalizedUrl::route('search.suggest')), @js(\App\Support\LocalizedUrl::route('search')))" class="relative">
                         <form action="{{ \App\Support\LocalizedUrl::route('search') }}" method="GET" class="relative">
                             <x-ico name="magnifying-glass" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                            <input type="search" name="q" placeholder="{{ __('layout.site_search_placeholder') }}" autocomplete="off"
+                            <input type="search" name="q" maxlength="{{ \App\Support\SearchQuery::MAX_LENGTH }}" placeholder="{{ __('layout.site_search_placeholder') }}" autocomplete="off"
                                    x-model="q" @input.debounce.250ms="suggest()" class="input w-full pl-9" />
                         </form>
                         <div x-show="open && items.length" x-cloak

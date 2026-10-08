@@ -55,7 +55,8 @@ Route::get('/halereya', [GalleryController::class, 'index'])->name('galleries.in
 Route::get('/halereya/{gallery:slug}', [GalleryController::class, 'show'])->name('galleries.show');
 
 // Пошук
-Route::get('/poshuk', [SearchController::class, 'index'])->name('search');
+Route::get('/poshuk', [SearchController::class, 'index'])
+    ->middleware('throttle:30,1')->name('search');
 Route::get('/poshuk/pidkazky', [SearchController::class, 'suggest'])
     ->middleware('throttle:60,1')->name('search.suggest');
 

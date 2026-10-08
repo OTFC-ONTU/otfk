@@ -59,7 +59,7 @@
                     <form method="get" action="{{ \App\Support\LocalizedUrl::route('search') }}" class="relative mt-6 max-w-2xl">
                         <label for="site-search" class="sr-only">{{ __('public.site_search') }}</label>
                         <x-ico name="magnifying-glass" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-                        <input id="site-search" type="search" name="q" value="{{ $q }}" autofocus
+                        <input id="site-search" type="search" name="q" maxlength="{{ \App\Support\SearchQuery::MAX_LENGTH }}" value="{{ $q }}" autofocus
                                placeholder="{{ __('feature.news_specialties_documents') }}"
                                class="w-full rounded-full border-0 bg-white py-3.5 pl-12 pr-28 text-base text-slate-800 shadow-sm ring-1 ring-slate-200 placeholder:text-slate-400 focus:ring-2 focus:ring-brand-600 sm:pr-32">
                         <button type="submit" class="absolute right-1.5 top-1/2 inline-flex min-h-11 -translate-y-1/2 items-center rounded-full bg-brand-900 px-5 text-sm font-semibold text-white transition hover:bg-brand-800">
