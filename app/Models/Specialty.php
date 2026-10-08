@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\KeepsPublicUrls;
+use App\Models\Concerns\HasSortOrder;
 use App\Casts\SafeHtml;
 use App\Models\Concerns\FlushesSitemap;
 use App\Models\Concerns\HasEnglishTranslation;
@@ -12,6 +14,8 @@ use Illuminate\Support\Str;
 
 class Specialty extends Model
 {
+    use KeepsPublicUrls;
+    use HasSortOrder;
     use FlushesSitemap;
     use HasEnglishTranslation;
     use OptimizesUploadedImages;
@@ -97,5 +101,16 @@ class Specialty extends Model
     protected function translationRequiredFields(): array
     {
         return $this->translationSourceFields();
+    }
+
+    /** Маршрут публічної сторінки — для перенаправлень при зміні адреси чи видаленні (KeepsPublicUrls). */
+    public static function publicRouteName(): string
+    {
+        return 'specialties.show';
+    }
+
+    public function publicFallbackPath(): string
+    {
+        return route('specialties.index', [], false);
     }
 }

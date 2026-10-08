@@ -2,11 +2,16 @@
 
 namespace App\Filament\Pages;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\DatePicker;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Forms\Components\Placeholder;
 use App\Filament\Support\SettingsFormPage;
 use App\Support\HolidayTheme;
 use Filament\Actions\Action;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Illuminate\Support\Carbon;
 
 /**
@@ -16,7 +21,7 @@ use Illuminate\Support\Carbon;
  */
 class HolidaySettings extends SettingsFormPage
 {
-    protected static ?string $navigationIcon = 'heroicon-o-sparkles';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-sparkles';
 
     protected static ?int $navigationSort = 4;
 
@@ -63,33 +68,33 @@ class HolidaySettings extends SettingsFormPage
         return $state;
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Тема')
+        return $schema
+            ->components([
+                Section::make('Тема')
                     ->description('Прикраси на всіх сторінках: святкові кольори шапки й підвалу, гірлянда під меню, значок біля логотипа, вітання над підвалом і короткий «снігопад» при першому відкритті сайту (раз за сесію; вимикається, якщо відвідувач обрав у системі «зменшити рух»).')
                     ->schema([
-                        Forms\Components\Radio::make('holiday_theme')
+                        Radio::make('holiday_theme')
                             ->hiddenLabel()
                             ->options(HolidayTheme::options())
                             ->descriptions(HolidayTheme::descriptions())
                             ->columns(['sm' => 2, 'xl' => 3])
                             ->live(),
-                        Forms\Components\DatePicker::make('holiday_theme_until')
+                        DatePicker::make('holiday_theme_until')
                             ->label('Вимкнути автоматично після')
                             ->native(false)
                             ->displayFormat('d.m.Y')
                             ->closeOnDateSelection()
-                            ->visible(fn (Forms\Get $get) => filled($get('holiday_theme')))
+                            ->visible(fn (Get $get) => filled($get('holiday_theme')))
                             ->helperText('Тема діє до кінця цього дня (київський час), потім сайт сам повертається до звичайного вигляду. Порожнє — доки не вимкнете вручну.'),
                     ]),
-                Forms\Components\Section::make('Попередній перегляд')
-                    ->visible(fn (Forms\Get $get) => filled($get('holiday_theme')))
+                Section::make('Попередній перегляд')
+                    ->visible(fn (Get $get) => filled($get('holiday_theme')))
                     ->schema([
-                        Forms\Components\Placeholder::make('preview')
+                        Placeholder::make('preview')
                             ->hiddenLabel()
-                            ->content(fn (Forms\Get $get) => view('filament.holiday-preview', [
+                            ->content(fn (Get $get) => view('filament.holiday-preview', [
                                 'key' => $get('holiday_theme'),
                                 'theme' => HolidayTheme::config($get('holiday_theme')),
                             ])),

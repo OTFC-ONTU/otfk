@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\KeepsPublicUrls;
 use App\Casts\SafeHtml;
 use App\Models\Concerns\FlushesSitemap;
 use App\Models\Concerns\HasEnglishTranslation;
@@ -15,6 +16,7 @@ use Illuminate\Support\Str;
 #[ObservedBy(NewsObserver::class)]
 class News extends Model
 {
+    use KeepsPublicUrls;
     use FlushesSitemap;
     use HasEnglishTranslation;
     use OptimizesUploadedImages;
@@ -118,5 +120,24 @@ class News extends Model
         });
 
         // Автопостинг у Telegram живе в NewsObserver (винесено з циклу збереження).
+    }
+
+    /** Маршрут публічної сторінки — для перенаправлень при зміні адреси чи видаленні (KeepsPublicUrls). */
+    public static function publicRouteName(): string
+    {
+        return 'news.show';
+    }
+
+    public function publicFallbackPath(): string
+    {
+        return route('news.index', [], false);
+    }
+
+    /** Новина з майбутньою датою ще не мала публічної адреси. */
+    public function wasPublic(): bool
+    {
+        $publishedAt = $this->getOriginal('published_at');
+
+        return (bool) $this->getOriginal('is_published') && ($publishedAt === null || \Illuminate\Support\Carbon::parse($publishedAt)->lte(now()));
     }
 }

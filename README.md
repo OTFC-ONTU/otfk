@@ -21,7 +21,7 @@
 
 ## Стек
 
-Laravel 12 · Filament 3 · Tailwind CSS · Alpine.js · MySQL · PHP 8.3
+Laravel 12 · Filament 4 · Tailwind CSS · Alpine.js · MySQL · PHP 8.3
 
 ## Запуск локально
 

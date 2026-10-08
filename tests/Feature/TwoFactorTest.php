@@ -25,6 +25,19 @@ class TwoFactorTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** Snapshot саме сторінки (у Filament 4 у макеті є й інші Livewire-компоненти, напр. сповіщення). */
+    private function snapshotOf(string $html, string $name): string
+    {
+        preg_match_all('/wire:snapshot="([^"]+)"/', $html, $matches);
+        foreach ($matches[1] as $raw) {
+            $snapshot = html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if (str_contains((string) (json_decode($snapshot, true)['memo']['name'] ?? ''), $name)) {
+                return $snapshot;
+            }
+        }
+        $this->fail("Livewire-компонент {$name} не знайдено на сторінці.");
+    }
+
     private function code(string $secret = UserFactory::TEST_TOTP_SECRET, int $shift = 0): string
     {
         $engine = new Google2FA;
@@ -57,8 +70,7 @@ class TwoFactorTest extends TestCase
         session([TwoFactor::SESSION_KEY => $user->id]);
         $user->forceFill(['two_factor_secret' => UserFactory::TEST_TOTP_SECRET, 'two_factor_confirmed_at' => now()])->saveQuietly();
         $html = $this->get(ContactSettings::getUrl())->assertOk()->getContent();
-        preg_match('/wire:snapshot="([^"]+)"/', $html, $m);
-        $snapshot = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $snapshot = $this->snapshotOf($html, 'contact-settings');
         session()->forget(TwoFactor::SESSION_KEY);
 
         $this->withHeaders(['X-Livewire' => 'true'])->postJson('/livewire/update', [
@@ -101,12 +113,12 @@ class TwoFactorTest extends TestCase
 
         // Сторінка коду сама викликається через Livewire і має бути дозволена без фактора.
         $html = $this->get(TwoFactorChallenge::getUrl())->getContent();
-        preg_match('/wire:snapshot="([^"]+)"/', $html, $m);
-        $snapshot = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $snapshot = $this->snapshotOf($html, 'two-factor-challenge');
         $this->withHeaders(['X-Livewire' => 'true'])->postJson('/livewire/update', [
             '_token' => csrf_token(),
             'components' => [['snapshot' => $snapshot, 'updates' => [], 'calls' => [['path' => '', 'method' => 'verify', 'params' => []]]]],
         ])->assertOk(); // Livewire відповідає 200 з помилкою валідації, а не 403
+        $this->flushHeaders();
 
         $challenge = Livewire::test(TwoFactorChallenge::class)->assertOk();
         $challenge->fillForm(['code' => '123456'])->call('verify')->assertHasErrors(['data.code']);
@@ -120,8 +132,7 @@ class TwoFactorTest extends TestCase
 
         // Після втрати позначки Livewire-виклик таблиці користувачів — 403.
         $html = $this->get(ListUsers::getUrl())->getContent();
-        preg_match('/wire:snapshot="([^"]+)"/', $html, $m);
-        $snapshot = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $snapshot = $this->snapshotOf($html, 'list-users');
         session()->forget(TwoFactor::SESSION_KEY);
         $this->withHeaders(['X-Livewire' => 'true'])->postJson('/livewire/update', [
             '_token' => csrf_token(),

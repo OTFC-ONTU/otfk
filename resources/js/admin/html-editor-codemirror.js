@@ -1,7 +1,7 @@
 // CodeMirror 6 для режиму «HTML»: підсвітка синтаксису, номери рядків, парні теги, пошук (Ctrl/Cmd+F),
 // перенесення довгих рядків. Тема стежить за світлою/темною темою адмінки Filament.
 import { basicSetup } from 'codemirror'
-import { Annotation, Compartment, EditorState } from '@codemirror/state'
+import { Annotation, Compartment, EditorState, Transaction } from '@codemirror/state'
 import { EditorView, keymap } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
 import { html } from '@codemirror/lang-html'
@@ -21,15 +21,17 @@ const base = EditorView.theme({
         minHeight: '20rem',
         maxHeight: '70vh',
     },
-    '&.cm-focused': { outline: '2px solid rgb(var(--primary-600))' },
+    '&.cm-focused': { outline: '2px solid var(--primary-600)' },
 })
 
 // Контрастні палітри (на основі GitHub light/dark): теги, атрибути й значення чітко різняться від тексту
+// Фон активного рядка — лише напівпрозорий: шар виділення CodeMirror лежить під текстом, і непрозорий фон
+// ховав виділення в межах рядка з курсором (слово/тег не підсвічувались).
 const light = [
     EditorView.theme({
         '&': { backgroundColor: '#ffffff', color: '#1f2328' },
         '.cm-gutters': { backgroundColor: '#f6f8fa', color: '#6e7781', borderRight: '1px solid #d0d7de' },
-        '.cm-activeLine': { backgroundColor: '#f0f6ff' },
+        '.cm-activeLine': { backgroundColor: 'rgb(9 105 218 / 0.06)' },
         '.cm-activeLineGutter': { backgroundColor: '#e7effa', color: '#1f2328' },
         '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: '#b6d7ff !important' },
         '.cm-matchingBracket, &.cm-focused .cm-matchingBracket': { backgroundColor: '#ffe58f', color: 'inherit', outline: '1px solid #d4a72c' },
@@ -52,7 +54,7 @@ const dark = [
         '.cm-content': { caretColor: '#e6edf3' },
         '.cm-cursor, .cm-dropCursor': { borderLeftColor: '#e6edf3' },
         '.cm-gutters': { backgroundColor: '#161b22', color: '#8b949e', borderRight: '1px solid #30363d' },
-        '.cm-activeLine': { backgroundColor: '#161b22' },
+        '.cm-activeLine': { backgroundColor: 'rgb(110 118 129 / 0.12)' },
         '.cm-activeLineGutter': { backgroundColor: '#1f2630', color: '#e6edf3' },
         '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: '#264f78 !important' },
         '.cm-matchingBracket, &.cm-focused .cm-matchingBracket': { backgroundColor: '#3b5070', color: '#ffffff', outline: '1px solid #79c0ff' },
@@ -105,7 +107,8 @@ export function createEditor(parent, { doc, label, onChange }) {
             if (text === view.state.doc.toString()) return
             view.dispatch({
                 changes: { from: 0, to: view.state.doc.length, insert: text },
-                annotations: external.of(true),
+                // Заміна ззовні (перемикання режиму) не йде в історію: Ctrl/Cmd+Z не поверне текст до правок у візуальному режимі
+                annotations: [external.of(true), Transaction.addToHistory.of(false)],
                 selection: { anchor: 0 },
             })
             view.scrollDOM.scrollTop = 0

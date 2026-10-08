@@ -4,7 +4,6 @@ namespace App\Filament\Auth;
 
 use DanHarrin\LivewireRateLimiting\Exceptions\TooManyRequestsException;
 use Filament\Notifications\Notification;
-use Filament\Pages\Auth\Login as BaseLogin;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -13,7 +12,7 @@ use Illuminate\Support\Facades\Log;
  * Illuminate\Auth\Events\Lockout, тому запис auth.lockout робиться тут
  * (той самий канал `security`, що й у LogAuthenticationEvents).
  */
-class Login extends BaseLogin
+class Login extends \Filament\Auth\Pages\Login
 {
     protected function getRateLimitedNotification(TooManyRequestsException $exception): ?Notification
     {

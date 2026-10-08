@@ -2,12 +2,25 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\BannerResource\Pages\ListBanners;
+use App\Filament\Resources\BannerResource\Pages\CreateBanner;
+use App\Filament\Resources\BannerResource\Pages\EditBanner;
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\BannerResource\Pages;
 use App\Models\Banner;
 use App\Rules\SafeUrl;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -16,9 +29,9 @@ class BannerResource extends Resource
 {
     protected static ?string $model = Banner::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-photo';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-photo';
 
-    protected static ?string $navigationGroup = 'Контент';
+    protected static string | \UnitEnum | null $navigationGroup = 'Контент';
 
     protected static ?int $navigationSort = 4;
 
@@ -28,26 +41,24 @@ class BannerResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Банери (головна)';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->components([
             EnglishTranslation::section(contentFields: ['subtitle' => ['label' => 'Англійський підзаголовок'], 'image_alt' => ['label' => 'Англійський опис зображення (alt)'], 'link_label' => ['label' => 'Англійський текст кнопки']], optionalPrimary: true),
-            Forms\Components\TextInput::make('title')->label('Заголовок')->maxLength(255)->columnSpanFull(),
-            Forms\Components\TextInput::make('subtitle')->label('Підзаголовок')->maxLength(255)->columnSpanFull(),
-            Forms\Components\FileUpload::make('image')->label('Зображення')->image()->directory('banners')->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('1920')->imageResizeTargetHeight('1080')
+            TextInput::make('title')->label('Заголовок')->maxLength(255)->columnSpanFull(),
+            TextInput::make('subtitle')->label('Підзаголовок')->maxLength(255)->columnSpanFull(),
+            FileUpload::make('image')->label('Зображення')->image()->directory('banners')->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('1920')->imageResizeTargetHeight('1080')
                 ->helperText('Якщо не завантажити - буде синій градієнт. Після збереження створюється WebP-версія.')->columnSpanFull(),
-            Forms\Components\TextInput::make('image_alt')->label('Опис зображення (alt)')
+            TextInput::make('image_alt')->label('Опис зображення (alt)')
                 ->maxLength(255)->columnSpanFull()
                 ->helperText('Для доступності та SEO. Якщо порожньо — використається заголовок банера.'),
-            Forms\Components\TextInput::make('link_url')->label('Посилання')->maxLength(255)->placeholder('/abituriyentu')->rule(new SafeUrl)
+            TextInput::make('link_url')->label('Посилання')->maxLength(255)->placeholder('/abituriyentu')->rule(new SafeUrl)
                 ->helperText('Куди веде кнопка банера. Порожнє — банер без кнопки.'),
-            Forms\Components\TextInput::make('link_label')->label('Текст кнопки')->maxLength(255)->placeholder('Детальніше'),
-            Forms\Components\DatePicker::make('starts_at')->label('Показувати з')
+            TextInput::make('link_label')->label('Текст кнопки')->maxLength(255)->placeholder('Детальніше'),
+            DatePicker::make('starts_at')->label('Показувати з')
                 ->helperText('Порожні дати — банер показується постійно.'),
-            Forms\Components\DatePicker::make('ends_at')->label('Показувати до'),
-            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
-                ->helperText('Порядок слайдів у каруселі: менше число — раніше.'),
-            Forms\Components\Toggle::make('is_published')->label('Активний')->default(true)
+            DatePicker::make('ends_at')->label('Показувати до'),
+            Toggle::make('is_published')->label('Активний')->default(true)
                 ->helperText('Вимкнено — банер прибирається з головної, але лишається в адмінці.'),
         ]);
     }
@@ -56,18 +67,19 @@ class BannerResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                TextColumn::make('translation_status')->label('Переклад EN')
                     ->state(fn (Banner $record) => $record->translationStatus())->badge(),
-                Tables\Columns\ImageColumn::make('image')->label('')->square(),
-                Tables\Columns\TextColumn::make('title')->label('Заголовок')->searchable()->weight('bold'),
-                Tables\Columns\IconColumn::make('is_published')->label('Активний')->boolean(),
-                Tables\Columns\TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
+                ImageColumn::make('image')->label('')->square(),
+                TextColumn::make('title')->label('Заголовок')->searchable()->weight('bold'),
+                IconColumn::make('is_published')->label('Активний')->boolean(),
+                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('sort_order')
+            ->reorderable('sort_order')
             ->emptyStateHeading('Банерів ще немає')
             ->emptyStateDescription('Банери - великі слайди у верхній частині головної сторінки. Без жодного активного банера показується стандартна синя заставка.')
-            ->actions([Tables\Actions\EditAction::make()])
-            ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
+            ->recordActions([EditAction::make()])
+            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }
 
     public static function getRelations(): array
@@ -78,9 +90,9 @@ class BannerResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListBanners::route('/'),
-            'create' => Pages\CreateBanner::route('/create'),
-            'edit' => Pages\EditBanner::route('/{record}/edit'),
+            'index' => ListBanners::route('/'),
+            'create' => CreateBanner::route('/create'),
+            'edit' => EditBanner::route('/{record}/edit'),
         ];
     }
 }

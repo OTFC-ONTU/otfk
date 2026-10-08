@@ -2,13 +2,27 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\LegacyRedirectResource\Pages\ListLegacyRedirects;
+use App\Filament\Resources\LegacyRedirectResource\Pages\CreateLegacyRedirect;
+use App\Filament\Resources\LegacyRedirectResource\Pages\EditLegacyRedirect;
 use App\Filament\Resources\LegacyRedirectResource\Pages;
 use App\Models\LegacyRedirect;
 use App\Support\LegacyRedirects;
 use Closure;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -27,9 +41,9 @@ class LegacyRedirectResource extends Resource
         return (bool) auth()->user()?->isAdmin();
     }
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-uturn-right';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-arrow-uturn-right';
 
-    protected static ?string $navigationGroup = 'SEO';
+    protected static string | \UnitEnum | null $navigationGroup = 'SEO';
 
     protected static ?int $navigationSort = 1;
 
@@ -39,17 +53,17 @@ class LegacyRedirectResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Редиректи старих адрес';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\TextInput::make('source')->label('Стара адреса')->required()->maxLength(2000)
-                ->afterStateHydrated(fn (Forms\Components\TextInput $component, ?LegacyRedirect $record) => $component->state($record?->source))
+        return $schema->components([
+            TextInput::make('source')->label('Стара адреса')->required()->maxLength(2000)
+                ->afterStateHydrated(fn (TextInput $component, ?LegacyRedirect $record) => $component->state($record?->source))
                 ->helperText('Шлях старого сайту: /uploads/2019/foto.jpg або повна адреса https://otfk.od.ua/... Параметри старої CMS (?p=12) — після «?», мітки utm_* відкидаються.')
                 ->rule(fn (Get $get, ?LegacyRedirect $record) => self::sourceRule($get, $record)),
-            Forms\Components\Select::make('action')->label('Дія')->required()->live()->default(LegacyRedirect::REDIRECT)
+            Select::make('action')->label('Дія')->required()->live()->default(LegacyRedirect::REDIRECT)
                 ->options([LegacyRedirect::REDIRECT => 'Постійний редирект', LegacyRedirect::GONE => '410 — матеріал видалено назавжди'])
                 ->helperText('410 — лише для свідомо видаленого матеріалу без заміни (рішення редактора).'),
-            Forms\Components\TextInput::make('target_url')->label('Нова адреса')->maxLength(2000)
+            TextInput::make('target_url')->label('Нова адреса')->maxLength(2000)
                 ->visible(fn (Get $get) => $get('action') !== LegacyRedirect::GONE)
                 ->required(fn (Get $get) => $get('action') !== LegacyRedirect::GONE)
                 ->helperText('Відносна адреса цього сайту, напр. /novyny/nazva або /storage/mirror/otfk.od.ua/uploads/doc.pdf. Головну для всіх старих сторінок не вказуйте.')
@@ -62,12 +76,12 @@ class LegacyRedirectResource extends Resource
                         $fail($error);
                     }
                 }),
-            Forms\Components\Select::make('status_code')->label('Код')->default(301)
+            Select::make('status_code')->label('Код')->default(301)
                 ->options([301 => '301 Moved Permanently', 308 => '308 Permanent Redirect'])
                 ->visible(fn (Get $get) => $get('action') !== LegacyRedirect::GONE)
                 ->required(fn (Get $get) => $get('action') !== LegacyRedirect::GONE),
-            Forms\Components\Toggle::make('is_active')->label('Активний')->default(true),
-            Forms\Components\TextInput::make('note')->label('Примітка')->maxLength(500)
+            Toggle::make('is_active')->label('Активний')->default(true),
+            TextInput::make('note')->label('Примітка')->maxLength(500)
                 ->helperText('Джерело запису або підстава видалення.'),
         ]);
     }
@@ -76,31 +90,31 @@ class LegacyRedirectResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('source')->label('Стара адреса')->wrap()
+                TextColumn::make('source')->label('Стара адреса')->wrap()
                     ->searchable(query: fn ($query, string $search) => $query->where('source_path', 'like', "%{$search}%")),
-                Tables\Columns\TextColumn::make('action')->label('Дія')->badge()
+                TextColumn::make('action')->label('Дія')->badge()
                     ->formatStateUsing(fn (LegacyRedirect $record) => $record->action === LegacyRedirect::GONE ? '410' : (string) $record->status_code)
                     ->color(fn (string $state) => $state === LegacyRedirect::GONE ? 'danger' : 'success'),
-                Tables\Columns\TextColumn::make('target_url')->label('Нова адреса')->wrap()->placeholder('—')->searchable(),
-                Tables\Columns\TextColumn::make('hits')->label('Переходів')->numeric()->sortable(),
-                Tables\Columns\TextColumn::make('last_hit_at')->label('Останній перехід')->since()->sortable()->placeholder('—'),
-                Tables\Columns\IconColumn::make('is_active')->label('Активний')->boolean(),
+                TextColumn::make('target_url')->label('Нова адреса')->wrap()->placeholder('—')->searchable(),
+                TextColumn::make('hits')->label('Переходів')->numeric()->sortable(),
+                TextColumn::make('last_hit_at')->label('Останній перехід')->since()->sortable()->placeholder('—'),
+                IconColumn::make('is_active')->label('Активний')->boolean(),
             ])
             ->defaultSort('updated_at', 'desc')
             ->filters([
-                Tables\Filters\SelectFilter::make('action')->label('Дія')
+                SelectFilter::make('action')->label('Дія')
                     ->options([LegacyRedirect::REDIRECT => 'Редирект', LegacyRedirect::GONE => '410']),
-                Tables\Filters\TernaryFilter::make('is_active')->label('Активний'),
+                TernaryFilter::make('is_active')->label('Активний'),
             ])
             ->emptyStateHeading('Карта старих адрес порожня')
             ->emptyStateDescription('Записи додаються командою otfk:legacy-redirects з CSV або з журналу 404 («Створити редирект»).')
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -172,9 +186,9 @@ class LegacyRedirectResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListLegacyRedirects::route('/'),
-            'create' => Pages\CreateLegacyRedirect::route('/create'),
-            'edit' => Pages\EditLegacyRedirect::route('/{record}/edit'),
+            'index' => ListLegacyRedirects::route('/'),
+            'create' => CreateLegacyRedirect::route('/create'),
+            'edit' => EditLegacyRedirect::route('/{record}/edit'),
         ];
     }
 }

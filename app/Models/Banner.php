@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSortOrder;
 use App\Models\Concerns\HasEnglishTranslation;
 use App\Models\Concerns\OptimizesUploadedImages;
 use Illuminate\Database\Eloquent\Builder;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Banner extends Model
 {
+    use HasSortOrder;
     use HasEnglishTranslation;
     use OptimizesUploadedImages;
 
@@ -79,5 +81,11 @@ class Banner extends Model
         }
 
         return $query;
+    }
+
+    /** Новий запис — першим у списку, як раніше при сортуванні за датою (HasSortOrder). */
+    public static function sortNewRecordsFirst(): bool
+    {
+        return true;
     }
 }

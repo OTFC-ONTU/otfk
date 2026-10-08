@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\LegacyRedirectResource\Pages;
 
+use Filament\Actions\DeleteAction;
 use App\Filament\Resources\LegacyRedirectResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
@@ -17,6 +18,6 @@ class EditLegacyRedirect extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [Actions\DeleteAction::make()];
+        return [DeleteAction::make()];
     }
 }

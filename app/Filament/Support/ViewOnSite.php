@@ -4,7 +4,6 @@ namespace App\Filament\Support;
 
 use Closure;
 use Filament\Actions\Action as PageAction;
-use Filament\Tables\Actions\Action as TableAction;
 
 /**
  * Спільна кнопка «Переглянути на сайті» для адмінки: відкриває публічну
@@ -25,9 +24,9 @@ class ViewOnSite
     }
 
     /** Дія рядка таблиці. */
-    public static function table(Closure $url): TableAction
+    public static function table(Closure $url): PageAction
     {
-        return TableAction::make('viewOnSite')
+        return PageAction::make('viewOnSite')
             ->label('На сайті')
             ->icon('heroicon-o-arrow-top-right-on-square')
             ->url($url)

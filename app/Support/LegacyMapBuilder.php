@@ -172,6 +172,10 @@ class LegacyMapBuilder
             ? DocumentCategory::query()->whereNotNull('page_id')->pluck('slug', 'page_id')
                 ->map(fn ($slug) => route('documents.category', $slug, false))->all()
             : [];
+        // Стара сторінка «Викладачі комісії …» переадресовує на блок викладачів комісії — карта веде туди
+        foreach (DepartmentStaffAnchor::pageDepartments() as $pageId => $department) {
+            $sectionTargets[$pageId] = DepartmentStaffAnchor::path($department);
+        }
 
         foreach (self::MARKER_SOURCES as $source) {
             /** @var class-string<Model> $model */

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Tables\Columns\TextColumn;
 use App\Models\SiteVisit;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -26,10 +27,10 @@ class TopPages extends TableWidget
                     ->limit(10)
             )
             ->columns([
-                Tables\Columns\TextColumn::make('path')->label('Сторінка')
+                TextColumn::make('path')->label('Сторінка')
                     ->url(fn ($record) => url($record->path), shouldOpenInNewTab: true)
                     ->limit(60),
-                Tables\Columns\TextColumn::make('total')->label('Перегляди')->numeric()->alignRight(),
+                TextColumn::make('total')->label('Перегляди')->numeric()->alignRight(),
             ])
             ->paginated(false);
     }

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\QuickLinkResource\Pages;
 
+use Filament\Actions\DeleteAction;
 use App\Filament\Resources\QuickLinkResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
@@ -12,6 +13,6 @@ class EditQuickLink extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [Actions\DeleteAction::make()];
+        return [DeleteAction::make()];
     }
 }

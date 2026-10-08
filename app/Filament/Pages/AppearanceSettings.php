@@ -2,12 +2,20 @@
 
 namespace App\Filament\Pages;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Placeholder;
 use App\Filament\Support\SettingsFormPage;
 use App\Filament\Support\ViewOnSite;
 use App\Models\QuickLink;
 use Filament\Actions\Action;
 use Filament\Forms;
-use Filament\Forms\Form;
 
 /**
  * Вигляд підвалу в одному місці. Святковими темами керує HolidaySettings.
@@ -20,7 +28,7 @@ use Filament\Forms\Form;
  */
 class AppearanceSettings extends SettingsFormPage
 {
-    protected static ?string $navigationIcon = 'heroicon-o-paint-brush';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-paint-brush';
 
     protected static ?int $navigationSort = 6;
 
@@ -58,31 +66,31 @@ class AppearanceSettings extends SettingsFormPage
             ->all();
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Підвал сайту')
+        return $schema
+            ->components([
+                Section::make('Підвал сайту')
                     ->schema([
-                        Forms\Components\Textarea::make('footer_about')
+                        Textarea::make('footer_about')
                             ->label('Текст «Про коледж»')
                             ->rows(3)
                             ->helperText('Абзац під назвою коледжу в підвалі. Контакти та соцмережі підвал бере зі сторінки «Контакти та соцмережі».'),
                         static::englishField('footer_about', 'Текст «Про коледж»', multiline: true),
                     ]),
-                Forms\Components\Section::make('Партнери в підвалі')
+                Section::make('Партнери в підвалі')
                     ->description('Колонка «Партнери» в підвалі кожної сторінки. Порядок міняється перетягуванням. Якщо список порожній, сайт показує стандартні посилання (ОНТУ, МОН).')
                     ->schema([
-                        Forms\Components\Repeater::make('partners')
+                        Repeater::make('partners')
                             ->hiddenLabel()
                             ->schema([
-                                Forms\Components\Hidden::make('id'),
-                                Forms\Components\TextInput::make('title')->label('Назва')->required()->maxLength(255),
-                                Forms\Components\TextInput::make('title_en')->label('Назва англійською')->maxLength(255),
-                                Forms\Components\TextInput::make('url')->label('Посилання')->required()->maxLength(255)
+                                Hidden::make('id'),
+                                TextInput::make('title')->label('Назва')->required()->maxLength(255),
+                                TextInput::make('title_en')->label('Назва англійською')->maxLength(255),
+                                TextInput::make('url')->label('Посилання')->required()->maxLength(255)
                                     ->placeholder('https://...'),
-                                Forms\Components\Toggle::make('open_new_tab')->label('У новій вкладці')->default(true)->inline(false),
-                                Forms\Components\Toggle::make('is_visible')->label('Показувати')->default(true)->inline(false),
+                                Toggle::make('open_new_tab')->label('У новій вкладці')->default(true)->inline(false),
+                                Toggle::make('is_visible')->label('Показувати')->default(true)->inline(false),
                             ])
                             ->columns(['sm' => 2, 'lg' => 4])
                             ->reorderable()
@@ -90,14 +98,14 @@ class AppearanceSettings extends SettingsFormPage
                             ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
                             ->defaultItems(0),
                     ]),
-                Forms\Components\Section::make('Позначка версії сайту')
+                Section::make('Позначка версії сайту')
                     ->description('Маленький бейдж у нижньому рядку підвалу (напр. «Альфа-версія»). Порожній напис — бейдж приховано.')
                     ->columns(2)
                     ->schema([
-                        Forms\Components\TextInput::make('site_version_label')
+                        TextInput::make('site_version_label')
                             ->label('Напис'),
                         static::englishField('site_version_label', 'Позначка версії'),
-                        Forms\Components\Select::make('site_version_color')
+                        Select::make('site_version_color')
                             ->label('Колір')
                             ->options([
                                 'gold' => 'Золотий',
@@ -108,9 +116,9 @@ class AppearanceSettings extends SettingsFormPage
                             ])
                             ->selectablePlaceholder(false),
                     ]),
-                Forms\Components\Section::make('Банери')
+                Section::make('Банери')
                     ->schema([
-                        Forms\Components\Placeholder::make('banner_note')
+                        Placeholder::make('banner_note')
                             ->hiddenLabel()
                             ->content('Затемнення фото банерів головної редагується в розділі «Контент → Банери» (поле «Сила затемнення» над таблицею).'),
                     ]),

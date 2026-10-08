@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\NewsResource\Pages;
 
+use App\Filament\Support\SafeDeleteAction;
 use App\Filament\Resources\NewsResource;
 use App\Filament\Support\PreviewFormAction;
 use App\Filament\Support\ViewOnSite;
@@ -17,7 +18,7 @@ class EditNews extends EditRecord
         return [
             PreviewFormAction::make('news'),
             ViewOnSite::header(fn () => route('news.show', $this->record)),
-            Actions\DeleteAction::make(),
+            SafeDeleteAction::make(),
         ];
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Department;
 use App\Models\DocumentCategory;
+use App\Support\DepartmentStaffAnchor;
 use App\Models\Gallery;
 use App\Models\News;
 use App\Models\Page;
@@ -101,7 +102,9 @@ class SitemapController extends Controller
             $add($path('news.show', ['news' => $n->slug]), $n->updated_at, 'monthly', '0.7', $en);
         }
         // Сторінки розділів публічної інформації переадресовуються на /dokumenty/{slug} — у sitemap лише сам розділ
-        $sectionPages = DocumentCategory::whereNotNull('page_id')->pluck('page_id');
+        // Сторінки з власною переадресацією (розділ документів, блок викладачів комісії) — без дублів у sitemap
+        $sectionPages = DocumentCategory::whereNotNull('page_id')->pluck('page_id')
+            ->merge(array_keys(DepartmentStaffAnchor::pageDepartments()));
         $english = $this->englishSlugs(Page::published()->whereNotIn('id', $sectionPages));
         foreach (Page::published()->whereNotIn('id', $sectionPages)->toBase()->get(['slug', 'updated_at']) as $p) {
             // Слаг, який перехоплює спеціальний маршрут, не є адресою цієї сторінки.

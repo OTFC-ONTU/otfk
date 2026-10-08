@@ -46,14 +46,14 @@
             </p>
         @endif
 
-        <x-filament-panels::form id="form" wire:submit="{{ $this->pendingSecret ? 'confirm' : 'regenerateRecoveryCodes' }}">
+        <form id="form" wire:submit="{{ $this->pendingSecret ? 'confirm' : 'regenerateRecoveryCodes' }}" class="fi-sc-form">
             {{ $this->form }}
 
-            <x-filament-panels::form.actions
+            <x-filament::actions
                 :actions="$this->getCachedFormActions()"
                 :full-width="$this->hasFullWidthFormActions()"
             />
-        </x-filament-panels::form>
+        </form>
 
         @unless ($this->pendingSecret)
             <div class="mt-4 text-center text-sm">

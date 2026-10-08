@@ -59,10 +59,10 @@
 
                     @if ($staffCount)
                         <div class="mt-5 flex flex-wrap items-center gap-2 text-sm">
-                            <span class="inline-flex items-center gap-1.5 rounded-full bg-gold-50 px-3 py-1 font-semibold text-gold-700 ring-1 ring-gold-300/70">
+                            <a href="#{{ \App\Support\DepartmentStaffAnchor::ID }}" class="inline-flex items-center gap-1.5 rounded-full bg-gold-50 px-3 py-1 font-semibold text-gold-700 ring-1 ring-gold-300/70 transition hover:bg-gold-100">
                                 <x-ico name="users" class="h-4 w-4" aria-hidden="true" />
                                 {{ $staffCount }} {{ $staffWord($staffCount) }}
-                            </span>
+                            </a>
                         </div>
                     @endif
                 </div>
@@ -74,7 +74,7 @@
         <div class="lg:col-span-2">
             @if (filled($department->localized('description')))
                 <x-prose.article :drop-cap="false">
-                    {!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($department->localized('description')))), false) !!}
+                    {!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($staffCount ? \App\Support\DepartmentStaffAnchor::links($department->localized('description')) : $department->localized('description')))), false) !!}
                 </x-prose.article>
             @elseif ($department->staff->isEmpty())
                 <x-empty-state icon="building-office-2" title="{{ __('public.no_department') }}" />
@@ -129,7 +129,7 @@
     </section>
 
     @if ($department->staff->isNotEmpty())
-        <section class="border-t border-slate-200/70 bg-slate-50/60">
+        <section id="{{ \App\Support\DepartmentStaffAnchor::ID }}" class="scroll-mt-24 border-t border-slate-200/70 bg-slate-50/60">
             <div class="container-site py-12">
                 <div class="flex flex-wrap items-end justify-between gap-4">
                     <div>
