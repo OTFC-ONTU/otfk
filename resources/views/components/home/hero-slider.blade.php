@@ -56,6 +56,14 @@
         {{-- Сцена слайдів: власна висота, бо слайди накладаються через absolute --}}
         <div class="relative @if ($count > 1) min-h-[460px] lg:min-h-[560px] 2xl:min-h-[640px] @endif">
         @foreach ($slides as $i => $banner)
+            @php
+                /* Фото-слайд без заголовка й підпису: на телефоні не кладемо на фото кнопки,
+                   інакше самотня «скляна» плашка висить посеред кадру поверх облич */
+                $hasText = filled($banner->localized('title')) || filled($banner->localized('subtitle'));
+                $linkLabel = $banner->localized('link_label') ?: __('public.details');
+                /* Довга підпись у половині ширини телефона переноситься на два рядки — тоді кнопка на всю ширину */
+                $wideLink = ! $hasText || mb_strlen($linkLabel) > 13;
+            @endphp
             <div @if ($count > 1)
                      x-show="index === {{ $i }}"
                      x-transition:enter="transition ease-in-out duration-700"
@@ -75,8 +83,10 @@
                             <x-picture :path="$banner->image" :alt="$banner->imageAlt()" class="h-full w-full object-cover" loading="lazy" decoding="async" />
                         @endif
                         @if (BannerOverlay::hasOverlay())
-                            <div class="absolute inset-0" style="{{ BannerOverlay::gradientStyle() }}"></div>
-                            <div class="absolute inset-0" style="{{ BannerOverlay::flatStyle() }}"></div>
+                            {{-- Десктоп: текст ліворуч — затемнення зліва направо; телефон: текст унизу — знизу вгору --}}
+                            <div class="absolute inset-0 hidden sm:block" style="{{ BannerOverlay::gradientStyle() }}"></div>
+                            <div class="absolute inset-0 hidden sm:block" style="{{ BannerOverlay::flatStyle() }}"></div>
+                            <div class="absolute inset-0 sm:hidden" style="{{ BannerOverlay::mobileStyle($hasText) }}"></div>
                         @endif
                     @else
                         <div class="h-full w-full bg-gradient-to-br from-brand-800 via-brand-900 to-brand-950"></div>
@@ -85,7 +95,7 @@
                     @endif
                 </div>
                 {{-- Коли слайдів кілька, знизу лишаємо місце під крапки-перемикачі, інакше вони лягають на чипи --}}
-                <div class="container-site relative flex min-h-[460px] flex-col justify-center py-16 sm:py-20 lg:min-h-[560px] lg:py-28 2xl:min-h-[640px] @if ($count > 1) pb-24 sm:pb-36 lg:pb-32 @endif">
+                <div class="container-site relative flex min-h-[460px] flex-col justify-end py-16 sm:justify-center sm:py-20 lg:min-h-[560px] lg:py-28 2xl:min-h-[640px] @if ($count > 1) pb-24 sm:pb-36 lg:pb-32 @endif">
                     <div class="max-w-2xl xl:max-w-3xl">
                         @if ($banner->localized('title'))
                             {{-- Числа в заголовку («Вступ 2026») підсвічуємо золотом; e() екранує до вставки span --}}
@@ -94,11 +104,12 @@
                         @if ($banner->localized('subtitle'))
                             <p class="mt-4 max-w-xl leading-relaxed text-brand-100 sm:mt-5 sm:text-lg xl:text-xl">{{ $banner->localized('subtitle') }}</p>
                         @endif
-                        <div class="mt-7 flex flex-wrap items-center gap-3 sm:mt-8">
+                        {{-- На телефоні дві кнопки — сітка 2×1 однакової ширини, а не дві повноширинні смуги одна під одною --}}
+                        <div class="{{ $hasText || $banner->link_url ? 'grid' : 'hidden' }} mt-7 grid-cols-2 gap-3 sm:mt-8 sm:flex sm:flex-wrap sm:items-center">
                             @if ($banner->link_url)
-                                <a href="{{ \App\Support\LocalizedUrl::to($banner->link_url) }}" class="btn-accent max-sm:w-full lg:px-6 lg:py-3 lg:text-base">{{ $banner->localized('link_label') ?: __('public.details') }} <x-ico name="arrow-right" class="h-4 w-4" /></a>
+                                <a href="{{ \App\Support\LocalizedUrl::to($banner->link_url) }}" class="btn-accent {{ $wideLink ? 'col-span-2' : '' }} max-sm:px-3 lg:px-6 lg:py-3 lg:text-base">{{ $linkLabel }} <x-ico name="arrow-right" class="h-4 w-4" /></a>
                             @endif
-                            <a href="{{ \App\Support\LocalizedUrl::route('specialties.index') }}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-white/10 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-white/20 max-sm:w-full lg:px-6 lg:py-3 lg:text-base">{{ __('public.specialties') }} <x-ico name="arrow-right" class="h-4 w-4" /></a>
+                            <a href="{{ \App\Support\LocalizedUrl::route('specialties.index') }}" class="{{ $hasText ? 'inline-flex' : 'hidden sm:inline-flex' }} {{ $banner->link_url && ! $wideLink ? '' : 'col-span-2' }} items-center justify-center gap-2 rounded-lg bg-white/10 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-white/20 max-sm:px-3 lg:px-6 lg:py-3 lg:text-base">{{ __('public.specialties') }} <x-ico name="arrow-right" class="h-4 w-4" /></a>
                         </div>
                         @if ($heroStats->isNotEmpty())
                             {{-- Чипи ховаємо на мобільних: слайди absolute у секції з фіксованою min-h, високий контент переповнює її.
