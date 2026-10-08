@@ -4,7 +4,9 @@
 
 > ✅ Перед прод-деплоем уже сделано в коде: `User::canAccessPanel()` (иначе Filament отдаёт 403 на проде) и шаблон `.env.production.example`.
 
-> 🚀 **Автодеплой:** после первичной настройки по этому документу обновления едут сами — workflow `.github/workflows/deploy.yml` на каждый push в `master` (или вручную через Run workflow): после успешных тестов и аудита того же workflow собирает фронтенд в CI, по SSH делает `git reset --hard ${{ github.sha }}` + `composer install`, заливает `public/build/` rsync-ом и выполняет `migrate --force` + пересборку кэшей. Нужны секреты репозитория `REMOTE_KEY` (приватный SSH-ключ), `REMOTE_HOST`, `REMOTE_USER`, `REMOTE_PATH` (каталог сайта), опционально `REMOTE_PORT`. Раздел «Обновление сайта потом» ниже — ручной запасной путь.
+> 🧭 **Два окружения (с 2026-10-08):** основная ветка — `prod`, push в неё выкладывает на Plesk-поддомен `new.otfk.od.ua` (GitHub Environment `plesk`, раздел «Plesk: new.otfk.od.ua» ниже); push в `master` — по-прежнему на тестовый хостинг just-test.shop (секреты репозитория). Старый сайт на otfk.od.ua в это время работает как был.
+>
+> 🚀 **Автодеплой:** после первичной настройки по этому документу обновления едут сами — workflow `.github/workflows/deploy.yml` на каждый push в `prod`/`master` (или вручную через Run workflow): после успешных тестов и аудита того же workflow собирает фронтенд в CI, по SSH делает `git reset --hard ${{ github.sha }}` + `composer install`, заливает `public/build/` rsync-ом и выполняет `migrate --force` + пересборку кэшей. Нужны секреты репозитория `REMOTE_KEY` (приватный SSH-ключ), `REMOTE_HOST`, `REMOTE_USER`, `REMOTE_PATH` (каталог сайта), опционально `REMOTE_PORT`. Раздел «Обновление сайта потом» ниже — ручной запасной путь.
 > Переревью безопасности 06.10.2026: в `deploy.yml` реализован собственный job `tests`, `deploy` зависит от него и устанавливает тот же SHA. Ручной запуск вне master требует отдельной проверки получения выбранного SHA. Атомарность проверки и записи `otfk:sanitize-content --apply` реализована условным UPDATE (разделы 16–17 аудита). Приёмка на хостинге остаётся обязательной; локальный тест команды требует изоляции storage, чтобы не удалять рабочие бэкапы.
 >
 > ⚠️ `public/build/` больше **не** коммитится в git — сборка живёт только в CI/деплое; локально `npm run build` или `npm run dev`.
@@ -88,6 +90,53 @@ php artisan optimize             # кеш конфигов/роутов/вью (
 7. Корень сайта → `public` (как в Варианте А, шаг 5).
 
 ---
+
+## Plesk: new.otfk.od.ua (ветка `prod`)
+
+Новый сайт живёт на поддомене подписки otfk.od.ua рядом со старым. Всё, что зависит от домена, привязано к `SEO_PRIMARY_HOST=otfk.od.ua`, поэтому поддомен автоматически `noindex`, без GA4 и без правил www/HTTPS из `public/.htaccess`; редиректы старых адресов остаются на поддомене. **`SEO_PRIMARY_HOST` на поддомен не менять.**
+
+**Панель Plesk (поддомен `new.otfk.od.ua`):**
+- «Хостинг та DNS → Налаштування хостингу»: корневой каталог — `new.otfk.od.ua/public`; SSL Let's Encrypt + перенаправление HTTP → HTTPS в панели.
+- «Налаштування PHP»: версия 8.3 (штатный PHP Plesk, `/opt/plesk/php/8.3`), «FPM-застосунок обслуговується Apache» (не nginx — нужен `.htaccess`), `upload_max_filesize` 25M, `post_max_size` 32M (админка принимает файлы до 20 МБ). CloudLinux PHP Selector не нужен.
+- «Налаштування Apache і nginx»: выключить «Обслуговувати статичні файли напряму через nginx» — иначе файлы `/storage/` уходят мимо `storage/app/public/.htaccess` (CSP `sandbox` для HTML/SVG).
+- Отдельная база MySQL и пользователь; старую БД сайта не трогать.
+- «Доступ до веб-хостингу»: shell `/bin/bash` (не chroot — нужны git и composer).
+
+**SSH: PHP 8.3 и Composer.** Системный `php` в SSH — 7.2. Для ручной работы добавить строку в **начало** `~/.bashrc` (ниже стандартной проверки на интерактивность она в неинтерактивном SSH не выполнится):
+
+```bash
+sed -i '1i export PATH=/opt/plesk/php/8.3/bin:$HOME/bin:$PATH' ~/.bashrc
+```
+
+Workflow от `.bashrc` не зависит — он берёт каталог PHP из переменной `REMOTE_PHP_BIN`. Composer, если его нет: `mkdir -p ~/bin && curl -sS https://getcomposer.org/installer | /opt/plesk/php/8.3/bin/php -- --install-dir=$HOME/bin --filename=composer`.
+
+**Первичная установка (один раз, по SSH):**
+
+```bash
+cd /var/www/vhosts/otfk.od.ua/new.otfk.od.ua   # каталог поддомена; если Plesk положил туда заглушки — очистить
+git clone https://github.com/gotthejuicee/otfk.git .
+git checkout prod
+composer install --no-dev --optimize-autoloader
+cp .env.production.example .env   # APP_URL=https://new.otfk.od.ua, DB_*, ADMIN_PASSWORD; SEO_PRIMARY_HOST не трогать
+php artisan key:generate           # при переносе БД с другого сервера — APP_KEY исходного (секреты 2FA)
+php artisan storage:link
+```
+
+Контент — перенос с тестового хостинга (`otfk:backup` + `otfk:storage-export` → `otfk:storage-import`, раздел «Файли старого сайту і переїзд»), **не** `db:seed`. Затем `php artisan migrate --force`.
+
+**Cron** («Заплановані завдання», щохвилини) — с полным путём к PHP, `.bashrc` на cron не действует:
+
+```bash
+cd /var/www/vhosts/otfk.od.ua/new.otfk.od.ua && /opt/plesk/php/8.3/bin/php artisan schedule:run >> /dev/null 2>&1
+```
+
+**GitHub → Settings → Environments → `plesk`:**
+- секреты `REMOTE_KEY`, `REMOTE_HOST`, `REMOTE_USER`, `REMOTE_PATH` (`/var/www/vhosts/otfk.od.ua/new.otfk.od.ua`), опционально `REMOTE_PORT`; публичную часть ключа — в `~/.ssh/authorized_keys` пользователя подписки;
+- переменные `DEPLOY_TARGET=plesk` (без неё деплой `prod` останавливается: недостающие секреты окружения GitHub молча берёт из репозитория, то есть с тестового хостинга), `REMOTE_PHP_BIN=/opt/plesk/php/8.3/bin`, `SEO_SMOKE_BASE_URL=https://new.otfk.od.ua`, `SEO_SMOKE_EXPECT=closed` (иначе smoke-проверка унаследует адрес тестового хостинга из переменных репозитория).
+
+Окружение `test` (для `master`) GitHub создаёт сам при первом запуске; оно пустое и использует секреты репозитория. `mirror-files.yml` выбирает сервер так же — запуск из ветки `prod` идёт на Plesk.
+
+**Проверка:** `curl -sI https://new.otfk.od.ua/` — есть `X-Robots-Tag: noindex, nofollow`; `/`, `/en`, `/admin` (вход с 2FA) открываются; проба `storage/app/public/_probe.php` → 403 (раздел 6 `docs/security-audit.md`).
 
 ## Чек-лист «не забыть»
 
@@ -185,7 +234,7 @@ CSV збирає `php artisan otfk:legacy-map --out=storage/app/private/legacy-m
 - Точний час сервера (NTP): TOTP-коди живуть 30 с, розбіжність понад хвилину = «невірний код» у всіх. Перевірка: `date -u`.
 - Document root = `public/`; повторити пробу `storage/app/public/_probe.php` → 403 (розділ 6 `docs/security-audit.md`). Якщо новий хостинг на nginx без Apache, `.htaccess` не діє — заборону скриптів у `/storage/` прописати в конфігу nginx (`location ~* ^/storage/.*\.php$ { return 403; }`); білий список завантажень у застосунку працює незалежно.
 - `storage/logs/security-*.log` і `storage/app/private/sanitize-backup-*.json` у `storage-export` не входять — за потреби скопіювати вручну.
-- Секрети GitHub Actions (`REMOTE_HOST`, `REMOTE_USER`, `REMOTE_KEY`, `REMOTE_PATH`, `REMOTE_PORT`) перевести на новий сервер, інакше автодеплой і далі йтиме на старий.
+- Секрети GitHub Actions (`REMOTE_HOST`, `REMOTE_USER`, `REMOTE_KEY`, `REMOTE_PATH`, `REMOTE_PORT`) перевести на новий сервер — у середовищі `plesk` для гілки `prod`, у секретах репозиторію для `master` — інакше автодеплой і далі йтиме на старий.
 
 ## Моніторинг доступності (без коду)
 
@@ -210,7 +259,7 @@ CSV збирає `php artisan otfk:legacy-map --out=storage/app/private/legacy-m
 
 ## Обновление сайта потом (Вариант А)
 
-Обычно ничего делать не надо — push в `master` запускает автодеплой (`deploy.yml`). Ручной путь на случай, если CI недоступен (фронтенд тогда собрать локально и залить `public/build` самому):
+Обычно ничего делать не надо — push в `prod` (Plesk) или `master` (тестовый хостинг) запускает автодеплой (`deploy.yml`). Ручной путь на случай, если CI недоступен (фронтенд тогда собрать локально и залить `public/build` самому):
 
 Если в БД остался результат старой миграции `2026_08_28_180000_drop_applicant_feedback_testimonials`, обычный `migrate --force` восстановит отсутствующие таблицы через `2026_10_04_175000_restore_missing_content_tables` перед переводом блоков главной (`180000`). Восстановление не запускает сидер и не меняет существующие записи. Последняя миграция перевода допускает повтор после частичного выполнения MySQL DDL: добавляются только отсутствующие поля. Не удаляйте записи из `migrations` и не откатывайте старые контент-миграции для восстановления схемы. Встроенные формы контактов/заявки и отзывы сняты с интерфейса, таблицы остаются архивными; августовская drop-миграция в объединённом коде ничего не удаляет. Перед восстановлением сохраните исходные записи и проверьте фактические таблицы/поля; после него проверьте успешность шага пересборки кешей и ответы `/`, `/en`, `/admin`.
 

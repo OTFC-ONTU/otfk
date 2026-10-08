@@ -1,12 +1,14 @@
 name: Deploy to production
 
+# prod → Plesk (new.otfk.od.ua, середовище plesk з власними секретами),
+# master та ручний запуск інших гілок → тестовий хостинг (секрети репозиторію).
 on:
   push:
-    branches: [master]
+    branches: [master, prod]
   workflow_dispatch:
 
 concurrency:
-  group: deploy-production
+  group: deploy-${{ github.ref_name == 'prod' && 'plesk' || 'test' }}
   cancel-in-progress: false
 
 jobs:
@@ -33,8 +35,18 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: tests
+    environment: ${{ github.ref_name == 'prod' && 'plesk' || 'test' }}
 
     steps:
+      # Секрети середовища підміняють однойменні секрети репозиторію, а відсутні GitHub
+      # мовчки бере з репозиторію — тобто незаповнене середовище plesk виклало б prod
+      # на тестовий хостинг. Змінна DEPLOY_TARGET задається лише в самому середовищі.
+      - name: Check deploy target
+        if: ${{ github.ref_name == 'prod' && vars.DEPLOY_TARGET != 'plesk' }}
+        run: |
+          echo "::error title=Deploy::Середовище plesk не налаштоване: потрібні змінна DEPLOY_TARGET=plesk і секрети REMOTE_* (DEPLOY.md)."
+          exit 1
+
       - uses: actions/checkout@v4
 
       # На хостингу немає node, тому фронтенд збираємо тут
@@ -61,6 +73,9 @@ jobs:
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.REMOTE_PORT || 22 }} ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} '
             set -e
             cd ${{ secrets.REMOTE_PATH }}
+            # Plesk: у SSH типово системний PHP 7.2 — REMOTE_PHP_BIN (каталог PHP 8.3) стає першим у PATH
+            if [ -n "${{ vars.REMOTE_PHP_BIN }}" ]; then export PATH="${{ vars.REMOTE_PHP_BIN }}:$HOME/bin:$PATH"; fi
+            php -v | head -n 1
             git fetch origin ${{ github.sha }}
             git reset --hard ${{ github.sha }}
             composer install --no-dev --optimize-autoloader --no-interaction
@@ -78,6 +93,9 @@ jobs:
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.REMOTE_PORT || 22 }} ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} '
             set -e
             cd ${{ secrets.REMOTE_PATH }}
+            # Plesk: у SSH типово системний PHP 7.2 — REMOTE_PHP_BIN (каталог PHP 8.3) стає першим у PATH
+            if [ -n "${{ vars.REMOTE_PHP_BIN }}" ]; then export PATH="${{ vars.REMOTE_PHP_BIN }}:$HOME/bin:$PATH"; fi
+            php -v | head -n 1
             php artisan migrate --force
             php artisan optimize:clear
             php artisan config:cache
