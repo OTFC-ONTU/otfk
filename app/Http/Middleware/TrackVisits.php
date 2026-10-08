@@ -49,7 +49,7 @@ class TrackVisits
 
         // Рахуємо лише справжніх відвідувачів основного домену: персонал, що
         // увійшов до адмінки, і тестовий хостинг/локальні копії не враховуються.
-        if (auth()->check() || ! Seo::indexable($request)) {
+        if (auth()->check() || ! Seo::onPrimaryHost($request)) {
             return false;
         }
 

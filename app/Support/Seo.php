@@ -56,6 +56,21 @@ class Seo
     }
 
     /**
+     * Чи це основний домен — для статистики й аналітики, незалежно від
+     * перемикача індексації (закриття сайту від пошуку не вимикає лічильники).
+     * Примусове SEO_INDEXING=true (тести, локальна перевірка) вважає основним будь-який домен.
+     */
+    public static function onPrimaryHost(?Request $request = null): bool
+    {
+        if (in_array(strtolower((string) config('otfk.seo.indexing', 'auto')), ['true', '1', 'on', 'yes'], true)) {
+            return true;
+        }
+        $host = strtolower(($request ?? request())->getHost());
+
+        return $host !== '' && $host === strtolower((string) config('otfk.seo.primary_host'));
+    }
+
+    /**
      * Canonical поточної сторінки: шлях без слешу в кінці плюс лише значущі
      * параметри у сталому порядку. Друга сторінка новин посилається сама на себе.
      */

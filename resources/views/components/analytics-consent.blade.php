@@ -19,8 +19,11 @@
             <p id="analytics-consent-title" class="font-display text-base font-bold text-brand-900">{{ __('layout.consent.title') }}</p>
             <p id="analytics-consent-text" class="mt-1.5 text-sm leading-relaxed text-slate-600">
                 {{ __('layout.consent.text') }}
-                <a href="{{ \App\Support\LocalizedUrl::to('/polityka-konfidentsiynosti') }}"
-                   class="font-semibold text-brand-700 underline underline-offset-2 hover:text-brand-900">{{ __('layout.consent.policy') }}</a>
+                {{-- Посилання лише на опубліковану CMS-сторінку політики — без «мертвого» 404 до її створення --}}
+                @if (\App\Models\Page::published()->where('slug', 'polityka-konfidentsiynosti')->exists())
+                    <a href="{{ \App\Support\LocalizedUrl::to('/polityka-konfidentsiynosti') }}"
+                       class="font-semibold text-brand-700 underline underline-offset-2 hover:text-brand-900">{{ __('layout.consent.policy') }}</a>
+                @endif
             </p>
             <div class="mt-4 flex flex-wrap justify-end gap-2">
                 <button type="button" data-consent-reject class="btn-outline flex-1 sm:flex-none">{{ __('layout.consent.reject') }}</button>

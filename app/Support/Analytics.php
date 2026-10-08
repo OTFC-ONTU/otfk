@@ -47,6 +47,6 @@ class Analytics
     /** Чи віддати ID і дозволити завантаження gtag після згоди — лише основний домен. */
     public static function tracking(?Request $request = null): bool
     {
-        return self::bannerVisible() && Seo::indexable($request);
+        return self::bannerVisible() && Seo::onPrimaryHost($request);
     }
 }

@@ -13,6 +13,8 @@ use App\Models\Page;
 use App\Models\User;
 use App\Support\LegacyRedirects;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -93,14 +95,53 @@ class LegacyRedirectsTest extends TestCase
         // Без значущих параметрів запит зіставляється лише за шляхом.
         $this->get('/structure/chairs/?id=5')->assertStatus(301)->assertRedirect(url('/novyny'));
         $this->assertSame(['/', null], LegacyRedirects::normalize('/index.php'));
+
+        // Старі посилання http:// і www. основного домену — одразу на https без www.
+        config(['otfk.seo.primary_host' => 'otfk.od.ua']);
+        $this->get('http://www.otfk.od.ua/structure/chairs/')->assertStatus(301)->assertRedirect('https://otfk.od.ua/novyny');
+        $this->get('http://otfk.od.ua/structure/chairs/index.php')->assertRedirect('https://otfk.od.ua/novyny');
+    }
+
+    public function test_migration_renormalizes_previously_imported_sources(): void
+    {
+        // Запис, збережений за старої нормалізації: хеш шляху з index.php.
+        DB::table('legacy_redirects')->insert([
+            'source_hash' => LegacyRedirects::hash('/structure/old/index.php', null),
+            'source_path' => '/structure/old/index.php', 'source_query' => null,
+            'action' => LegacyRedirect::REDIRECT, 'target_url' => '/novyny', 'status_code' => 301,
+            'is_active' => true, 'hits' => 0, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $this->get('/structure/old/')->assertNotFound();
+
+        (require database_path('migrations/2026_10_08_130000_renormalize_legacy_redirect_sources.php'))->up();
+
+        $this->assertSame('/structure/old', LegacyRedirect::first()->source_path);
+        $this->get('/structure/old/')->assertStatus(301)->assertRedirect(url('/novyny'));
+    }
+
+    public function test_missed_lookups_are_not_cached(): void
+    {
+        $path = '/scanner-probe-'.uniqid();
+        $this->get($path)->assertNotFound();
+        $version = (int) Cache::get('legacy_redirects.version', 0);
+        $this->assertFalse(Cache::has("legacy_redirects.{$version}.".LegacyRedirects::hash($path, null)));
+
+        // Знайдений запис кешується як і раніше.
+        $this->redirect('/stara-adresa', '/novyny');
+        $this->get('/stara-adresa')->assertStatus(301);
+        $version = (int) Cache::get('legacy_redirects.version', 0);
+        $this->assertTrue(Cache::has("legacy_redirects.{$version}.".LegacyRedirects::hash('/stara-adresa', null)));
     }
 
     public function test_htaccess_keeps_old_site_slash_paths_for_laravel(): void
     {
         $htaccess = file_get_contents(public_path('.htaccess'));
-        // Виняток стоїть у тому ж блоці умов, що й правило прибирання слешу.
-        $this->assertMatchesRegularExpression('~RewriteCond %\{REQUEST_URI\} !\^/\(\?:([a-z_|]+)\)/\n(?:\s*RewriteCond[^\n]*\n)*\s*RewriteRule \^ %1 \[L,R=301\]~', $htaccess);
-        preg_match('~!\^/\(\?:([a-z_|]+)\)/~', $htaccess, $m);
+        // Каталоги старого сайту позначаються прапорцем, який обходять www, HTTPS і прибирання слешу.
+        $this->assertMatchesRegularExpression('~RewriteCond %\{REQUEST_URI\} \^/\(\?:([a-z_|]+)\)/\n\s*RewriteRule \^ - \[E=OTFK_LEGACY:1\]~', $htaccess);
+        $this->assertSame(3, substr_count($htaccess, 'RewriteCond %{ENV:OTFK_LEGACY} !=1'));
+        $this->assertMatchesRegularExpression('~RewriteCond %\{ENV:OTFK_LEGACY\} !=1\n(?:\s*RewriteCond[^\n]*\n)*\s*RewriteRule \^ %1 \[L,R=301\]~', $htaccess);
+        $this->assertLessThan(strpos($htaccess, 'RewriteCond %{HTTP_HOST} ^www'), strpos($htaccess, 'E=OTFK_LEGACY:1'));
+        preg_match('~\^/\(\?:([a-z_|]+)\)/~', $htaccess, $m);
         $exempt = explode('|', $m[1]);
 
         foreach (['news', 'structure', 'student', 'applicant', 'public_information', 'uploads'] as $old) {

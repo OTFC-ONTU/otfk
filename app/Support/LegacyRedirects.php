@@ -54,7 +54,7 @@ class LegacyRedirects
 
             return $match['action'] === LegacyRedirect::GONE
                 ? response()->view('errors.410', [], 410)
-                : redirect()->to($match['target'], $match['code']);
+                : redirect()->to(self::absoluteTarget($request, $match['target']), $match['code']);
         }
 
         NotFoundLog::record($request, $path, $query);
@@ -143,6 +143,19 @@ class LegacyRedirects
         return true;
     }
 
+    /**
+     * Старі посилання http:// і www. основного домену .htaccess пропускає до Laravel
+     * (розділи старого сайту), тож редирект одразу веде на https без www — один перехід.
+     * Інші домени (тестовий хостинг, localhost) отримують відносну адресу як раніше.
+     */
+    private static function absoluteTarget(Request $request, string $target): string
+    {
+        $primary = strtolower((string) config('otfk.seo.primary_host'));
+        $host = (string) preg_replace('/^www\./', '', strtolower($request->getHost()));
+
+        return $primary !== '' && $host === $primary ? 'https://'.$primary.$target : $target;
+    }
+
     public static function flush(): void
     {
         Cache::forever(self::VERSION_KEY, (int) Cache::get(self::VERSION_KEY, 0) + 1);
@@ -170,17 +183,22 @@ class LegacyRedirects
         ]));
 
         foreach ($hashes as $hash) {
-            $row = Cache::remember("legacy_redirects.{$version}.{$hash}", self::CACHE_TTL, function () use ($hash) {
-                $record = LegacyRedirect::query()->where('source_hash', $hash)->where('is_active', true)->first();
-
-                return $record ? [
+            // Кешуються лише знайдені записи: промахи (бот-сміття, випадкові адреси) не
+            // пишуть рядків у кеш-таблицю — для них досить індексованого запиту за source_hash.
+            $key = "legacy_redirects.{$version}.{$hash}";
+            if ($row = Cache::get($key)) {
+                return $row;
+            }
+            $record = LegacyRedirect::query()->where('source_hash', $hash)->where('is_active', true)->first();
+            if ($record) {
+                $row = [
                     'id' => $record->id,
                     'action' => $record->action,
                     'target' => $record->target_url,
                     'code' => (int) $record->status_code,
-                ] : [];
-            });
-            if ($row !== []) {
+                ];
+                Cache::put($key, $row, self::CACHE_TTL);
+
                 return $row;
             }
         }

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\Pages\SeoSettings;
+use App\Models\Page;
 use App\Models\Setting;
 use App\Models\SiteVisit;
 use App\Models\User;
@@ -49,6 +50,10 @@ class AnalyticsConsentTest extends TestCase
     public function test_banner_and_config_for_guest_on_primary_domain_in_both_locales(): void
     {
         $this->setMeasurementId(self::ID);
+
+        // Без опублікованої сторінки політики посилання не виводиться (без 404).
+        $this->assertStringNotContainsString('polityka-konfidentsiynosti', $this->get('/')->getContent());
+        Page::create(['title' => 'Політика конфіденційності', 'slug' => 'polityka-konfidentsiynosti', 'is_published' => true]);
 
         $uk = $this->get('/')->assertOk()->getContent();
         $this->assertStringContainsString('data-ga4-id="'.self::ID.'"', $uk);

@@ -67,12 +67,19 @@ final class MetaText
             preg_split('/\s+/u', $brand) ?: [],
             fn (string $word) => mb_strlen($word) >= 4 && $word === mb_strtoupper($word),
         );
-        $variants = array_filter([$brand, $siteName, ...$abbrs, ...$aliases], 'filled');
+        $variants = array_filter([$brand, $siteName, ...$aliases], 'filled');
 
         foreach ($variants as $variant) {
             if (mb_stripos($title, trim((string) $variant)) !== false) {
                 return $title;
             }
+        }
+
+        // Абревіатура самого коледжу (перша в бренді, «ОТФК») — лише цілим словом з урахуванням
+        // регістру: «Контури» (містить «онту») чи згадка університету «ОНТУ» не прибирають бренд.
+        $own = reset($abbrs);
+        if ($own !== false && preg_match('/(?<!\p{L})'.preg_quote($own, '/').'(?!\p{L})/u', $title)) {
+            return $title;
         }
 
         return $title.self::TITLE_SEPARATOR.$brand;
