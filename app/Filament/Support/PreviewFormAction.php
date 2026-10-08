@@ -2,6 +2,7 @@
 
 namespace App\Filament\Support;
 
+use App\Filament\Forms\Components\HtmlRichEditor;
 use Filament\Support\Enums\Width;
 use App\Models\Department;
 use App\Models\News;
@@ -44,7 +45,7 @@ class PreviewFormAction
                 $model = self::MODELS[$type];
                 $base = $livewire->record ?? new $model;
 
-                $token = AdminPreview::store($type, $base, $livewire->form->getRawState());
+                $token = AdminPreview::store($type, $base, HtmlRichEditor::rawStateWithHtml($livewire->form));
 
                 return view('filament.support.preview-frame', [
                     'url' => route('admin.preview', $token),

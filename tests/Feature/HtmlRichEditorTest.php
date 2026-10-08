@@ -23,6 +23,14 @@ class HtmlRichEditorTest extends TestCase
     public function test_images_are_resizable(): void
     {
         $this->assertTrue(HtmlRichEditor::make('body')->hasResizableImages());
+
+        // Кнопки розміру — у плаваючій панелі зображення, разом зі стандартними панелями таблиці/сітки
+        $this->actingAs(User::firstOrFail());
+        $page = Page::create(['title' => 'Фото', 'slug' => 'foto-test', 'body' => '<p><img src="/storage/a.jpg" alt=""></p>']);
+        Livewire::test(EditPage::class, ['record' => $page->getRouteKey()])
+            ->assertSeeHtml('floatingToolbar::image')
+            ->assertSeeHtml('setImageSize($getEditor(), \'medium\')')
+            ->assertSeeHtml('floatingToolbar::table');
     }
 
     public function test_lossy_markup_is_detected(): void

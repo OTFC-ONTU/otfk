@@ -219,6 +219,17 @@
     @once
         <style>
             .otfk-html-rich-editor.otfk-html-mode .fi-fo-rich-editor { display: none; }
+            /* Текст у редакторі — колонкою завширшки як на сайті (≈720 px), як аркуш документа */
+            .otfk-html-rich-editor .fi-fo-rich-editor-content { max-width: 45rem; margin-inline: auto; }
+            .otfk-html-rich-editor .fi-fo-rich-editor-content img { max-width: 100%; }
+            /* Зображення без заданого розміру на сайті займає всю колонку; у редакторі — компактне прев'ю з поясненням */
+            .otfk-html-rich-editor .fi-fo-rich-editor-content img:not([style*="width"]) { max-height: 16rem; width: auto; }
+            .otfk-html-rich-editor [data-resize-wrapper]:has(> img:not([style*="width"]))::after {
+                content: 'На сайті — на всю ширину колонки. Виділіть, щоб вибрати розмір';
+                position: absolute; left: .5rem; bottom: .5rem; max-width: calc(100% - 1rem); padding: .125rem .5rem;
+                border-radius: .375rem; background: rgb(17 24 39 / .75); color: #fff; font-size: .6875rem; line-height: 1.4;
+                pointer-events: none;
+            }
             .otfk-html-source { margin-top: .5rem; }
             .otfk-html-tools { display: flex; flex-wrap: wrap; gap: .375rem; margin-bottom: .375rem; }
             .otfk-html-tools button {

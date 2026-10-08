@@ -7,9 +7,12 @@ use DOMElement;
 use App\Filament\Forms\Components\RichEditor\EmbedPlugin;
 use DOMXPath;
 use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\RichEditor\RichEditorTool;
 use Filament\Forms\Components\RichEditor\StateCasts\RichEditorStateCast;
 use Filament\Schemas\Components\StateCasts\Contracts\StateCast;
+use Filament\Schemas\Schema;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Js;
 
 /**
  * Візуальний редактор (TipTap, RichEditor Filament 4) з перемикачем «Візуально / HTML».
@@ -38,6 +41,9 @@ class HtmlRichEditor extends RichEditor
         .'|<(?!(?:img|iframe)\\b)[a-z][a-z0-9]*\\b[^>]*\\s(?:width|height)\\s*='
         .'|<!--(?!imported-from:)';
 
+    /** Кнопки розміру зображення: частка колонки сайту (html-editor.js imageSizes) або вся ширина. */
+    private const IMAGE_SIZES = ['small' => 'Мале', 'medium' => 'Середнє', 'large' => 'Велике', '' => 'Уся ширина'];
+
     /** Маркери імпорту (їх читають Page::publicBody(), карта старих адрес, синхронізація). */
     private const MARKER = '<!--imported-from:[^>]*-->';
 
@@ -47,8 +53,22 @@ class HtmlRichEditor extends RichEditor
 
         $this->plugins([EmbedPlugin::make()]);
 
-        // Розмір зображення — перетягуванням кутика (width/height зберігаються, пропорції — так само)
+        // Розмір зображення — кнопками плаваючої панелі (частка колонки сайту) або перетягуванням кутика;
+        // width/height зберігаються, пропорції — так само (resources/js/admin/html-editor.js)
         $this->resizableImages();
+        $this->tools(array_map(
+            fn (string $size, string $label): RichEditorTool => RichEditorTool::make('imageSize'.ucfirst($size ?: 'full'))
+                ->label($label)
+                ->hiddenLabel(false)
+                ->jsHandler('window.otfkHtmlEditor?.setImageSize($getEditor(), '.Js::from($size ?: null).')')
+                ->activeJsExpression('window.otfkHtmlEditor?.imageSizeIs($getEditor(), '.Js::from($size ?: null).')'),
+            array_keys(self::IMAGE_SIZES),
+            self::IMAGE_SIZES,
+        ));
+        $this->floatingToolbars(fn (self $component): array => [
+            ...$component->getDefaultFloatingToolbars(),
+            'image' => array_map(fn (string $size) => 'imageSize'.ucfirst($size ?: 'full'), array_keys(self::IMAGE_SIZES)),
+        ]);
 
         $this->hint(fn (self $component): ?HtmlString => $component->isDisabled()
             ? null
@@ -130,6 +150,23 @@ class HtmlRichEditor extends RichEditor
             '',
             $html,
         );
+    }
+
+    /**
+     * Сирий стан форми, у якому документи TipTap (правка у візуальному режимі) замінено на HTML —
+     * для превʼю незбереженої форми (PreviewFormAction), яке читає стан без дегідратації.
+     */
+    public static function rawStateWithHtml(Schema $form): array
+    {
+        $state = (array) $form->getRawState();
+        foreach ($form->getFlatFields(withHidden: true) as $field) {
+            $path = $field->getStatePath(isAbsolute: false);
+            if ($field instanceof self && is_array(data_get($state, $path))) {
+                data_set($state, $path, $field->documentToHtml(data_get($state, $path)));
+            }
+        }
+
+        return $state;
     }
 
     public static function isLossy(?string $html): bool
