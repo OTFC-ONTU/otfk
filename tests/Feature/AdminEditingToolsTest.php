@@ -162,7 +162,7 @@ class AdminEditingToolsTest extends TestCase
         $it = Page::create(['title' => 'IT', 'slug' => 'vydannya-it-test', 'parent_id' => $hub->id, 'is_published' => true]);
         $list = Page::create(['title' => 'IT', 'slug' => 'spysok-it-test', 'parent_id' => $it->id, 'is_published' => true]);
 
-        $this->assertSame('Студенту тест › Цифрові видання › IT · /vydannya-it-test', $it->adminPathLabel());
+        $this->assertSame('IT (Студенту тест › Цифрові видання)', $it->adminOptionLabel());
 
         $options = Livewire::test(EditPage::class, ['record' => $hub->getRouteKey()])
             ->instance()->form->getComponent('data.parent_id')->getOptions();
@@ -171,6 +171,6 @@ class AdminEditingToolsTest extends TestCase
         $this->assertArrayNotHasKey($hub->id, $options);
         $this->assertArrayNotHasKey($it->id, $options);
         $this->assertArrayNotHasKey($list->id, $options);
-        $this->assertSame('Студенту тест · /studentu-test', $options[$student->id]);
+        $this->assertSame('Студенту тест', $options[$student->id]);
     }
 }
