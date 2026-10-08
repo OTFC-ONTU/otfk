@@ -2,11 +2,10 @@ name: Deploy to production
 
 # prod → Plesk (new.otfk.od.ua): job deploy-plesk збирає фронтенд і публікує гілку
 # plesk-build, яку забирає Laravel Toolkit у Plesk (SSH там chroot без PHP 8.3).
-# master, filament-4 (оновлення адмінки до Filament 4) та ручний запуск інших гілок →
-# тестовий хостинг по SSH (job deploy); на хостингу лишається остання викладена гілка.
+# master та ручний запуск інших гілок → тестовий хостинг по SSH (job deploy).
 on:
   push:
-    branches: [master, prod, filament-4]
+    branches: [master, prod]
   workflow_dispatch:
 
 concurrency:
