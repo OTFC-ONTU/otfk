@@ -12,23 +12,24 @@ use Tests\TestCase;
 
 /**
  * Перемикач «Візуально / HTML» у редакторах основного тексту: розмітку можна
- * копіювати й вставляти, а вміст, який Trix спростив би, відкривається одразу в HTML.
+ * копіювати й вставляти; типово — візуальний режим, а вміст, який Trix спростив би,
+ * не перезаписується без дії користувача (попередження + підтвердження першої правки).
  */
 class HtmlRichEditorTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_trix_lossy_markup_starts_in_html_mode(): void
+    public function test_trix_lossy_markup_is_detected(): void
     {
-        $this->assertFalse(HtmlRichEditor::needsHtmlMode('<p>Текст із <strong>жирним</strong> і <a href="/novyny">посиланням</a>.</p><ul><li>Пункт</li></ul>'));
-        $this->assertFalse(HtmlRichEditor::needsHtmlMode('<figure data-trix-attachment="{}" class="attachment"><img src="/storage/pages/a.jpg"></figure>'));
-        $this->assertFalse(HtmlRichEditor::needsHtmlMode(null));
+        $this->assertFalse(HtmlRichEditor::isTrixLossy('<p>Текст із <strong>жирним</strong> і <a href="/novyny">посиланням</a>.</p><ul><li>Пункт</li></ul>'));
+        $this->assertFalse(HtmlRichEditor::isTrixLossy('<figure data-trix-attachment="{}" class="attachment"><img src="/storage/pages/a.jpg"></figure>'));
+        $this->assertFalse(HtmlRichEditor::isTrixLossy(null));
 
-        $this->assertTrue(HtmlRichEditor::needsHtmlMode('<table><tr><td>1</td></tr></table>'));
-        $this->assertTrue(HtmlRichEditor::needsHtmlMode('<details><summary>Більше</summary><p>…</p></details>'));
-        $this->assertTrue(HtmlRichEditor::needsHtmlMode('<p class="lead">Вступ</p>'));
-        $this->assertTrue(HtmlRichEditor::needsHtmlMode('<p><img src="/storage/mirror/a.png"></p>'));
-        $this->assertTrue(HtmlRichEditor::needsHtmlMode('<p>Текст</p><!--imported-from:https://otfk.od.ua/x-->'));
+        $this->assertTrue(HtmlRichEditor::isTrixLossy('<table><tr><td>1</td></tr></table>'));
+        $this->assertTrue(HtmlRichEditor::isTrixLossy('<details><summary>Більше</summary><p>…</p></details>'));
+        $this->assertTrue(HtmlRichEditor::isTrixLossy('<p class="lead">Вступ</p>'));
+        $this->assertTrue(HtmlRichEditor::isTrixLossy('<p><img src="/storage/mirror/a.png"></p>'));
+        $this->assertTrue(HtmlRichEditor::isTrixLossy('<p>Текст</p><!--imported-from:https://otfk.od.ua/x-->'));
     }
 
     public function test_page_editor_has_mode_toggle_and_keeps_html_on_save(): void
@@ -43,7 +44,8 @@ class HtmlRichEditorTest extends TestCase
 
         Livewire::test(EditPage::class, ['record' => $page->getRouteKey()])
             ->assertSeeHtml('otfk-mode-toggle')
-            ->assertSeeHtml("mode: 'html'")
+            ->assertSeeHtml("mode: 'visual'")
+            ->assertSeeHtml('otfk-lossy-note')
             ->fillForm(['body' => '<p>Вступ</p><table><tbody><tr><td>2</td></tr></tbody></table>'])
             ->call('save')
             ->assertHasNoFormErrors();
