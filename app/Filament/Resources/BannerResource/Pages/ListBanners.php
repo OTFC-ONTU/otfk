@@ -2,23 +2,23 @@
 
 namespace App\Filament\Resources\BannerResource\Pages;
 
+use Filament\Schemas\Schema;
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\BannerResource;
 use App\Filament\Support\ViewOnSite;
 use App\Models\Setting;
 use Filament\Actions;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\EmbeddedSchema;
+use Filament\Schemas\Components\EmbeddedTable;
+use Filament\Schemas\Components\RenderHook;
+use Filament\Schemas\Components\Section;
+use Filament\View\PanelsRenderHook;
 
-class ListBanners extends ListRecords implements HasForms
+class ListBanners extends ListRecords
 {
-    use InteractsWithForms;
-
     protected static string $resource = BannerResource::class;
-
-    protected static string $view = 'filament.resources.banner-resource.pages.list-banners';
 
     public ?array $overlay = [];
 
@@ -31,15 +31,24 @@ class ListBanners extends ListRecords implements HasForms
         ]);
     }
 
-    protected function getForms(): array
+    /** Над таблицею — налаштування затемнення фото (зберігається одразу при виборі). */
+    public function content(Schema $schema): Schema
     {
-        return ['overlayForm'];
+        return $schema->components([
+            Section::make('Затемнення фото')
+                ->description('Наскільки затемнюється зображення під текстом на головній сторінці. Зміни застосовуються одразу після вибору значення.')
+                ->schema([EmbeddedSchema::make('overlayForm')]),
+            $this->getTabsContentComponent(),
+            RenderHook::make(PanelsRenderHook::RESOURCE_PAGES_LIST_RECORDS_TABLE_BEFORE),
+            EmbeddedTable::make(),
+            RenderHook::make(PanelsRenderHook::RESOURCE_PAGES_LIST_RECORDS_TABLE_AFTER),
+        ]);
     }
 
-    public function overlayForm(Form $form): Form
+    public function overlayForm(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Select::make('opacity')
                     ->label('Сила затемнення')
                     ->options(collect(range(0, 100, 5))->mapWithKeys(fn (int $value) => [$value => "{$value}%"])->all())
@@ -63,7 +72,7 @@ class ListBanners extends ListRecords implements HasForms
     {
         return [
             ViewOnSite::header(route('home')),
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

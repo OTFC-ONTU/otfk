@@ -7,7 +7,7 @@ use Filament\Widgets\ChartWidget;
 
 class VisitsChart extends ChartWidget
 {
-    protected static ?string $heading = 'Відвідуваність за 30 днів';
+    protected ?string $heading = 'Відвідуваність за 30 днів';
 
     protected static ?int $sort = 2;
 

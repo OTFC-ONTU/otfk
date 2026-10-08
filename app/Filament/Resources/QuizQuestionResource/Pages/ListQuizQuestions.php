@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\QuizQuestionResource\Pages;
 
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\QuizQuestionResource;
 use App\Filament\Support\ViewOnSite;
 use Filament\Actions;
@@ -15,7 +16,7 @@ class ListQuizQuestions extends ListRecords
     {
         return [
             ViewOnSite::header(route('quiz')),
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

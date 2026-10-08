@@ -6,7 +6,7 @@ use Filament\Widgets\Widget;
 
 class QuickActions extends Widget
 {
-    protected static string $view = 'filament.widgets.quick-actions';
+    protected string $view = 'filament.widgets.quick-actions';
 
     /** Кнопки мають зʼявлятися миттєво, без відкладеного Livewire-завантаження. */
     protected static bool $isLazy = false;

@@ -2,6 +2,9 @@
 
 namespace App\Filament\Support;
 
+use Filament\Forms\Components\Field;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use App\Models\Setting;
 use Filament\Actions\Action;
 use Filament\Forms;
@@ -9,6 +12,10 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page as FilamentPage;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\EmbeddedSchema;
+use Filament\Schemas\Components\Form;
+use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -27,9 +34,8 @@ abstract class SettingsFormPage extends FilamentPage implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationGroup = 'Налаштування';
+    protected static string | \UnitEnum | null $navigationGroup = 'Налаштування';
 
-    protected static string $view = 'filament.pages.settings-form';
 
     /** Група в таблиці settings для новостворених ключів. */
     protected static string $settingsGroup = 'general';
@@ -83,11 +89,11 @@ abstract class SettingsFormPage extends FilamentPage implements HasForms
     }
 
     /** Поле англійського варіанта для перекладного ключа. */
-    protected static function englishField(string $key, string $label, bool $multiline = false): Forms\Components\Field
+    protected static function englishField(string $key, string $label, bool $multiline = false): Field
     {
         $field = $multiline
-            ? Forms\Components\Textarea::make($key.'_en')->rows(3)
-            : Forms\Components\TextInput::make($key.'_en');
+            ? Textarea::make($key.'_en')->rows(3)
+            : TextInput::make($key.'_en');
 
         return $field->label($label.' (англійською)')
             ->helperText('Для англійської версії сайту (/en). Порожнє — використовується стандартний англійський підпис або український текст.');
@@ -133,5 +139,16 @@ abstract class SettingsFormPage extends FilamentPage implements HasForms
         });
 
         Notification::make()->title('Налаштування збережено')->success()->send();
+    }
+
+    /** Форма зі збереженням — стандартна розмітка сторінки Filament 4 (без власного view). */
+    public function content(Schema $schema): Schema
+    {
+        return $schema->components([
+            Form::make([EmbeddedSchema::make('form')])
+                ->id('form')
+                ->livewireSubmitHandler('save')
+                ->footer([Actions::make($this->getFormActions())->key('form-actions')]),
+        ]);
     }
 }

@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use Filament\Pages\Dashboard;
+use Filament\Widgets\AccountWidget;
 use App\Filament\Auth\Login;
 use App\Filament\Auth\TwoFactorChallenge;
 use App\Filament\Auth\TwoFactorSetup;
@@ -13,8 +15,12 @@ use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages;
 use Filament\Panel;
+use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Tables\Table;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -55,7 +61,7 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
-                Pages\Dashboard::class,
+                Dashboard::class,
                 // Сторінки другого фактора (поза auto-discovery: без навігації, лише за маршрутом).
                 TwoFactorChallenge::class,
                 TwoFactorSetup::class,
@@ -64,7 +70,7 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(PanelsRenderHook::SCRIPTS_AFTER, fn (): string => Blade::render("@vite('resources/js/admin/html-editor.js')"))
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
+                AccountWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -87,5 +93,17 @@ class AdminPanelProvider extends PanelProvider
             ->persistentMiddleware([
                 RequireTwoFactor::class,
             ]);
+    }
+
+    /**
+     * Поведінка Filament 3, яку Filament 4 змінив типово (upgrade guide, «silent changes»):
+     * фільтри таблиць застосовуються одразу, секції/сітки на всю ширину форми.
+     */
+    public function boot(): void
+    {
+        Table::configureUsing(fn (Table $table) => $table->deferFilters(false));
+        Section::configureUsing(fn (Section $section) => $section->columnSpanFull());
+        Grid::configureUsing(fn (Grid $grid) => $grid->columnSpanFull());
+        Fieldset::configureUsing(fn (Fieldset $fieldset) => $fieldset->columnSpanFull());
     }
 }

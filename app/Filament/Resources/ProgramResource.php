@@ -2,11 +2,23 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Textarea;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\ProgramResource\Pages\ListPrograms;
+use App\Filament\Resources\ProgramResource\Pages\CreateProgram;
+use App\Filament\Resources\ProgramResource\Pages\EditProgram;
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\ProgramResource\Pages;
 use App\Models\Program;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -15,9 +27,9 @@ class ProgramResource extends Resource
 {
     protected static ?string $model = Program::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static ?string $navigationGroup = 'Абітурієнту';
+    protected static string | \UnitEnum | null $navigationGroup = 'Абітурієнту';
 
     protected static ?int $navigationSort = 2;
 
@@ -27,21 +39,21 @@ class ProgramResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Освітні програми';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Select::make('specialty_id')->label('Спеціальність')
+        return $schema->components([
+            Select::make('specialty_id')->label('Спеціальність')
                 ->relationship('specialty', 'title')->searchable()->preload()->required(),
-            Forms\Components\TextInput::make('title')->label('Назва програми')->required()->maxLength(255)->columnSpanFull(),
-            Forms\Components\FileUpload::make('file_path')->label('Файл програми')->directory('programs')->downloadable()->openable()
+            TextInput::make('title')->label('Назва програми')->required()->maxLength(255)->columnSpanFull(),
+            FileUpload::make('file_path')->label('Файл програми')->directory('programs')->downloadable()->openable()
                 ->acceptedFileTypes(['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
                 ->maxSize(20480)
                 ->helperText('PDF або DOC/DOCX з освітньою програмою (до 20 МБ). Або вкажіть зовнішнє посилання нижче — достатньо одного з двох.'),
-            Forms\Components\TextInput::make('external_url')->label('Зовнішнє посилання')->url()->maxLength(255)
+            TextInput::make('external_url')->label('Зовнішнє посилання')->url()->maxLength(255)
                 ->helperText('Якщо програма розміщена на іншому сайті — замість файла.'),
-            Forms\Components\Textarea::make('description')->label('Опис')->rows(2)->columnSpanFull()
+            Textarea::make('description')->label('Опис')->rows(2)->columnSpanFull()
                 ->helperText('Короткий підпис під назвою програми на сторінці спеціальності. Необовʼязково.'),
-            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
+            TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
                 ->helperText('Порядок у списку програм спеціальності: менше число — вище.'),
 
             EnglishTranslation::academicSection(false, false),
@@ -52,19 +64,19 @@ class ProgramResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                TextColumn::make('translation_status')->label('Переклад EN')
                     ->state(fn (Program $record) => $record->translationStatus())->badge(),
-                Tables\Columns\TextColumn::make('title')->label('Назва')->searchable()->weight('bold')->wrap(),
-                Tables\Columns\TextColumn::make('specialty.title')->label('Спеціальність')->badge()->sortable(),
-                Tables\Columns\IconColumn::make('file_path')->label('Файл')->boolean()
+                TextColumn::make('title')->label('Назва')->searchable()->weight('bold')->wrap(),
+                TextColumn::make('specialty.title')->label('Спеціальність')->badge()->sortable(),
+                IconColumn::make('file_path')->label('Файл')->boolean()
                     ->getStateUsing(fn ($record) => filled($record->file_path) || filled($record->external_url)),
-                Tables\Columns\TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
+                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
             ])
             ->defaultSort('sort_order')
             ->emptyStateHeading('Освітніх програм ще немає')
             ->emptyStateDescription('Освітні програми (файли або посилання) показуються на сторінці своєї спеціальності. Спершу оберіть спеціальність, потім додайте програму.')
-            ->actions([Tables\Actions\EditAction::make()])
-            ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
+            ->recordActions([EditAction::make()])
+            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }
 
     public static function getRelations(): array
@@ -75,9 +87,9 @@ class ProgramResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListPrograms::route('/'),
-            'create' => Pages\CreateProgram::route('/create'),
-            'edit' => Pages\EditProgram::route('/{record}/edit'),
+            'index' => ListPrograms::route('/'),
+            'create' => CreateProgram::route('/create'),
+            'edit' => EditProgram::route('/{record}/edit'),
         ];
     }
 }

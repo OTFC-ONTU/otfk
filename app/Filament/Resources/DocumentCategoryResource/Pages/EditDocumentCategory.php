@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\DocumentCategoryResource\Pages;
 
+use Filament\Actions\DeleteAction;
 use App\Filament\Resources\DocumentCategoryResource;
 use App\Filament\Support\ViewOnSite;
 use Filament\Actions;
@@ -15,7 +16,7 @@ class EditDocumentCategory extends EditRecord
     {
         return [
             ViewOnSite::header(fn () => route('documents.category', $this->record)),
-            Actions\DeleteAction::make(),
+            DeleteAction::make(),
         ];
     }
 }

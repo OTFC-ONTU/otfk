@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PageResource\Pages;
 
+use Filament\Actions\DeleteAction;
 use App\Filament\Resources\PageResource;
 use App\Filament\Support\PreviewFormAction;
 use App\Filament\Support\ViewOnSite;
@@ -17,7 +18,7 @@ class EditPage extends EditRecord
         return [
             PreviewFormAction::make('page'),
             ViewOnSite::header(fn () => url('/' . $this->record->slug)),
-            Actions\DeleteAction::make(),
+            DeleteAction::make(),
         ];
     }
 }

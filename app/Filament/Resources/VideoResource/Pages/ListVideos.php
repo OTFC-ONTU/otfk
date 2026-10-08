@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\VideoResource\Pages;
 
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\VideoResource;
 use App\Filament\Support\ViewOnSite;
 use Filament\Actions;
@@ -15,7 +16,7 @@ class ListVideos extends ListRecords
     {
         return [
             ViewOnSite::header(route('video.index')),
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

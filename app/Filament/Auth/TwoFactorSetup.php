@@ -2,6 +2,7 @@
 
 namespace App\Filament\Auth;
 
+use Filament\Schemas\Schema;
 use App\Filament\Auth\Concerns\SimpleAuthLayout;
 use App\Models\User;
 use App\Support\TwoFactor;
@@ -10,7 +11,6 @@ use DanHarrin\LivewireRateLimiting\WithRateLimiting;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Concerns\InteractsWithFormActions;
 use Filament\Pages\Page;
@@ -25,7 +25,7 @@ use Illuminate\Validation\ValidationException;
  * може перегенерувати коди відновлення або перепідключити застосунок
  * (обидва — після введення поточного коду).
  *
- * @property Form $form
+ * @property \Filament\Schemas\Schema $form
  */
 class TwoFactorSetup extends Page
 {
@@ -33,7 +33,7 @@ class TwoFactorSetup extends Page
     use SimpleAuthLayout;
     use WithRateLimiting;
 
-    protected static string $view = 'filament.auth.two-factor-setup';
+    protected string $view = 'filament.auth.two-factor-setup';
 
     /** Проста (без навігації) розмітка, як у сторінки входу. */
     protected static string $layout = 'filament-panels::components.layout.simple';
@@ -74,10 +74,10 @@ class TwoFactorSetup extends Page
         $this->form->fill();
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 TextInput::make('code')
                     ->label('Код із застосунку')
                     ->required()

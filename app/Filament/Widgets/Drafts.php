@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use Illuminate\Support\Carbon;
 use App\Filament\Resources\DepartmentResource;
 use App\Filament\Resources\NewsResource;
 use App\Filament\Resources\PageResource;
@@ -20,7 +21,7 @@ use Filament\Widgets\Widget;
  */
 class Drafts extends Widget
 {
-    protected static string $view = 'filament.widgets.drafts';
+    protected string $view = 'filament.widgets.drafts';
 
     /** Список маленький і важливий — рендеримо одразу, без відкладеного Livewire. */
     protected static bool $isLazy = false;
@@ -37,7 +38,7 @@ class Drafts extends Widget
             || Department::query()->where('is_published', false)->exists();
     }
 
-    /** @return list<array{type: string, title: string, edit_url: string, view_url: string, updated: \Illuminate\Support\Carbon|null}> */
+    /** @return list<array{type: string, title: string, edit_url: string, view_url: string, updated: Carbon|null}> */
     public function drafts(): array
     {
         $pages = Page::query()->where('is_published', false)

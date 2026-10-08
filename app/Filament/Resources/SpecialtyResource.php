@@ -2,13 +2,27 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\SpecialtyResource\Pages\ListSpecialties;
+use App\Filament\Resources\SpecialtyResource\Pages\CreateSpecialty;
+use App\Filament\Resources\SpecialtyResource\Pages\EditSpecialty;
 use App\Filament\Forms\Components\HtmlRichEditor;
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\SpecialtyResource\Pages;
 use App\Filament\Support\ViewOnSite;
 use App\Models\Specialty;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -17,9 +31,9 @@ class SpecialtyResource extends Resource
 {
     protected static ?string $model = Specialty::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-academic-cap';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-academic-cap';
 
-    protected static ?string $navigationGroup = 'Абітурієнту';
+    protected static string | \UnitEnum | null $navigationGroup = 'Абітурієнту';
 
     protected static ?int $navigationSort = 1;
 
@@ -29,30 +43,30 @@ class SpecialtyResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Спеціальності';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Section::make('Основне')->schema([
-                Forms\Components\TextInput::make('title')->label('Назва спеціальності')->required()->maxLength(255)->columnSpanFull(),
-                Forms\Components\TextInput::make('code')->label('Код')->maxLength(255)->placeholder('напр., 121')
+        return $schema->components([
+            Section::make('Основне')->schema([
+                TextInput::make('title')->label('Назва спеціальності')->required()->maxLength(255)->columnSpanFull(),
+                TextInput::make('code')->label('Код')->maxLength(255)->placeholder('напр., 121')
                     ->helperText('Офіційний код спеціальності — бейдж на картці.'),
-                Forms\Components\TextInput::make('slug')->label('URL (slug)')->maxLength(255)
+                TextInput::make('slug')->label('URL (slug)')->maxLength(255)
                     ->prefix(url('/spetsialnosti') . '/')
                     ->helperText('Залиште порожнім - згенерується автоматично.'),
-                Forms\Components\Textarea::make('short_description')->label('Короткий опис')->rows(2)->columnSpanFull()
+                Textarea::make('short_description')->label('Короткий опис')->rows(2)->columnSpanFull()
                     ->helperText('1-2 речення в картці спеціальності у списку та в результаті квізу.'),
                 HtmlRichEditor::make('description')->label('Повний опис')->columnSpanFull()
                     ->helperText('Основний текст на сторінці спеціальності.'),
-                Forms\Components\FileUpload::make('cover_image')->label('Зображення')->image()->directory('specialties')->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('1600')->imageResizeTargetHeight('1600')->columnSpanFull()
+                FileUpload::make('cover_image')->label('Зображення')->image()->directory('specialties')->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('1600')->imageResizeTargetHeight('1600')->columnSpanFull()
                     ->helperText('Горизонтальне фото в картці та вгорі сторінки спеціальності.'),
             ])->columns(2),
-            Forms\Components\Section::make('Деталі навчання')->schema([
-                Forms\Components\TextInput::make('degree')->label('Освітній ступінь')->maxLength(255)->placeholder('Фаховий молодший бакалавр'),
-                Forms\Components\TextInput::make('study_form')->label('Форма навчання')->maxLength(255)->placeholder('Денна / Заочна'),
-                Forms\Components\TextInput::make('duration')->label('Термін навчання')->maxLength(255)->placeholder('3 роки 10 місяців'),
-                Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
+            Section::make('Деталі навчання')->schema([
+                TextInput::make('degree')->label('Освітній ступінь')->maxLength(255)->placeholder('Фаховий молодший бакалавр'),
+                TextInput::make('study_form')->label('Форма навчання')->maxLength(255)->placeholder('Денна / Заочна'),
+                TextInput::make('duration')->label('Термін навчання')->maxLength(255)->placeholder('3 роки 10 місяців'),
+                TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
                     ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
-                Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true),
+                Toggle::make('is_published')->label('Опубліковано')->default(true),
             ])->columns(2),
             EnglishTranslation::academicSection(true),
         ]);
@@ -62,24 +76,24 @@ class SpecialtyResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                TextColumn::make('translation_status')->label('Переклад EN')
                     ->state(fn (Specialty $record) => $record->translationStatus())->badge(),
-                Tables\Columns\ImageColumn::make('cover_image')->label('')->square(),
-                Tables\Columns\TextColumn::make('title')->label('Назва')->searchable()->weight('bold')->wrap(),
-                Tables\Columns\TextColumn::make('code')->label('Код')->badge()->toggleable(),
-                Tables\Columns\TextColumn::make('degree')->label('Ступінь')->toggleable(),
-                Tables\Columns\TextColumn::make('programs_count')->label('Програм')->counts('programs')->badge(),
-                Tables\Columns\IconColumn::make('is_published')->label('Опубл.')->boolean(),
+                ImageColumn::make('cover_image')->label('')->square(),
+                TextColumn::make('title')->label('Назва')->searchable()->weight('bold')->wrap(),
+                TextColumn::make('code')->label('Код')->badge()->toggleable(),
+                TextColumn::make('degree')->label('Ступінь')->toggleable(),
+                TextColumn::make('programs_count')->label('Програм')->counts('programs')->badge(),
+                IconColumn::make('is_published')->label('Опубл.')->boolean(),
             ])
             ->defaultSort('sort_order')
             ->reorderable('sort_order')
             ->emptyStateHeading('Спеціальностей ще немає')
             ->emptyStateDescription('Спеціальності показуються на сторінці «Спеціальності» та в квізі для вступників. Додайте першу спеціальність з кодом і описом.')
-            ->actions([
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                EditAction::make(),
                 ViewOnSite::table(fn (Specialty $record) => route('specialties.show', $record)),
             ])
-            ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
+            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }
 
     public static function getRelations(): array
@@ -90,9 +104,9 @@ class SpecialtyResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSpecialties::route('/'),
-            'create' => Pages\CreateSpecialty::route('/create'),
-            'edit' => Pages\EditSpecialty::route('/{record}/edit'),
+            'index' => ListSpecialties::route('/'),
+            'create' => CreateSpecialty::route('/create'),
+            'edit' => EditSpecialty::route('/{record}/edit'),
         ];
     }
 }

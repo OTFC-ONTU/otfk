@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\FaqResource\Pages;
 
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\FaqResource;
 use App\Filament\Support\ViewOnSite;
 use Filament\Actions;
@@ -15,7 +16,7 @@ class ListFaqs extends ListRecords
     {
         return [
             ViewOnSite::header(route('faq')),
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

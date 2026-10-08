@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\EventResource\Pages;
 
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\EventResource;
 use App\Filament\Support\ViewOnSite;
 use Filament\Actions;
@@ -15,7 +16,7 @@ class ListEvents extends ListRecords
     {
         return [
             ViewOnSite::header(route('events')),
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

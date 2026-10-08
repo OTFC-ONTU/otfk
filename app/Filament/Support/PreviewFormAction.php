@@ -2,13 +2,13 @@
 
 namespace App\Filament\Support;
 
+use Filament\Support\Enums\Width;
 use App\Models\Department;
 use App\Models\News;
 use App\Models\Page;
 use App\Models\Specialty;
 use App\Support\AdminPreview;
 use Filament\Actions\Action;
-use Filament\Support\Enums\MaxWidth;
 
 /**
  * Кнопка «Превʼю» на формах створення/редагування контенту з власною
@@ -35,7 +35,7 @@ class PreviewFormAction
             ->icon('heroicon-o-eye')
             ->color('gray')
             ->slideOver()
-            ->modalWidth(MaxWidth::SixExtraLarge)
+            ->modalWidth(Width::SixExtraLarge)
             ->modalHeading('Попередній перегляд')
             ->modalDescription('Показано поточний стан форми — нічого не збережено.')
             ->modalSubmitAction(false)

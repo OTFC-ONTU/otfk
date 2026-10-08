@@ -2,12 +2,24 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\QuickLinkResource\Pages\ListQuickLinks;
+use App\Filament\Resources\QuickLinkResource\Pages\CreateQuickLink;
+use App\Filament\Resources\QuickLinkResource\Pages\EditQuickLink;
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\QuickLinkResource\Pages;
 use App\Models\QuickLink;
 use App\Rules\SafeUrl;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -22,9 +34,9 @@ class QuickLinkResource extends Resource
 {
     protected static ?string $model = QuickLink::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-squares-2x2';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-squares-2x2';
 
-    protected static ?string $navigationGroup = 'Контент';
+    protected static string | \UnitEnum | null $navigationGroup = 'Контент';
 
     protected static ?int $navigationSort = 5;
 
@@ -62,11 +74,11 @@ class QuickLinkResource extends Resource
         return parent::getEloquentQuery()->where('location', 'home_tile');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->components([
             EnglishTranslation::section(contentFields: ['description' => ['label' => 'Англійський опис', 'rows' => 2]]),
-            Forms\Components\Select::make('location')->label('Розташування')
+            Select::make('location')->label('Розташування')
                 ->options([
                     'home_tile' => 'Плитка на головній',
                     'footer_partner' => 'Партнер у підвалі',
@@ -74,26 +86,26 @@ class QuickLinkResource extends Resource
                 ->default('home_tile')->required()->live()
                 ->helperText('Плитки - 4 кольорові картки під банером. Партнери - посилання в підвалі сайту.'),
 
-            Forms\Components\TextInput::make('title')->label('Заголовок')->required()->maxLength(255)->columnSpanFull()
+            TextInput::make('title')->label('Заголовок')->required()->maxLength(255)->columnSpanFull()
                 ->helperText('Плитки - 4 кольорові картки під банером на головній.'),
 
-            Forms\Components\Textarea::make('description')->label('Опис')->rows(2)->maxLength(255)->columnSpanFull()
+            Textarea::make('description')->label('Опис')->rows(2)->maxLength(255)->columnSpanFull()
                 ->helperText('Короткий підпис під заголовком плитки.'),
 
-            Forms\Components\TextInput::make('url')->label('Посилання')->required()->maxLength(255)->rule(new SafeUrl)
+            TextInput::make('url')->label('Посилання')->required()->maxLength(255)->rule(new SafeUrl)
                 ->placeholder('/abituriyentu або https://...'),
 
-            Forms\Components\Select::make('icon')->label('Іконка')
+            Select::make('icon')->label('Іконка')
                 ->options(static::iconOptions())->searchable()->native(false),
 
-            Forms\Components\Select::make('color')->label('Колір')
+            Select::make('color')->label('Колір')
                 ->options(['brand' => 'Синій (фірмовий)', 'gold' => 'Золотий'])
                 ->default('brand'),
 
-            Forms\Components\Toggle::make('open_new_tab')->label('Відкривати у новій вкладці')->default(false),
-            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
+            Toggle::make('open_new_tab')->label('Відкривати у новій вкладці')->default(false),
+            TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
                 ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
-            Forms\Components\Toggle::make('is_visible')->label('Показувати')->default(true),
+            Toggle::make('is_visible')->label('Показувати')->default(true),
         ]);
     }
 
@@ -101,22 +113,22 @@ class QuickLinkResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                TextColumn::make('translation_status')->label('Переклад EN')
                     ->state(fn (QuickLink $record) => $record->translationStatus())->badge(),
-                Tables\Columns\TextColumn::make('location')->label('Розташування')->badge()
+                TextColumn::make('location')->label('Розташування')->badge()
                     ->formatStateUsing(fn (string $state) => $state === 'home_tile' ? 'Плитка' : 'Партнер')
                     ->color(fn (string $state) => $state === 'home_tile' ? 'primary' : 'gray')->sortable(),
-                Tables\Columns\TextColumn::make('title')->label('Заголовок')->searchable()->weight('bold'),
-                Tables\Columns\TextColumn::make('url')->label('Посилання')->color('gray')->limit(30),
-                Tables\Columns\IconColumn::make('is_visible')->label('Показ')->boolean(),
-                Tables\Columns\TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
+                TextColumn::make('title')->label('Заголовок')->searchable()->weight('bold'),
+                TextColumn::make('url')->label('Посилання')->color('gray')->limit(30),
+                IconColumn::make('is_visible')->label('Показ')->boolean(),
+                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
             ])
             ->defaultSort('sort_order')
             ->reorderable('sort_order')
             ->emptyStateHeading('Плиток ще немає')
             ->emptyStateDescription('Плитки - 4 кольорові картки під банером на головній. Посилання-партнери підвалу редагуються в «Налаштування → Підвал і вигляд».')
-            ->actions([Tables\Actions\EditAction::make()])
-            ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
+            ->recordActions([EditAction::make()])
+            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }
 
     public static function getRelations(): array
@@ -127,9 +139,9 @@ class QuickLinkResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListQuickLinks::route('/'),
-            'create' => Pages\CreateQuickLink::route('/create'),
-            'edit' => Pages\EditQuickLink::route('/{record}/edit'),
+            'index' => ListQuickLinks::route('/'),
+            'create' => CreateQuickLink::route('/create'),
+            'edit' => EditQuickLink::route('/{record}/edit'),
         ];
     }
 }

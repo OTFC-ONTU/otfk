@@ -2,13 +2,24 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\DepartmentResource\Pages\ListDepartments;
+use App\Filament\Resources\DepartmentResource\Pages\CreateDepartment;
+use App\Filament\Resources\DepartmentResource\Pages\EditDepartment;
 use App\Filament\Forms\Components\HtmlRichEditor;
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\DepartmentResource\Pages;
 use App\Filament\Support\ViewOnSite;
 use App\Models\Department;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -17,9 +28,9 @@ class DepartmentResource extends Resource
 {
     protected static ?string $model = Department::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-building-office-2';
 
-    protected static ?string $navigationGroup = 'Структура та персонал';
+    protected static string | \UnitEnum | null $navigationGroup = 'Структура та персонал';
 
     protected static ?int $navigationSort = 1;
 
@@ -29,21 +40,21 @@ class DepartmentResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Підрозділи';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\TextInput::make('title')->label('Назва')->required()->maxLength(255)->columnSpanFull(),
-            Forms\Components\Select::make('type')->label('Тип')->required()->default('kafedra')
+        return $schema->components([
+            TextInput::make('title')->label('Назва')->required()->maxLength(255)->columnSpanFull(),
+            Select::make('type')->label('Тип')->required()->default('kafedra')
                 ->options(Department::TYPES)
                 ->helperText('Визначає, у якій групі підрозділ показується на сторінці «Структура».'),
-            Forms\Components\TextInput::make('slug')->label('URL (slug)')->maxLength(255)
+            TextInput::make('slug')->label('URL (slug)')->maxLength(255)
                 ->prefix(url('/struktura') . '/')
                 ->helperText('Залиште порожнім - згенерується автоматично.'),
             HtmlRichEditor::make('description')->label('Опис')->columnSpanFull()
                 ->helperText('Основний текст на сторінці підрозділу; перші речення видно в його картці на сторінці «Структура».'),
-            Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
+            TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
                 ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
-            Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true)
+            Toggle::make('is_published')->label('Опубліковано')->default(true)
                 ->helperText('Вимкнено — підрозділ і його сторінка не видні на сайті, але лишаються в адмінці.'),
 
             EnglishTranslation::academicSection(),
@@ -54,24 +65,24 @@ class DepartmentResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                TextColumn::make('translation_status')->label('Переклад EN')
                     ->state(fn (Department $record) => $record->translationStatus())->badge(),
-                Tables\Columns\TextColumn::make('title')->label('Назва')->searchable()->weight('bold')->wrap(),
-                Tables\Columns\TextColumn::make('type')->label('Тип')->badge()
+                TextColumn::make('title')->label('Назва')->searchable()->weight('bold')->wrap(),
+                TextColumn::make('type')->label('Тип')->badge()
                     ->formatStateUsing(fn ($state) => Department::TYPES[$state] ?? $state),
-                Tables\Columns\TextColumn::make('staff_count')->label('Працівників')->counts('staff')->badge(),
-                Tables\Columns\IconColumn::make('is_published')->label('Опубл.')->boolean(),
-                Tables\Columns\TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(),
+                TextColumn::make('staff_count')->label('Працівників')->counts('staff')->badge(),
+                IconColumn::make('is_published')->label('Опубл.')->boolean(),
+                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(),
             ])
             ->defaultSort('sort_order')
             ->reorderable('sort_order')
             ->emptyStateHeading('Підрозділів ще немає')
             ->emptyStateDescription('Підрозділи - це циклові комісії, відділення та служби на сторінці «Структура». Додайте підрозділ, щоб закріплювати за ним працівників.')
-            ->actions([
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                EditAction::make(),
                 ViewOnSite::table(fn (Department $record) => route('structure.show', $record)),
             ])
-            ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
+            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }
 
     public static function getRelations(): array
@@ -82,9 +93,9 @@ class DepartmentResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListDepartments::route('/'),
-            'create' => Pages\CreateDepartment::route('/create'),
-            'edit' => Pages\EditDepartment::route('/{record}/edit'),
+            'index' => ListDepartments::route('/'),
+            'create' => CreateDepartment::route('/create'),
+            'edit' => EditDepartment::route('/{record}/edit'),
         ];
     }
 }

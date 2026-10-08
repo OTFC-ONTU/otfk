@@ -2,11 +2,12 @@
 
 namespace App\Filament\Resources\MenuItemResource\Pages;
 
+use Filament\Actions\CreateAction;
+use Filament\Schemas\Components\Tabs\Tab;
 use App\Filament\Resources\MenuItemResource;
 use App\Filament\Support\ViewOnSite;
 use App\Models\MenuItem;
 use Filament\Actions;
-use Filament\Resources\Components\Tab;
 use Filament\Resources\Pages\ListRecords;
 
 /**
@@ -23,7 +24,7 @@ class ListMenuItems extends ListRecords
     {
         return [
             ViewOnSite::header(route('home')),
-            Actions\CreateAction::make()->url(function (): string {
+            CreateAction::make()->url(function (): string {
                 $tab = (string) $this->activeTab;
 
                 return MenuItemResource::getUrl('create', str_starts_with($tab, 'sub-')

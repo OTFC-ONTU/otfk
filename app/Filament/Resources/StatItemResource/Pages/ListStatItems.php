@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\StatItemResource\Pages;
 
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\StatItemResource;
 use App\Filament\Support\ViewOnSite;
 use Filament\Actions;
@@ -15,7 +16,7 @@ class ListStatItems extends ListRecords
     {
         return [
             ViewOnSite::header(route('home')),
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

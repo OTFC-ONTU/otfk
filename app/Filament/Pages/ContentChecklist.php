@@ -20,17 +20,17 @@ use Illuminate\Support\Facades\Cache;
  */
 class ContentChecklist extends FilamentPage
 {
-    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clipboard-document-check';
 
     protected static ?string $navigationLabel = 'Що наповнити';
 
     protected static ?string $title = 'Що ще наповнити';
 
-    protected static ?string $navigationGroup = 'Структура сайту';
+    protected static string | \UnitEnum | null $navigationGroup = 'Структура сайту';
 
     protected static ?int $navigationSort = -1;
 
-    protected static string $view = 'filament.pages.content-checklist';
+    protected string $view = 'filament.pages.content-checklist';
 
     /** Скільки символів «живого» тексту вважаємо мінімумом, щоб сторінка не була заглушкою. */
     private const STUB_MIN_CHARS = 200;
