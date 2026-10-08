@@ -9,7 +9,7 @@
     $s = Setting::publicMap();
     $partners = QuickLink::visible()->location('footer_partner')->ordered()->get();
     $logo = ! empty($s['logo']) ? asset('storage/' . $s['logo']) : null;
-    // Без завантаженої іконки — емблема коледжу зі старого сайту: favicon.ico (16px) і герб 180px для телефонів
+    // Без завантаженої іконки — щит герба коледжу для вкладки (favicon.ico 16/32/48, icon-32.png) і повний герб для телефонів (180/192px)
     $favicon = ! empty($s['favicon']) ? asset('storage/' . $s['favicon']) : asset('favicon.ico');
     $touchIcon = ! empty($s['favicon']) ? $favicon : asset('apple-touch-icon.png');
     // Опис: власний опис сторінки, інакше загальний опис сайту; MetaText чистить HTML і обрізає ~160 символів
@@ -52,6 +52,7 @@
     <title>{{ $pageTitle }}</title>
     <link rel="icon" href="{{ $favicon }}"@if (\Illuminate\Support\Str::endsWith($favicon, '.svg')) type="image/svg+xml"@endif>
     @empty($s['favicon'])
+        <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('icon-32.png') }}">
         <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('icon-192.png') }}">
     @endempty
     <link rel="apple-touch-icon" href="{{ $touchIcon }}">

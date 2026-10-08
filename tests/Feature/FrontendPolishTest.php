@@ -56,6 +56,20 @@ class FrontendPolishTest extends TestCase
         $res->assertDontSee("localStorage.getItem('night')", escape: false);
     }
 
+    public function test_default_icons_use_shield_for_tab_and_full_emblem_for_phones(): void
+    {
+        $res = $this->get('/')->assertOk();
+
+        // Вкладка — щит герба 32px (браузер обирає найближчий розмір, а не повний герб 192px)
+        $res->assertSee('sizes="32x32" href="'.asset('icon-32.png').'"', escape: false);
+        $res->assertSee('sizes="192x192" href="'.asset('icon-192.png').'"', escape: false);
+        $res->assertSee('rel="apple-touch-icon" href="'.asset('apple-touch-icon.png').'"', escape: false);
+
+        foreach (['favicon.ico', 'icon-32.png', 'icon-192.png', 'apple-touch-icon.png'] as $file) {
+            $this->assertFileExists(public_path($file));
+        }
+    }
+
     public function test_sitemap_has_priority_changefreq_and_lastmod(): void
     {
         News::create([
