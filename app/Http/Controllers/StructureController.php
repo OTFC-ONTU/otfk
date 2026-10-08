@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Department;
+use App\Models\Page;
 
 class StructureController extends Controller
 {
@@ -16,7 +17,10 @@ class StructureController extends Controller
             }
         }
 
-        return view('structure.index', compact('groups'));
+        // Вступ і рейтингове оцінювання викладачів зі сторінки «Циклові комісії» оригіналу (CMS-сторінка ciklovi-komisiyi)
+        $commissionPage = Page::published()->where('slug', 'ciklovi-komisiyi')->first();
+
+        return view('structure.index', compact('groups', 'commissionPage'));
     }
 
     public function show(Department $department)

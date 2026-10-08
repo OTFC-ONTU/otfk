@@ -127,4 +127,24 @@ class LegacyContentParityTest extends TestCase
         // Картка — не обгортка-посилання: посилання ОПП не вкладені в інше посилання.
         $this->assertStringContainsString('<article class="card card-interactive group relative', $html);
     }
+
+    public function test_structure_commission_section_shows_intro_and_rating_files(): void
+    {
+        Department::create(['title' => 'Комісія тестових дисциплін', 'slug' => 'komisiia-test', 'type' => 'tsyklova-komisiya', 'is_published' => true]);
+        Page::create([
+            'title' => 'Циклові комісії', 'slug' => 'ciklovi-komisiyi', 'is_published' => true,
+            'body' => '<p>У структурі коледжу представлені циклові комісії різних дисциплін.</p>'
+                .'<ul><li><a href="/struktura/komisiia-test">Комісія тестова</a></li></ul>'
+                .'<p><a href="/storage/mirror/otfk.od.ua/structure/cycles_commissions/files/28_10_2025_1.pdf">Рейтингове оцінювання викладачів за 2023-2024 н.р.</a></p>',
+        ]);
+
+        $html = $this->get('/struktura')->assertOk()
+            ->assertSee('У структурі коледжу представлені циклові комісії різних дисциплін.')
+            ->assertSee('Рейтингове оцінювання викладачів за 2023-2024 н.р.')
+            ->assertSee('href="/storage/mirror/otfk.od.ua/structure/cycles_commissions/files/28_10_2025_1.pdf"', false)
+            ->assertDontSee('Комісія тестова')
+            ->getContent();
+
+        $this->assertStringContainsString('file-card', $html);
+    }
 }
