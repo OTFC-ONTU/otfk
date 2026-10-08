@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\Components\HtmlRichEditor;
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\NewsResource\Pages;
 use App\Filament\Support\ViewOnSite;
@@ -44,7 +45,7 @@ class NewsResource extends Resource
             Forms\Components\Textarea::make('excerpt')
                 ->label('Короткий опис')->rows(2)->maxLength(1000)->columnSpanFull()
                 ->helperText('1-2 речення: показується в картці новини у списку та при поширенні в соцмережах і месенджерах.'),
-            Forms\Components\RichEditor::make('body')
+            HtmlRichEditor::make('body')
                 ->label('Текст новини')
                 ->fileAttachmentsDisk('public')
                 ->fileAttachmentsDirectory('news')

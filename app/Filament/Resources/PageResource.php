@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\Components\HtmlRichEditor;
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\PageResource\Pages;
 use App\Filament\Support\ViewOnSite;
@@ -50,7 +51,7 @@ class PageResource extends Resource
                     ->label('Ключова сторінка розділу')
                     ->helperText('На сторінці батьківського розділу така сторінка виноситься нагору окремою великою карткою.')
                     ->columnSpanFull(),
-                Forms\Components\RichEditor::make('body')->label('Основний текст')
+                HtmlRichEditor::make('body')->label('Основний текст')
                     ->fileAttachmentsDisk('public')
                     ->fileAttachmentsDirectory('pages')
                     ->fileAttachmentsVisibility('public')

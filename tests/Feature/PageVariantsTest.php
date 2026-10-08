@@ -73,23 +73,43 @@ class PageVariantsTest extends TestCase
             ->assertDontSee('Пошук по сторінках розділу…', escape: false);
     }
 
-    public function test_hub_keeps_short_body_in_sidebar_and_moves_long_body_to_main_column(): void
+    public function test_hub_shows_short_body_as_intro_above_cards_and_long_body_below(): void
     {
         $hub = $this->hubWithChildren(3);
 
-        // Короткий опис — у сайдбарі, без блока «Про розділ» в основній колонці
-        $this->get('/testovyy-rozdil')
+        // Короткий опис — вступом над картками, без окремого блока «Про розділ»
+        $html = $this->get('/testovyy-rozdil')
             ->assertOk()
-            ->assertSee('Про розділ')
-            ->assertDontSee('id="pro-rozdil"', escape: false);
+            ->assertDontSee('Про розділ')
+            ->assertDontSee('id="pro-rozdil"', escape: false)
+            ->getContent();
+        $this->assertLessThan(strpos($html, 'Усі сторінки розділу'), strpos($html, 'Опис розділу.'));
 
-        // Довгий текст не читається у вузькому сайдбарі — показується статтею в основній колонці
+        // Довгий текст показується статтею «Про розділ» під картками
         $hub->update(['body' => '<p>' . str_repeat('Виховна робота в коледжі. ', 60) . '</p>']);
 
         $this->get('/testovyy-rozdil')
             ->assertOk()
             ->assertSee('id="pro-rozdil"', escape: false)
             ->assertSee('Виховна робота в коледжі.');
+    }
+
+    public function test_hub_intro_drops_lines_that_only_link_to_child_pages(): void
+    {
+        $hub = $this->hubWithChildren(3);
+        $hub->update(['body' => '<p>Пропонуємо увазі ресурси розділу.</p>'
+            . '<p>Видання в сфері IT - <a href="/dochirnya-storinka-2">Посилання</a></p>'
+            . '<ul><li><a href="https://otfk.od.ua/dochirnya-storinka-3/">Третя</a></li></ul>'
+            . '<p>Зовнішній ресурс - <a href="https://example.com/resurs">Ресурс</a></p>']);
+
+        $this->get('/testovyy-rozdil')
+            ->assertOk()
+            ->assertSee('Пропонуємо увазі ресурси розділу.')
+            ->assertDontSee('href="/dochirnya-storinka-2">Посилання', escape: false)
+            ->assertDontSee('>Третя<', escape: false)
+            ->assertSee('example.com/resurs">Ресурс', escape: false);
+
+        $this->assertStringContainsString('dochirnya-storinka-2', Page::find($hub->id)->body);
     }
 
     public function test_content_page_builds_table_of_contents_from_headings(): void
