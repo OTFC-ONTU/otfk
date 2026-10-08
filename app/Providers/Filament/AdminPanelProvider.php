@@ -47,6 +47,7 @@ class AdminPanelProvider extends PanelProvider
                 'Абітурієнту',
                 'Структура та персонал',
                 'Публічна інформація',
+                'SEO',
                 'Налаштування',
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')

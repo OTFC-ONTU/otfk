@@ -1,4 +1,5 @@
-<x-layouts.app :title="$gallery->albumLocalized('title')" :description="$gallery->albumLocalized('description')">
+<x-layouts.app :title="$gallery->albumLocalized('title')"
+               :description="\App\Support\MetaText::from($gallery->albumLocalized('description'), __('feature.meta_gallery_description', ['title' => $gallery->albumLocalized('title')]))">
 
     @php
         // Дані для лайтбокса — один масив, щоб гортати фото стрілками
@@ -98,7 +99,7 @@
                                         'rounded-sm ring-2 ring-gold-300/60 shadow-[inset_0_0_24px_rgb(30_35_63/0.12)]' => $gallery->is_archive,
                                         'rounded-xl' => ! $gallery->is_archive,
                                     ])>
-                                <x-picture :path="$photo->image" :alt="$gallery->publicCaption($photo) ?: $gallery->albumLocalized('title')" loading="lazy"
+                                <x-picture :path="$photo->image" :alt="$gallery->publicCaption($photo) ?: $gallery->albumLocalized('title')" loading="lazy" decoding="async"
                                            @class([
                                                'h-full w-full object-cover transition duration-500 group-hover:scale-105',
                                                'sepia-[0.18] contrast-[1.03]' => $gallery->is_archive,

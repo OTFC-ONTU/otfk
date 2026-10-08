@@ -42,7 +42,8 @@
     $pageBreadcrumbs[] = ['label' => $page->localized('title')];
 @endphp
 
-<x-layouts.app :title="$page->localized('meta_title') ?: $page->localized('title')" :description="$page->localized('meta_description') ?: $page->localized('excerpt')">
+<x-layouts.app :title="$page->localized('meta_title') ?: $page->localized('title')"
+               :description="\App\Support\MetaText::from($page->localized('meta_description'), $page->localized('excerpt'), $page->publicBody())">
 
     @if (! empty($adminPreview))
         <x-draft-notice message="{{ __('feature.preview_of_this_page_changes_are_unsaved') }}" />
@@ -135,7 +136,7 @@
     @elseif ($isHeritage)
         <section class="container-site py-12">
             @if ($page->cover_image)
-                <x-picture :path="$page->cover_image" :alt="$page->localized('title')" loading="lazy" decoding="async"
+                <x-picture :path="$page->cover_image" :alt="$page->localized('title')" sized decoding="async"
                            class="mx-auto mb-8 max-w-3xl rounded-2xl object-cover" />
             @endif
 
@@ -145,7 +146,7 @@
 
             @if (filled($page->publicBody()))
                 <x-prose.article heritage :drop-cap="$page->slug === 'istoriya'">
-                    {!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->publicBody()))) !!}
+                    {!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->publicBody()))), ! $page->cover_image) !!}
                 </x-prose.article>
             @else
                 <x-empty-state icon="document-text" title="{{ __('public.no_page_content') }}" />

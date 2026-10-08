@@ -1,9 +1,12 @@
 @php
     $facts = $staff->bioFacts();
     $links = $staff->bioLinks();
+    // Опис для пошуку: посада й підрозділ; без них — загальний опис сайту
+    $staffRole = implode(', ', array_filter([$staff->localized('position'), $staff->department?->localized('title')], 'filled'));
 @endphp
 
-<x-layouts.app :title="$staff->localized('full_name')" :description="$staff->localized('position')"
+<x-layouts.app :title="$staff->localized('full_name')"
+               :description="$staffRole !== '' ? __('feature.meta_staff_description', ['name' => $staff->localized('full_name'), 'position' => $staffRole]) : null"
                :og-image="$staff->photo ? asset('storage/' . $staff->photo) : null">
 
     <section class="bg-brand-950">
@@ -74,7 +77,7 @@
                 </dl>
             @elseif (filled($staff->localized('bio')))
                 <div class="prose prose-slate max-w-none prose-headings:font-display prose-a:text-brand-700">
-                    {!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($staff->localized('bio')))) !!}
+                    {!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($staff->localized('bio')))), false) !!}
                 </div>
             @else
                 <x-empty-state icon="user" title="{{ __('feature.details_about_this_staff_member_will_be') }}" />

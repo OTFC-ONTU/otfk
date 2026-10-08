@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Department;
+use App\Support\Seo;
 use App\Models\Page;
 
 class StructureController extends Controller
@@ -29,6 +30,7 @@ class StructureController extends Controller
         abort_unless($department->is_published || auth()->check(), 404);
 
         $department->load(['staff' => fn ($q) => $q->where('is_published', true)->orderBy('sort_order')->with(['profilePage', 'qualificationPage'])]);
+        Seo::translation($department);
 
         // Блок «Інші підрозділи» — сусіди тієї ж групи (відділення / комісія / кафедра)
         $others = Department::published()

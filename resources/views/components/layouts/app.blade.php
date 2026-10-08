@@ -1,4 +1,4 @@
-@props(['title' => null, 'description' => null, 'ogImage' => null])
+@props(['title' => null, 'description' => null, 'ogImage' => null, 'robots' => null])
 
 @php
     use App\Models\MenuItem;
@@ -9,9 +9,23 @@
     $s = Setting::publicMap();
     $partners = QuickLink::visible()->location('footer_partner')->ordered()->get();
     $logo = ! empty($s['logo']) ? asset('storage/' . $s['logo']) : null;
-    $favicon = ! empty($s['favicon']) ? asset('storage/' . $s['favicon']) : asset('favicon.svg');
-    $metaDesc = $description ?: ($s['site_description'] ?? __('layout.description'));
+    // Без завантаженої іконки — емблема коледжу зі старого сайту: favicon.ico (16px) і герб 180px для телефонів
+    $favicon = ! empty($s['favicon']) ? asset('storage/' . $s['favicon']) : asset('favicon.ico');
+    $touchIcon = ! empty($s['favicon']) ? $favicon : asset('apple-touch-icon.png');
+    // Опис: власний опис сторінки, інакше загальний опис сайту; MetaText чистить HTML і обрізає ~160 символів
+    $metaDesc = \App\Support\MetaText::from($description, $s['site_description'] ?? null, __('layout.description'));
     $siteName = app()->getLocale() === 'en' ? ($s['brand_name'] ?? __('layout.brand_name')) : config('app.name');
+    // <title>: «Заголовок — ОТФК ОНТУ» без повтору бренду; головна — лише назва сайту
+    $titleBrand = filled($s['brand_short'] ?? null) ? $s['brand_short'] : __('layout.brand_short');
+    $pageTitle = \App\Support\MetaText::title($title, $siteName, $titleBrand, [$s['brand_name'] ?? null, config('app.name'), __('layout.brand_name')]);
+    // Індексація (docs/seo-plan.md): тестовий домен закритий повністю, окремі
+    // сторінки (пошук, архів за роком) передають robots самі. Canonical — лише
+    // для індексованих сторінок, із значущими параметрами (page, category, year).
+    // /en без повного незастарілого перекладу матеріалу — noindex, follow;
+    // hreflang — лише коли індексуються обидві мовні версії (Seo::alternates).
+    $robotsMeta = \App\Support\Seo::robots($robots);
+    $canonical = \App\Support\Seo::canonical();
+    $hreflang = \App\Support\Seo::alternates($robots);
     // Святкова тема (App\Support\HolidayTheme): null — звичайний вигляд
     $holidayKey = \App\Support\HolidayTheme::active();
     $holiday = \App\Support\HolidayTheme::config($holidayKey);
@@ -35,15 +49,21 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     {{-- Позначка, що JS активний — лише тоді вмикається scroll-reveal (без FOUC) --}}
     <script>document.documentElement.classList.add('js')</script>
-    <title>{{ $title ? $title . ' - ' . $siteName : $siteName }}</title>
+    <title>{{ $pageTitle }}</title>
     <link rel="icon" href="{{ $favicon }}"@if (\Illuminate\Support\Str::endsWith($favicon, '.svg')) type="image/svg+xml"@endif>
-    <link rel="apple-touch-icon" href="{{ $favicon }}">
+    @empty($s['favicon'])
+        <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('icon-192.png') }}">
+    @endempty
+    <link rel="apple-touch-icon" href="{{ $touchIcon }}">
     <meta name="description" content="{{ $metaDesc }}">
+    @if ($robotsMeta)
+        <meta name="robots" content="{{ $robotsMeta }}">
+    @endif
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="{{ $siteName }}">
     <meta property="og:title" content="{{ $title ?: $siteName }}">
     <meta property="og:description" content="{{ $metaDesc }}">
-    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:url" content="{{ $canonical }}">
     @php $shareImage = $ogImage ?: $logo; @endphp
     @if ($shareImage)
         <meta property="og:image" content="{{ $shareImage }}">
@@ -54,17 +74,14 @@
     <meta name="twitter:card" content="{{ $ogImage ? 'summary_large_image' : 'summary' }}">
     <link rel="alternate" type="application/xml" title="Sitemap" href="{{ url('/sitemap.xml') }}">
     <link rel="alternate" type="application/rss+xml" title="RSS — {{ __('layout.news') }}" href="{{ \App\Support\LocalizedUrl::route('news.feed') }}">
-    <link rel="canonical" href="{{ url()->current() }}">
-    @php $jsonld = array_filter([
-        '@context' => 'https://schema.org',
-        '@type' => 'EducationalOrganization',
-        'name' => $siteName,
-        'url' => url('/'),
-        'logo' => $logo ?: asset('favicon.svg'),
-        'email' => $s['contact_email'] ?? null,
-        'telephone' => $s['contact_phone'] ?? null,
-        'address' => $s['contact_address'] ?? null,
-    ]); @endphp
+    @unless (\App\Support\Seo::isNoindex($robotsMeta))
+        <link rel="canonical" href="{{ $canonical }}">
+        @foreach ($hreflang as $hreflangCode => $hreflangUrl)
+            <link rel="alternate" hreflang="{{ $hreflangCode }}" href="{{ $hreflangUrl }}">
+        @endforeach
+    @endunless
+    {{-- EducationalOrganization: адреса PostalAddress, alternateName/sameAs — з «SEO → Розмітка та аналітика» --}}
+    @php $jsonld = \App\Support\StructuredData::organization($s); @endphp
     <script type="application/ld+json">{!! json_encode($jsonld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700|manrope:600,700,800|cormorant-garamond:400,500,600,700|lora:400,500,600,700&display=swap" rel="stylesheet">
@@ -181,7 +198,8 @@
                         <x-holiday.badge :theme="$holiday" :size="24" class="holiday-logo-badge" />
                     @endif
                     @if ($logo)
-                        <img src="{{ $logo }}" alt="{{ $s['brand_short'] ?? __('layout.brand_short') }}" class="h-10 w-auto shrink-0 sm:h-12 lg:h-16">
+                        @php $logoDims = \App\Support\ImageDimensions::of($s['logo'] ?? null); @endphp
+                        <img src="{{ $logo }}" alt="{{ $s['brand_short'] ?? __('layout.brand_short') }}" @if ($logoDims) width="{{ $logoDims['width'] }}" height="{{ $logoDims['height'] }}" @endif decoding="async" class="h-10 w-auto shrink-0 sm:h-12 lg:h-16">
                     @else
                         <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-700 to-brand-900 text-white shadow-sm sm:h-12 sm:w-12">
                             <x-ico name="academic-cap" class="h-7 w-7" />
@@ -424,7 +442,7 @@
                 <div class="flex items-center gap-3">
                     @if ($logo)
                         <span class="grid h-11 place-items-center rounded-xl bg-white px-2 ring-1 ring-white/15">
-                            <img src="{{ $logo }}" alt="{{ $s['brand_short'] ?? __('layout.brand_short') }}" loading="lazy" decoding="async" class="h-8 w-auto">
+                            <img src="{{ $logo }}" alt="{{ $s['brand_short'] ?? __('layout.brand_short') }}" @if ($logoDims ?? null) width="{{ $logoDims['width'] }}" height="{{ $logoDims['height'] }}" @endif loading="lazy" decoding="async" class="h-8 w-auto">
                         </span>
                     @else
                         <span class="grid h-11 w-11 place-items-center rounded-xl bg-white/10 text-white ring-1 ring-white/15">
@@ -505,6 +523,7 @@
             <div class="container-site flex flex-col items-center justify-center gap-2.5 text-center text-xs text-brand-300 sm:flex-row">
                 {{-- Копірайт дослівно як у підвалі оригіналу otfk.od.ua (рік зафіксований там) --}}
                 <span>© 2014-2025 {{ __('layout.copyright') }}</span>
+                <x-analytics-settings-link />
                 @if ($versionLabel !== '')
                     <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium ring-1 {{ $versionColor['badge'] }}"
                           title="{{ __('layout.version_stage') }}">
@@ -514,6 +533,9 @@
             </div>
         </div>
     </footer>
+
+    {{-- Банер згоди на GA4 (лише з Measurement ID, основний домен, гість) --}}
+    <x-analytics-consent />
 
     {{-- Логіка «зараз йде пара» (розклад дзвінків): спільна для плашки в шапці та сторінки розкладу --}}
     <script>

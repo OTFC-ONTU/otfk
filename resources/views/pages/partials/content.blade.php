@@ -13,7 +13,7 @@
 <section class="container-site grid gap-10 py-12 lg:grid-cols-3 lg:items-start">
     <div class="lg:col-span-2">
         @if ($page->cover_image)
-            <x-picture :path="$page->cover_image" :alt="$page->localized('title')" loading="lazy" decoding="async"
+            <x-picture :path="$page->cover_image" :alt="$page->localized('title')" sized decoding="async"
                        class="mb-8 w-full rounded-2xl object-cover" />
         @endif
 
@@ -34,7 +34,7 @@
 
         @if (filled($page->localized('body')))
             <x-prose.article :drop-cap="$page->slug === 'istoriya'">
-                {!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->bodyWithAnchors()))) !!}
+                {!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->bodyWithAnchors()))), ! $page->cover_image) !!}
             </x-prose.article>
         @else
             <x-empty-state icon="document-text" title="{{ __('feature.content_for_this_page_will_be_added') }}" />

@@ -48,6 +48,8 @@
                  aria-roledescription="carousel"
                  aria-label="{{ __('public.main_banner') }}"
              @endif>
+        {{-- Єдиний H1 головної — назва коледжу; заголовки слайдів нижче — H2, бо банерів може бути кілька --}}
+        <h1 class="sr-only">{{ \App\Models\Setting::publicGet('brand_name') ?: __('public.college_name') }}</h1>
         {{-- Сцена слайдів: власна висота, бо слайди накладаються через absolute --}}
         <div class="relative @if ($count > 1) min-h-[460px] lg:min-h-[560px] 2xl:min-h-[640px] @endif">
         @foreach ($slides as $i => $banner)
@@ -65,7 +67,7 @@
                 <div class="pointer-events-none absolute inset-0 overflow-hidden">
                     @if ($banner->image)
                         @if ($i === 0)
-                            <x-picture :path="$banner->image" :alt="$banner->imageAlt()" class="h-full w-full object-cover" fetchpriority="high" decoding="async" />
+                            <x-picture :path="$banner->image" :alt="$banner->imageAlt()" class="h-full w-full object-cover" sized fetchpriority="high" decoding="async" />
                         @else
                             <x-picture :path="$banner->image" :alt="$banner->imageAlt()" class="h-full w-full object-cover" loading="lazy" decoding="async" />
                         @endif
@@ -84,7 +86,7 @@
                     <div class="max-w-2xl xl:max-w-3xl">
                         @if ($banner->localized('title'))
                             {{-- Числа в заголовку («Вступ 2026») підсвічуємо золотом; e() екранує до вставки span --}}
-                            <h1 class="text-[2rem] font-extrabold leading-[1.1] text-white sm:text-5xl lg:text-6xl 2xl:text-7xl">{!! preg_replace('/\d+/', '<span class="text-gold-400">$0</span>', e($banner->localized('title'))) !!}</h1>
+                            <h2 class="text-[2rem] font-extrabold leading-[1.1] text-white sm:text-5xl lg:text-6xl 2xl:text-7xl">{!! preg_replace('/\d+/', '<span class="text-gold-400">$0</span>', e($banner->localized('title'))) !!}</h2>
                         @endif
                         @if ($banner->localized('subtitle'))
                             <p class="mt-4 max-w-xl leading-relaxed text-brand-100 sm:mt-5 sm:text-lg xl:text-xl">{{ $banner->localized('subtitle') }}</p>
@@ -176,6 +178,7 @@
             </p>
             <div class="mt-9 flex flex-wrap gap-3">
                 <a href="{{ \App\Support\LocalizedUrl::to('/abituriyentu') }}" class="btn-accent">{{ __('public.applicants') }} <x-ico name="arrow-right" class="h-4 w-4" /></a>
+                <a href="{{ \App\Support\LocalizedUrl::route('specialties.index') }}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-white/10 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-white/15">{{ __('public.specialties') }}</a>
                 <a href="{{ \App\Support\LocalizedUrl::route('news.index') }}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-white/10 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-white/15">{{ __('public.news_title') }}</a>
             </div>
         </div>

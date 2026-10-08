@@ -1,4 +1,4 @@
-<x-layouts.app title="{{ __('public.structure') }}" description="Структура Одеського технічного фахового коледжу ОНТУ: відділення, циклові комісії та кафедри.">
+<x-layouts.app title="{{ __('public.structure') }}" description="{{ __('feature.meta_structure_description') }}">
 
     @php
         // Українське відмінювання лічильників

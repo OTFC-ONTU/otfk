@@ -18,7 +18,33 @@
     RewriteCond %{HTTP:x-xsrf-token} .
     RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
 
-    # Redirect Trailing Slashes If Not A Folder...
+    # Розділи старого сайту (адреси-каталоги зі слешем у кінці): www, HTTP і слеш
+    # тут не нормалізуються — Laravel знаходить адресу в legacy_redirects і веде
+    # одразу на https://otfk.od.ua/<нова адреса> одним 301. Список — верхні каталоги
+    # старого сайту, яких немає серед маршрутів нового (video є — не тут).
+    RewriteCond %{REQUEST_URI} ^/(?:news|structure|student|public_information|applicant|about_us|distance_learning|licensing_and_accreditation|conference|survey|attestation|docx|imp_message|study|feedback|corruption_alert|contacts|images|uploads)/
+    RewriteRule ^ - [E=OTFK_LEGACY:1]
+
+    # Канонічна адреса основного домену (docs/seo-plan.md, етап 1): лише для
+    # otfk.od.ua, тестовий хостинг і localhost ці правила не зачіпають.
+    # www → без www одразу на https (один 301); шлях і query зберігаються
+    # (Apache сам дописує query, якщо в підстановці немає «?»).
+    RewriteCond %{ENV:OTFK_LEGACY} !=1
+    RewriteCond %{HTTP_HOST} ^www\.otfk\.od\.ua(:\d+)?$ [NC]
+    RewriteRule ^ https://otfk.od.ua%{REQUEST_URI} [L,R=301]
+
+    # HTTP → HTTPS для otfk.od.ua. За nginx-фронтендом хостингу TLS може
+    # завершуватися до Apache, тому https визначаємо і за %{HTTPS}, і за
+    # заголовками проксі — інакше вийде нескінченний редирект.
+    RewriteCond %{ENV:OTFK_LEGACY} !=1
+    RewriteCond %{HTTP_HOST} ^otfk\.od\.ua(:\d+)?$ [NC]
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !^https$ [NC]
+    RewriteCond %{HTTP:X-Forwarded-SSL} !^on$ [NC]
+    RewriteRule ^ https://otfk.od.ua%{REQUEST_URI} [L,R=301]
+
+    # Redirect Trailing Slashes If Not A Folder... (крім розділів старого сайту — див. вище)
+    RewriteCond %{ENV:OTFK_LEGACY} !=1
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]

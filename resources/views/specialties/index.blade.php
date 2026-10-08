@@ -1,4 +1,4 @@
-<x-layouts.app title="{{ __('public.specialties') }}" description="Спеціальності Одеського технічного фахового коледжу ОНТУ: напрями підготовки, освітні ступені, терміни та форми навчання.">
+<x-layouts.app title="{{ __('public.specialties') }}" description="{{ __('feature.meta_specialties_description') }}">
 
     @php
         // Українське відмінювання слова «спеціальність» для лічильника

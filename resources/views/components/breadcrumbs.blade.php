@@ -12,7 +12,8 @@
             '@type' => 'ListItem',
             'position' => $i + 1,
             'name' => $item['label'],
-            'item' => (! empty($item['url']) && $i < $count - 1) ? $item['url'] : null,
+            // Google вимагає абсолютний URL; відносні шляхи (якщо LocalizedUrl не розпізнав) доповнюємо
+            'item' => (! empty($item['url']) && $i < $count - 1) ? \App\Support\StructuredData::absoluteUrl($item['url']) : null,
         ], fn ($v) => $v !== null))->values()->all(),
     ];
 @endphp

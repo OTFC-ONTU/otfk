@@ -55,18 +55,22 @@
                 '@context' => 'https://schema.org',
                 '@type' => 'Event',
                 'name' => $e->localized('title'),
-                'startDate' => $e->starts_at->copy()->shiftTimezone('Europe/Kyiv')->toIso8601String(),
-                'endDate' => $e->ends_at?->copy()->shiftTimezone('Europe/Kyiv')->toIso8601String(),
-                'description' => $e->localized('description'),
+                // starts_at/ends_at — київський wall-clock (Gotcha «Таймзона»)
+                'startDate' => \App\Support\StructuredData::wallClockDate($e->starts_at),
+                'endDate' => \App\Support\StructuredData::wallClockDate($e->ends_at),
+                'description' => $e->localized('description') ?: null,
                 'eventStatus' => 'https://schema.org/EventScheduled',
                 'eventAttendanceMode' => 'https://schema.org/OfflineEventAttendanceMode',
                 'location' => [
                     '@type' => 'Place',
-                    'name' => $e->localized('location') ?: config('app.name'),
-                    'address' => \App\Models\Setting::get('contact_address') ?: __('public.city_address'),
+                    'name' => $e->localized('location') ?: \App\Support\StructuredData::siteName(),
+                    'address' => \App\Support\StructuredData::postalAddress() ?? ['@type' => 'PostalAddress', 'addressLocality' => __('public.city'), 'addressCountry' => 'UA'],
                 ],
-                'organizer' => ['@type' => 'Organization', 'name' => config('app.name'), 'url' => \App\Support\LocalizedUrl::to('/')],
-                'url' => \App\Support\LocalizedUrl::route('events'),
+                'organizer' => \App\Support\StructuredData::publisher(),
+                // Власне посилання події (новина/сторінка), інакше — календар подій; лише http(s) або шлях сайту
+                'url' => filled($e->url) && preg_match('~^(/|https?://)~i', $e->url) && ! str_starts_with($e->url, '//')
+                    ? \App\Support\StructuredData::absoluteUrl(\App\Support\LocalizedUrl::to($e->url))
+                    : \App\Support\LocalizedUrl::route('events'),
             ]))->values()->all();
         @endphp
         <script type="application/ld+json">{!! json_encode($eventsLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Casts\SafeHtml;
+use App\Models\Concerns\FlushesSitemap;
 use App\Models\Concerns\HasEnglishTranslation;
 use App\Models\Concerns\OptimizesUploadedImages;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,7 @@ use Illuminate\Support\Str;
 
 class Specialty extends Model
 {
+    use FlushesSitemap;
     use HasEnglishTranslation;
     use OptimizesUploadedImages;
 

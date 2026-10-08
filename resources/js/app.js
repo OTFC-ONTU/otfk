@@ -9,3 +9,9 @@ Alpine.start();
 if (document.body?.dataset.holiday) {
     import('./holiday').then(({ startHolidayParticles }) => startHolidayParticles());
 }
+
+// Банер згоди та GA4 — окремий чанк лише коли сервер увімкнув аналітику (App\Support\Analytics)
+const analyticsRoot = document.getElementById('analytics-consent');
+if (analyticsRoot) {
+    import('./analytics').then(({ initAnalytics }) => initAnalytics(analyticsRoot));
+}

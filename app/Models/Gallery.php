@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\FlushesSitemap;
 use App\Models\Concerns\HasEnglishTranslation;
 use App\Models\Concerns\OptimizesUploadedImages;
 use Illuminate\Database\Eloquent\Model;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Gallery extends Model
 {
+    use FlushesSitemap;
     use HasEnglishTranslation;
     use OptimizesUploadedImages;
 
@@ -78,6 +80,13 @@ class Gallery extends Model
     {
         return app()->getLocale() === 'en' && $this->hasPublishedEnglishTranslation()
             && $this->photos->every(fn (Photo $photo) => blank($photo->caption) || $photo->hasPublishedEnglishTranslation());
+    }
+
+    /** Індексація `/en`: альбом і всі непорожні підписи перекладені й не застаріли. */
+    public function hasIndexableEnglishTranslation(): bool
+    {
+        return $this->hasPublishedEnglishTranslation() && ! $this->translationIsStale()
+            && $this->photos->every(fn (Photo $photo) => blank($photo->caption) || $photo->hasIndexableEnglishTranslation());
     }
 
     public function albumLocalized(string $field): ?string

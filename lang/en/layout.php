@@ -11,7 +11,7 @@ return [
     'brand_short' => 'OTPC ONTU',
     'brand_name' => 'Odesa Technical Professional College',
     'about' => 'Odesa Technical Professional College of Odesa National University of Technology.',
-    'description' => 'Official website of Odesa Technical Professional College of ONTU.',
+    'description' => 'Official website of Odesa Technical Professional College of ONTU (Odesa, Ukraine): technical specialties, admission, news and contacts.',
     'search_placeholder' => 'Search...',
     'site_search_placeholder' => 'Search the site...',
     'no_results' => 'No results found.',
@@ -37,6 +37,15 @@ return [
     'bell_current' => 'Class :number · :minutes min remaining',
     'bell_next' => 'Class :number at :time',
     'bell_break' => 'Break · class :number at :time',
+    // Банер згоди на аналітику (App\Support\Analytics, resources/js/analytics.js)
+    'consent' => [
+        'title' => 'Visit statistics',
+        'text' => 'With your consent, we use Google Analytics to understand which pages are useful to visitors. Advertising features are turned off. Declining does not affect the site, and you can change your choice in the footer.',
+        'policy' => 'Privacy policy',
+        'accept' => 'Accept',
+        'reject' => 'Decline',
+        'settings' => 'Cookie settings',
+    ],
     'holiday' => [
         'new_year' => 'Happy New Year and Merry Christmas!',
         'easter' => 'Happy Easter!',

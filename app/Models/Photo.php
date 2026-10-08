@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\FlushesSitemap;
 use App\Models\Concerns\HasEnglishTranslation;
 use App\Models\Concerns\OptimizesUploadedImages;
 use Illuminate\Database\Eloquent\Model;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Photo extends Model
 {
+    // Підписи фото впливають на індексацію англійського альбому в sitemap.
+    use FlushesSitemap;
     use HasEnglishTranslation;
     use OptimizesUploadedImages;
 

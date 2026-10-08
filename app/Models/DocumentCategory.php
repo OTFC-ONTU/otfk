@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\FlushesSitemap;
 use App\Models\Concerns\HasEnglishTranslation;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +11,7 @@ use Illuminate\Support\Str;
 
 class DocumentCategory extends Model
 {
+    use FlushesSitemap;
     use HasEnglishTranslation;
 
     protected function casts(): array
@@ -41,6 +43,26 @@ class DocumentCategory extends Model
         $page = $this->page;
 
         return $page && $page->is_published && filled($page->publicBody()) ? $page : null;
+    }
+
+    /**
+     * `/en/dokumenty/{slug}` показує й текст прив'язаної CMS-сторінки: індексується
+     * лише тоді, коли перекладено (повністю й актуально) і назву, і сторінку розділу.
+     */
+    public function hasIndexableEnglishTranslation(): bool
+    {
+        $section = $this->sectionPage();
+
+        return $this->hasPublishedEnglishTranslation() && ! $this->translationIsStale()
+            && ($section === null || $section->hasIndexableEnglishTranslation());
+    }
+
+    /** Для sitemap: крім полів перекладу потрібна прив'язка до сторінки розділу. */
+    public function translationColumns(): array
+    {
+        $source = $this->translationSourceFields();
+
+        return array_merge($source, array_map(fn ($field) => $field.'_en', $source), ['translation_published', 'translation_source_hash', 'page_id']);
     }
 
     public function scopeOrdered($query)

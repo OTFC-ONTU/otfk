@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Casts\SafeHtml;
+use App\Models\Concerns\FlushesSitemap;
 use App\Models\Concerns\HasEnglishTranslation;
 use App\Models\Concerns\OptimizesUploadedImages;
 use App\Observers\NewsObserver;
@@ -14,6 +15,7 @@ use Illuminate\Support\Str;
 #[ObservedBy(NewsObserver::class)]
 class News extends Model
 {
+    use FlushesSitemap;
     use HasEnglishTranslation;
     use OptimizesUploadedImages;
 
@@ -80,6 +82,26 @@ class News extends Model
     {
         return $query->where('is_published', true)
             ->where(fn ($q) => $q->whereNull('published_at')->orWhere('published_at', '<=', now()));
+    }
+
+    /** Опублікована й дата публікації вже настала — та сама умова, що в scopePublished(). */
+    public function isPubliclyVisible(): bool
+    {
+        return $this->is_published && (! $this->published_at || $this->published_at->lte(now()));
+    }
+
+    /**
+     * Атомарно збільшує лічильник (views, likes) без зміни updated_at.
+     * Eloquent increment() і incrementQuietly() додають updated_at, а з нього
+     * sitemap бере lastmod: дії відвідувачів не є правкою матеріалу.
+     * Подій моделі немає — NewsObserver/Telegram не спрацьовують.
+     */
+    public function incrementCounterQuietly(string $column): void
+    {
+        static::whereKey($this->getKey())->toBase()->increment($column);
+
+        $this->setAttribute($column, (int) $this->getAttribute($column) + 1);
+        $this->syncOriginalAttribute($column);
     }
 
     public function scopeRecent($query)

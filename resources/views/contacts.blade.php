@@ -2,7 +2,7 @@
                description="{{ __('feature.contact_odesa_technical_professional_college_of_ontu') }}">
 
     @if ($page && filled($page->publicBody()))
-        <section class="container-site py-8"><div class="prose-site">{!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->publicBody()))) !!}</div></section>
+        <section class="container-site py-8"><div class="prose-site">{!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->publicBody()))), false) !!}</div></section>
     @endif
 
     @php

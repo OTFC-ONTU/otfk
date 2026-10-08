@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Specialty;
+use App\Support\Seo;
 
 class SpecialtyController extends Controller
 {
@@ -19,6 +20,7 @@ class SpecialtyController extends Controller
         abort_unless($specialty->is_published || auth()->check(), 404);
 
         $specialty->load('programs');
+        Seo::translation($specialty);
 
         $others = Specialty::published()->ordered()->whereKeyNot($specialty->id)->get();
 

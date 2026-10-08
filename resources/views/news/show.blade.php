@@ -1,4 +1,4 @@
-<x-layouts.app :title="$news->localized('title')" :description="$news->localized('excerpt')"
+<x-layouts.app :title="$news->localized('title')" :description="\App\Support\MetaText::from($news->localized('excerpt'), $news->localized('body'))"
                :og-image="$news->cover_image ? asset('storage/' . $news->cover_image) : null">
 
     @if (! empty($adminPreview))
@@ -7,18 +7,32 @@
         <x-draft-notice />
     @endif
 
-    {{-- Розмітка NewsArticle для пошукових систем --}}
+    {{-- Розмітка NewsArticle для пошукових систем (App\Support\StructuredData) --}}
     @php
+        $ld = \App\Support\StructuredData::class;
+        $articleUrl = \App\Support\LocalizedUrl::route('news.show', $news);
+        // published_at — київський wall-clock, updated_at — справжній UTC (Gotcha «Таймзона»)
+        $ldPublished = $news->published_at?->copy()->shiftTimezone($ld::TIMEZONE) ?? $news->created_at?->copy()->setTimezone($ld::TIMEZONE);
+        $ldModified = $news->updated_at?->copy()->setTimezone($ld::TIMEZONE);
+        if ($ldPublished && (! $ldModified || $ldModified->lt($ldPublished))) {
+            $ldModified = $ldPublished; // dateModified не раніше за datePublished
+        }
+        // Без обкладинки — перше зображення тексту (відносні /storage/... стають абсолютними)
+        $ldImage = $news->cover_image
+            ? asset('storage/' . $news->cover_image)
+            : (preg_match('/<img\b[^>]*\bsrc="([^"]+)"/i', (string) $news->localized('body'), $ldImg) ? $ld::absoluteUrl(html_entity_decode($ldImg[1])) : null);
         $articleLd = array_filter([
             '@context' => 'https://schema.org',
             '@type' => 'NewsArticle',
-            'headline' => \Illuminate\Support\Str::limit($news->localized('title'), 110),
-            'datePublished' => $news->published_at?->copy()->shiftTimezone('Europe/Kyiv')->toIso8601String(),
-            'dateModified' => $news->updated_at?->copy()->shiftTimezone('Europe/Kyiv')->toIso8601String(),
-            'image' => $news->cover_image ? [asset('storage/' . $news->cover_image)] : null,
-            'mainEntityOfPage' => \App\Support\LocalizedUrl::route('news.show', $news),
-            'author' => ['@type' => 'Organization', 'name' => config('app.name')],
-            'publisher' => ['@type' => 'Organization', 'name' => config('app.name'), 'url' => \App\Support\LocalizedUrl::to('/')],
+            'headline' => $ld::headline($news->localized('title')),
+            'inLanguage' => app()->getLocale(),
+            'datePublished' => $ldPublished?->toIso8601String(),
+            'dateModified' => $ldModified?->toIso8601String(),
+            'image' => $ldImage ? [$ldImage] : null,
+            'url' => $articleUrl,
+            'mainEntityOfPage' => ['@type' => 'WebPage', '@id' => $articleUrl],
+            'author' => ['@type' => 'Organization', 'name' => $ld::siteName(), 'url' => url('/')],
+            'publisher' => $ld::publisher(),
         ]);
     @endphp
     <script type="application/ld+json">{!! json_encode($articleLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>
@@ -107,11 +121,11 @@
                  }"
                  x-effect="document.body.style.overflow = idx === null ? '' : 'hidden'">
             @if ($news->cover_image)
-                <x-picture :path="$news->cover_image" :alt="$news->localized('title')" loading="lazy" decoding="async" class="lightboxable mb-8 w-full rounded-2xl object-cover shadow-sm ring-1 ring-slate-200/70" />
+                <x-picture :path="$news->cover_image" :alt="$news->localized('title')" sized fetchpriority="high" decoding="async" class="lightboxable mb-8 w-full rounded-2xl object-cover shadow-sm ring-1 ring-slate-200/70" />
             @endif
             <x-lead-excerpt :excerpt="$news->localized('excerpt')" :body="$news->localized('body')" :heritage="$heritage" />
             <x-prose.article :heritage="$heritage" :date="$news->published_at" :drop-cap="false">
-                {!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($news->localized('body')))) !!}
+                {!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($news->localized('body')))), ! $news->cover_image) !!}
             </x-prose.article>
 
             {{-- Поділитися новиною --}}

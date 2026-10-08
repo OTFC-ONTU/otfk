@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Staff;
+use App\Support\Seo;
 
 class StaffController extends Controller
 {
@@ -38,6 +39,7 @@ class StaffController extends Controller
         abort_unless($staff->is_published, 404);
 
         $staff->load('department');
+        Seo::translation($staff);
 
         $colleagues = $staff->department_id
             ? Staff::published()->where('department_id', $staff->department_id)->whereKeyNot($staff->id)->ordered()->take(8)->get()

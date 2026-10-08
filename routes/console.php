@@ -25,3 +25,7 @@ Schedule::command('otfk:mirror-files --limit=30')
 Schedule::call(fn () => \App\Models\SiteVisit::where('date', '<', now()->subDays(180)->toDateString())->delete())
     ->weeklyOn(0, '04:00')
     ->name('prune-site-visits');
+
+// Журнал 404 (not_found_logs): адреси без звернень понад 90 днів видаляються.
+Schedule::command('model:prune', ['--model' => [\App\Models\NotFoundLog::class]])
+    ->weeklyOn(0, '04:15');

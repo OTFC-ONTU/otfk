@@ -1,4 +1,15 @@
-<x-layouts.app title="{{ __('public.news') }}">
+{{-- Архів за роком (і комбінації з категорією) — для навігації, не для індексу --}}
+{{-- Категорія й сторінка пагінації мають власні canonical, тож і власні title/description --}}
+@php
+    $newsMetaTitle = $activeCategory
+        ? __('feature.meta_news_category_title', ['category' => $activeCategory->localized('title')])
+        : __('public.news');
+    if ($news->currentPage() > 1) {
+        $newsMetaTitle = __('feature.meta_page_number', ['title' => $newsMetaTitle, 'page' => $news->currentPage()]);
+    }
+@endphp
+<x-layouts.app :title="$newsMetaTitle" :robots="$activeYear ? 'noindex, follow' : null"
+               :description="$activeCategory ? __('feature.meta_news_category_description', ['category' => $activeCategory->localized('title')]) : __('feature.meta_news_description')">
 
     <x-page-hero title="{{ __('public.news_title') }}" :breadcrumbs="[
         ['label' => __('public.home'), 'url' => \App\Support\LocalizedUrl::route('home')],
