@@ -12,19 +12,19 @@
             return $n % 10 === 1 && ($mod100 < 11 || $mod100 > 14) ? __('feature.results') : __('feature.results_2');
         };
 
-        // Підсвічування збігу в назві: спершу екрануємо, потім позначаємо збіг
+        // Підсвічування збігу в назві: ділимо вихідний текст за збігом і екрануємо кожен шматок окремо,
+        // щоб запит на кшталт «amp» не потрапляв усередину HTML-сутностей; теги <mark> — лише наші
         $highlight = function (?string $text) use ($q): string {
-            $escaped = e((string) $text);
+            $text = (string) $text;
+            $parts = $q === '' ? false : preg_split('/(' . preg_quote($q, '/') . ')/iu', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
 
-            if ($q === '') {
-                return $escaped;
+            if ($parts === false) {
+                return e($text);
             }
 
-            return preg_replace(
-                '/(' . preg_quote(e($q), '/') . ')/iu',
-                '<mark class="rounded bg-gold-100 px-0.5 text-brand-950">$1</mark>',
-                $escaped,
-            ) ?? $escaped;
+            return collect($parts)->map(fn (string $part, int $i) => $i % 2
+                ? '<mark class="rounded bg-gold-100 px-0.5 text-brand-950">' . e($part) . '</mark>'
+                : e($part))->implode('');
         };
 
         $tooShort = $q !== '' && mb_strlen($q) < 2;
