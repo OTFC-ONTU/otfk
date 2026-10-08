@@ -9,6 +9,8 @@ namespace App\Support;
  * loading/decoding не перезаписуються. Коментарі, script/style/textarea
  * пропускаються, як у ResponsiveTables.
  *
+ * Локальним зображенням без розмірів додаються природні width/height (ImageDimensions).
+ *
  * $eagerFirst — перше зображення лишається без lazy: на сторінці без
  * обкладинки воно може бути головним (LCP) елементом першого екрана.
  */
@@ -42,11 +44,27 @@ class LazyMedia
                 if ($tag === 'img' && ! self::has($attributes, 'decoding')) {
                     $add .= ' decoding="async"';
                 }
+                // Файл сайту без розмірів (імпорт): природні width/height резервують місце до завантаження —
+                // без зсуву макета (CLS) і без «недольоту» переходу до якоря нижче на сторінці
+                if ($tag === 'img' && ! self::has($attributes, 'width') && ! self::has($attributes, 'height')
+                    && ($dims = ImageDimensions::of(self::storagePath($attributes)))) {
+                    $add .= ' width="'.$dims['width'].'" height="'.$dims['height'].'"';
+                }
 
                 return '<'.$match[2].$attributes.$add.($selfClosing ? ' />' : '>');
             },
             $html ?? ''
         ) ?? (string) $html;
+    }
+
+    /** Шлях на диску public для src="/storage/…" (відносного або з хостом сайту). */
+    private static function storagePath(string $attributes): ?string
+    {
+        if (! preg_match('~(?:^|\s)src\s*=\s*(["\'])(?:https?://[^/"\']+)?/storage/([^"\'?#]+)\1~i', $attributes, $match)) {
+            return null;
+        }
+
+        return rawurldecode(html_entity_decode($match[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     }
 
     private static function has(string $attributes, string $name): bool
