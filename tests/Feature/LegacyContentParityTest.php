@@ -11,6 +11,7 @@ use App\Models\Setting;
 use App\Models\Specialty;
 use App\Models\Staff;
 use App\Support\FileCards;
+use App\Support\LocalizedUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -90,24 +91,25 @@ class LegacyContentParityTest extends TestCase
             FileCards::render('<p>Текст <a href="/plan.pdf?version=2#page=4">плану</a></p>'));
     }
 
-    public function test_teacher_card_links_to_profile_and_qualification_pages(): void
+    public function test_teacher_card_is_one_link_to_staff_page(): void
     {
         $department = Department::query()->first();
         $department->update(['is_published' => true]);
         $profile = Page::create(['title' => 'Результати професійної діяльності викладача', 'slug' => 'prof-test', 'is_published' => true]);
         $qualification = Page::create(['title' => 'Відомості про підвищення кваліфікації викладача', 'slug' => 'kval-test', 'is_published' => true]);
-        Staff::create([
+        $staff = Staff::create([
             'full_name' => 'Тестова Олена Петрівна', 'position' => 'викладач', 'category' => 'teacher',
             'department_id' => $department->id, 'is_published' => true,
             'profile_page_id' => $profile->id, 'qualification_page_id' => $qualification->id,
         ]);
+        $staffUrl = LocalizedUrl::route('staff.show', $staff);
 
-        $this->get('/struktura/'.$department->slug)->assertOk()
-            ->assertSee('href="'.url('/prof-test').'"', false)
-            ->assertSee('href="'.url('/kval-test').'"', false)
-            ->assertSee(__('public.staff_qualification_page'));
-        $this->get('/en/struktura/'.$department->slug)->assertOk()
-            ->assertSee('href="'.url('/en/prof-test').'"', false);
+        $html = $this->get('/struktura/'.$department->slug)->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('~<a href="'.preg_quote($staffUrl, '~').'"\s+class="card card-interactive~', $html);
+        $this->assertStringNotContainsString('href="'.url('/prof-test').'"', $html);
+        $this->assertStringNotContainsString('public.staff_', $html);
+
+        $this->get($staffUrl)->assertOk();
     }
 
     public function test_specialty_cards_list_programs_with_file_links(): void
@@ -126,5 +128,66 @@ class LegacyContentParityTest extends TestCase
 
         // Картка — не обгортка-посилання: посилання ОПП не вкладені в інше посилання.
         $this->assertStringContainsString('<article class="card card-interactive group relative', $html);
+    }
+
+    public function test_structure_commission_section_shows_intro_and_rating_files(): void
+    {
+        Department::create(['title' => 'Комісія тестових дисциплін', 'slug' => 'komisiia-test', 'type' => 'tsyklova-komisiya', 'is_published' => true]);
+        Page::create([
+            'title' => 'Циклові комісії', 'slug' => 'ciklovi-komisiyi', 'is_published' => true,
+            'body' => '<p>У структурі коледжу представлені циклові комісії різних дисциплін.</p>'
+                .'<ul><li><a href="/struktura/komisiia-test">Комісія тестова</a></li></ul>'
+                .'<p><a href="/storage/mirror/otfk.od.ua/structure/cycles_commissions/files/28_10_2025_1.pdf">Рейтингове оцінювання викладачів за 2023-2024 н.р.</a></p>',
+        ]);
+
+        $html = $this->get('/struktura')->assertOk()
+            ->assertSee('У структурі коледжу представлені циклові комісії різних дисциплін.')
+            ->assertSee('Рейтингове оцінювання викладачів за 2023-2024 н.р.')
+            ->assertSee('href="/storage/mirror/otfk.od.ua/structure/cycles_commissions/files/28_10_2025_1.pdf"', false)
+            ->assertDontSee('Комісія тестова')
+            ->getContent();
+
+        $this->assertStringContainsString('file-card', $html);
+    }
+
+    public function test_document_category_with_section_page_shows_page_content(): void
+    {
+        $category = DocumentCategory::create(['title' => 'Моніторинг показників якості освіти', 'slug' => 'monitorynh-test']);
+        $this->get('/dokumenty/monitorynh-test')->assertOk()->assertSee(__('public.no_documents'));
+
+        $page = Page::create([
+            'title' => 'Моніторинг показників якості освіти', 'slug' => 'monitorynh-page-test', 'is_published' => true,
+            'body' => '<p><strong>РЕЗУЛЬТАТИ УСПІШНОСТІ ЗДОБУВАЧІВ ОСВІТИ ЗА 2024-2025 н.р.</strong></p>'
+                .'<p><img src="/storage/mirror/otfk.od.ua/public_information/monitoring/img/1.jpg" alt="" /></p>'
+                .'<p><a href="/storage/mirror/otfk.od.ua/public_information/monitoring/files/report.pdf">Звіт моніторингу</a></p>',
+        ]);
+        $category->update(['page_id' => $page->id]);
+
+        $html = $this->get('/dokumenty/monitorynh-test')->assertOk()
+            ->assertSee('РЕЗУЛЬТАТИ УСПІШНОСТІ ЗДОБУВАЧІВ ОСВІТИ ЗА 2024-2025 н.р.')
+            ->assertSee('/storage/mirror/otfk.od.ua/public_information/monitoring/img/1.jpg', false)
+            ->assertDontSee(__('public.no_documents'))
+            ->getContent();
+        $this->assertStringContainsString('file-card', $html);
+
+        $page->update(['is_published' => false]);
+        $this->get('/dokumenty/monitorynh-test')->assertOk()->assertSee(__('public.no_documents'));
+    }
+
+    public function test_file_cards_keep_manual_numbering_of_the_original(): void
+    {
+        $html = FileCards::render('<p>1) <a href="/storage/polozhennya.pdf">Положення про коледж</a></p><p>93. <a href="/storage/nakaz.pdf">Наказ</a></p>');
+
+        $this->assertStringContainsString('1) Положення про коледж', $html);
+        $this->assertStringContainsString('93. Наказ', $html);
+    }
+
+    public function test_section_page_own_url_redirects_to_its_document_category(): void
+    {
+        $page = Page::create(['title' => 'Звіти', 'slug' => 'zvity-page-test', 'is_published' => true, 'body' => '<p>Звіти коледжу</p>']);
+        DocumentCategory::create(['title' => 'Звіти', 'slug' => 'zvity-test', 'page_id' => $page->id]);
+
+        $this->get('/zvity-page-test')->assertStatus(301)->assertRedirect(url('/dokumenty/zvity-test'));
+        $this->get('/en/zvity-page-test')->assertStatus(301)->assertRedirect(url('/en/dokumenty/zvity-test'));
     }
 }

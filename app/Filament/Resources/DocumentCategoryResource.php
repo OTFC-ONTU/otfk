@@ -36,6 +36,9 @@ class DocumentCategoryResource extends Resource
             Forms\Components\TextInput::make('slug')->label('URL (slug)')->maxLength(255)
                 ->prefix(url('/dokumenty') . '/')
                 ->helperText('Залиште порожнім - згенерується автоматично.'),
+            Forms\Components\Select::make('page_id')->label('Сторінка розділу (повний текст замість списку документів)')
+                ->relationship('page', 'title')->searchable()->preload()
+                ->helperText('Якщо обрано опубліковану сторінку, розділ показує її вміст: текст, таблиці, зображення та файли.'),
             Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
                 ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
         ]);

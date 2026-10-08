@@ -100,8 +100,10 @@ class SitemapController extends Controller
             $en = isset($english[$n->slug]) ? $path('en.news.show', ['news' => $n->slug]) : null;
             $add($path('news.show', ['news' => $n->slug]), $n->updated_at, 'monthly', '0.7', $en);
         }
-        $english = $this->englishSlugs(Page::published());
-        foreach (Page::published()->toBase()->get(['slug', 'updated_at']) as $p) {
+        // Сторінки розділів публічної інформації переадресовуються на /dokumenty/{slug} — у sitemap лише сам розділ
+        $sectionPages = DocumentCategory::whereNotNull('page_id')->pluck('page_id');
+        $english = $this->englishSlugs(Page::published()->whereNotIn('id', $sectionPages));
+        foreach (Page::published()->whereNotIn('id', $sectionPages)->toBase()->get(['slug', 'updated_at']) as $p) {
             // Слаг, який перехоплює спеціальний маршрут, не є адресою цієї сторінки.
             if ($this->servedByPageRoute($p->slug)) {
                 $add('/'.$p->slug, $p->updated_at, 'monthly', '0.6', isset($english[$p->slug]) ? '/en/'.$p->slug : null);

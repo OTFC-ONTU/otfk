@@ -115,11 +115,39 @@
                     </span>
                 </div>
 
+                @php
+                    // Текст CMS-сторінки «Циклові комісії»: вступ — над картками, файли (рейтинги) — під ними; перелік комісій дублює картки і не виводиться
+                    $commissionIntro = $commissionAfter = '';
+                    if ($type === 'tsyklova-komisiya' && ($commissionPage ?? null) && filled($commissionPage->publicBody())) {
+                        $commissionHtml = preg_replace('~<ul\b[^>]*>(?:(?!</ul>).)*?/struktura/(?:(?!</ul>).)*</ul>~isu', '', $commissionPage->publicBody());
+                        preg_match_all('~<p\b[^>]*>.*?</p>~isu', $commissionHtml, $commissionParagraphs);
+                        foreach ($commissionParagraphs[0] as $paragraph) {
+                            if (preg_match('~href="[^"]+\.(?:pdf|docx?|xlsx?|pptx?)(?:[?#][^"]*)?"~i', $paragraph)) {
+                                $commissionAfter .= $paragraph;
+                            } else {
+                                $commissionIntro .= $paragraph;
+                            }
+                        }
+                    }
+                @endphp
+
+                @if ($commissionIntro !== '')
+                    <div class="mt-6 max-w-4xl space-y-3 leading-relaxed text-slate-600">
+                        {!! \App\Support\LocalizedHtml::links($commissionIntro) !!}
+                    </div>
+                @endif
+
                 <div class="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4 2xl:gap-6">
                     @foreach ($group['items'] as $dep)
                         <x-department-card :department="$dep" />
                     @endforeach
                 </div>
+
+                @if ($commissionAfter !== '')
+                    <div class="mt-6 grid gap-3 lg:grid-cols-2">
+                        {!! \App\Support\FileCards::render(\App\Support\LocalizedHtml::links($commissionAfter)) !!}
+                    </div>
+                @endif
             </div>
         @empty
             <x-empty-state icon="building-office-2" title="{{ __('public.no_structure') }}" />

@@ -118,7 +118,12 @@
             </aside>
 
             <div class="order-1 lg:order-2 lg:col-span-9">
-                @if ($documents->total())
+                @if ($sectionPage && $search === '')
+                    {{-- Розділ має CMS-сторінку з повним вмістом оригіналу: показуємо її замість списку документів --}}
+                    <x-prose.article>
+                        {!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($sectionPage->publicBody()))) !!}
+                    </x-prose.article>
+                @elseif ($documents->total())
                     <div class="flex flex-wrap items-center justify-between gap-3 pb-4 text-sm text-slate-500">
                         <p>
                             {{ __('feature.showing_range', ['first' => $documents->firstItem(), 'last' => $documents->lastItem(), 'total' => $documents->total()]) }} {{ $documentGenitive($documents->total()) }}

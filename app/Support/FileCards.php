@@ -19,14 +19,15 @@ class FileCards
     private static function renderFragment(string $html): string
     {
         $html = preg_replace_callback(
-            '~<(p|li)\b[^>]*>\s*(?:\d+[.)]\s*)?(?:<strong>\s*)?(<a\b(?:"[^"]*"|\x27[^\x27]*\x27|[^\x27">])*>)(.*?)</a>\s*(?:</strong>\s*)?</\1>~isu',
+            '~<(p|li)\b[^>]*>\s*(?:(\d+[.)])\s*)?(?:<strong>\s*)?(<a\b(?:"[^"]*"|\x27[^\x27]*\x27|[^\x27">])*>)(.*?)</a>\s*(?:</strong>\s*)?</\1>~isu',
             function (array $match): string {
-                $url = self::attribute($match[2], 'href');
+                $url = self::attribute($match[3], 'href');
                 $extension = self::extension($url);
                 if ($extension === null) {
                     return $match[0];
                 }
-                $card = self::card($url, self::text($match[3]), $extension);
+                // Ручна нумерація оригіналу («1)», «2.») лишається частиною назви картки
+                $card = self::card($url, trim($match[2].' '.self::text($match[4])), $extension);
 
                 return strtolower($match[1]) === 'li' ? '<li class="file-card-list">'.$card.'</li>' : $card;
             },

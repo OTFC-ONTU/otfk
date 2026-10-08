@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DocumentCategory;
 use App\Models\Page;
 use App\Support\Seo;
+use App\Support\LocalizedUrl;
 
 class PageController extends Controller
 {
@@ -14,6 +16,10 @@ class PageController extends Controller
 
         // /en індексується лише з повним незастарілим перекладом (App\Support\Seo).
         Seo::translation($page);
+        // Сторінка розділу публічної інформації має одну адресу — розділ документів, без дубля вмісту
+        if ($page->is_published && $category = DocumentCategory::where('page_id', $page->id)->first()) {
+            return redirect(LocalizedUrl::route('documents.category', $category), 301);
+        }
 
         return view('pages.show', compact('page'));
     }
