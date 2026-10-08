@@ -18,9 +18,47 @@
                 const html = (this.html ?? '').replace(new RegExp(@js(HtmlRichEditor::TRIX_ATTACHMENT), 'gi'), '')
                 return new RegExp(@js(HtmlRichEditor::TRIX_LOSSY), 'i').test(html)
             },
+            {{-- CodeMirror (resources/js/admin/html-editor.js); без нього лишається звичайний textarea --}}
+            codeReady: false,
+            pending: null,
+            timer: null,
             setMode(mode) {
+                this.flush()
                 this.mode = mode
                 this.touched = false
+                if (mode === 'html') this.$nextTick(() => this.showCode())
+            },
+            async showCode() {
+                const tools = window.otfkHtmlEditor
+                if (! tools) return
+                const text = tools.formatHtml(this.html ?? '')
+                const holder = this.$refs.code
+                if (holder._otfkEditor) {
+                    holder._otfkEditor.setDoc(text)
+                    return
+                }
+                try {
+                    holder._otfkEditor = await tools.mount(holder, {
+                        doc: text,
+                        label: @js($getLabel().' (HTML)'),
+                        onChange: (value) => this.queue(value),
+                    })
+                    this.codeReady = true
+                } catch (error) {
+                    console.error(error)
+                }
+            },
+            {{-- Стан оновлюється з паузою (кожне оновлення перезавантажує Trix) і одразу — при виході з поля --}}
+            queue(value) {
+                this.pending = value
+                clearTimeout(this.timer)
+                this.timer = setTimeout(() => this.flush(), 400)
+            },
+            flush() {
+                clearTimeout(this.timer)
+                if (this.pending === null) return
+                this.html = this.pending
+                this.pending = null
             },
             {{-- Навігація та копіювання текст не змінюють --}}
             keyTouch(event) {
@@ -56,8 +94,9 @@
             правки тут їх спростять. Для таких текстів користуйтеся режимом HTML.
         </p>
 
-        <div x-show="mode === 'html'" x-cloak wire:ignore class="otfk-html-source">
-            <textarea
+        <div x-show="mode === 'html'" x-cloak wire:ignore class="otfk-html-source" x-on:focusout="flush()">
+            <div x-ref="code"></div>
+            <textarea x-show="! codeReady"
                 x-model.lazy="html"
                 rows="20"
                 spellcheck="false"
@@ -70,6 +109,8 @@
         <style>
             .otfk-html-rich-editor.otfk-html-mode .fi-fo-rich-editor { display: none; }
             .otfk-html-source { margin-top: .5rem; }
+            .otfk-html-source .cm-editor { box-shadow: 0 0 0 1px rgb(3 7 18 / .1); }
+            .dark .otfk-html-source .cm-editor { box-shadow: 0 0 0 1px rgb(255 255 255 / .2); }
             .otfk-lossy-note {
                 margin-top: .5rem; padding: .5rem .75rem; border-radius: .5rem; font-size: .8125rem; line-height: 1.4;
                 background: rgb(255 251 235); color: rgb(146 64 14); box-shadow: 0 0 0 1px rgb(253 230 138);
