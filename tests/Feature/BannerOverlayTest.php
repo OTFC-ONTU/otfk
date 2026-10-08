@@ -80,4 +80,23 @@ class BannerOverlayTest extends TestCase
             ->assertSee('aria-label="'.__('public.previous_slide').'"', escape: false)
             ->assertSee('aria-label="'.__('public.next_slide').'"', escape: false);
     }
+
+    public function test_photo_only_slide_has_no_floating_buttons_on_phones(): void
+    {
+        Banner::query()->delete();
+
+        Banner::create(['title' => 'Вступ', 'subtitle' => 'Підпис', 'image' => 'banners/1.jpg', 'link_url' => '/pro-koledzh', 'link_label' => 'Про коледж', 'is_published' => true]);
+        Banner::create(['image' => 'banners/2.jpg', 'is_published' => true]);
+
+        $html = $this->get('/')->assertOk()->getContent();
+
+        // Слайд із текстом: дві кнопки поруч у сітці, затемнення на телефоні — знизу вгору
+        $this->assertStringContainsString('grid mt-7 grid-cols-2', $html);
+        $this->assertStringContainsString('linear-gradient(to top, rgba(22, 34, 63, 0.71)', $html);
+        // Фото-слайд без тексту й посилання: блок кнопок на телефоні прихований, фото лише з легкою тінню знизу
+        $this->assertStringContainsString('hidden mt-7 grid-cols-2', $html);
+        $this->assertStringContainsString('linear-gradient(to top, rgba(22, 34, 63, 0.75) 0%, rgba(22, 34, 63, 0.41)', $html);
+        // Десктопне затемнення зліва направо лишається
+        $this->assertStringContainsString('linear-gradient(to right, rgba(22, 34, 63', $html);
+    }
 }
