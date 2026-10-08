@@ -25,11 +25,13 @@ const base = EditorView.theme({
 })
 
 // Контрастні палітри (на основі GitHub light/dark): теги, атрибути й значення чітко різняться від тексту
+// Фон активного рядка — лише напівпрозорий: шар виділення CodeMirror лежить під текстом, і непрозорий фон
+// ховав виділення в межах рядка з курсором (слово/тег не підсвічувались).
 const light = [
     EditorView.theme({
         '&': { backgroundColor: '#ffffff', color: '#1f2328' },
         '.cm-gutters': { backgroundColor: '#f6f8fa', color: '#6e7781', borderRight: '1px solid #d0d7de' },
-        '.cm-activeLine': { backgroundColor: '#f0f6ff' },
+        '.cm-activeLine': { backgroundColor: 'rgb(9 105 218 / 0.06)' },
         '.cm-activeLineGutter': { backgroundColor: '#e7effa', color: '#1f2328' },
         '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: '#b6d7ff !important' },
         '.cm-matchingBracket, &.cm-focused .cm-matchingBracket': { backgroundColor: '#ffe58f', color: 'inherit', outline: '1px solid #d4a72c' },
@@ -52,7 +54,7 @@ const dark = [
         '.cm-content': { caretColor: '#e6edf3' },
         '.cm-cursor, .cm-dropCursor': { borderLeftColor: '#e6edf3' },
         '.cm-gutters': { backgroundColor: '#161b22', color: '#8b949e', borderRight: '1px solid #30363d' },
-        '.cm-activeLine': { backgroundColor: '#161b22' },
+        '.cm-activeLine': { backgroundColor: 'rgb(110 118 129 / 0.12)' },
         '.cm-activeLineGutter': { backgroundColor: '#1f2630', color: '#e6edf3' },
         '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: '#264f78 !important' },
         '.cm-matchingBracket, &.cm-focused .cm-matchingBracket': { backgroundColor: '#3b5070', color: '#ffffff', outline: '1px solid #79c0ff' },
