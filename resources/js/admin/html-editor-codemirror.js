@@ -110,6 +110,22 @@ export function createEditor(parent, { doc, label, onChange }) {
             })
             view.scrollDOM.scrollTop = 0
         },
+        getDoc() {
+            return view.state.doc.toString()
+        },
+        /** Замінює виділення результатом transform(виділений текст) — як правку користувача (з undo). */
+        replaceSelection(transform) {
+            const { from, to } = view.state.selection.main
+            const insert = transform(view.state.sliceDoc(from, to))
+            view.dispatch({ changes: { from, to, insert }, selection: { anchor: from, head: from + insert.length }, scrollIntoView: true })
+            view.focus()
+        },
+        /** Замінює весь документ як правку користувача (з undo). */
+        replaceDoc(text) {
+            if (text === view.state.doc.toString()) return
+            view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } })
+            view.focus()
+        },
         focus() {
             view.focus()
         },
