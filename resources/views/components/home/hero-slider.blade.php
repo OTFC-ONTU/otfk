@@ -5,6 +5,9 @@
 
     $slides = $banners->values();
     $count = $slides->count();
+    /* Стрілки 2×44px + точки по 32px: на 375px уміщується до 7 точок. Більше — і рядок
+       ширший за екран, стрілки обрізаються, тож на телефоні замість точок лічильник «3 / 12». */
+    $compactDots = $count > 7;
     /* Чипи-факти в героя — топ-3 з «Коледж у цифрах» (адмінка → Показники) */
     $heroStats = \App\Models\StatItem::active()->limit(3)->get();
 @endphp
@@ -120,11 +123,14 @@
         @endforeach
 
         @if ($count > 1)
-            <div class="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex items-center justify-center gap-2 sm:bottom-6 sm:gap-3">
+            <div class="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex items-center justify-center gap-2 px-4 sm:bottom-6 sm:gap-3">
                 <button type="button" @click="prev(); start()" class="pointer-events-auto grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white" aria-label="{{ __('public.previous_slide') }}">
                     <x-ico name="chevron-left" class="h-5 w-5" />
                 </button>
-                <div class="flex" role="tablist" aria-label="{{ __('public.banner_slides') }}">
+                @if ($compactDots)
+                    <span class="min-w-[4.5rem] text-center text-sm font-semibold tabular-nums text-white sm:hidden" aria-hidden="true"><span x-text="index + 1">1</span> / {{ $count }}</span>
+                @endif
+                <div class="flex{{ $compactDots ? ' max-sm:hidden' : '' }}" role="tablist" aria-label="{{ __('public.banner_slides') }}">
                     @foreach ($slides as $i => $banner)
                         {{-- Точка мала (10px), але тач-мішень — 44×32, інакше на телефоні в неї не влучити --}}
                         <button type="button" role="tab"

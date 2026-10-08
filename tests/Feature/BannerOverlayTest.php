@@ -52,4 +52,32 @@ class BannerOverlayTest extends TestCase
             ->assertOk()
             ->assertSee('rgba(22, 34, 63, 0.48)', escape: false);
     }
+
+    public function test_many_banners_use_slide_counter_on_phones_so_arrows_fit(): void
+    {
+        Banner::query()->delete();
+
+        foreach (range(1, 3) as $i) {
+            Banner::create(['title' => "Банер {$i}", 'image' => "banners/{$i}.jpg", 'is_published' => true]);
+        }
+
+        // До 7 слайдів точки вміщуються поруч зі стрілками навіть на 375px
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('aria-label="'.__('public.next_slide').'"', escape: false)
+            ->assertDontSee('x-text="index + 1"', escape: false)
+            ->assertDontSee('max-sm:hidden', escape: false);
+
+        foreach (range(4, 12) as $i) {
+            Banner::create(['title' => "Банер {$i}", 'image' => "banners/{$i}.jpg", 'is_published' => true]);
+        }
+
+        // 12 точок ширші за телефон і виштовхують стрілки — на телефоні лічильник замість точок
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('<span x-text="index + 1">1</span> / 12', escape: false)
+            ->assertSee('class="flex max-sm:hidden" role="tablist"', escape: false)
+            ->assertSee('aria-label="'.__('public.previous_slide').'"', escape: false)
+            ->assertSee('aria-label="'.__('public.next_slide').'"', escape: false);
+    }
 }
