@@ -25,7 +25,7 @@ return new class extends Migration
             // title, url, sort — порядок як у підвалі старого сайту
             ['ОНТУ', 'https://ontu.edu.ua', 1],
             ['МОН України', 'https://mon.gov.ua', 2],
-            ['НМЦ ВФПО', 'https://nmc-vfpo.com', 3],
+            ['НМЦ ВФПО', 'https://nmc-vfpo.gov.ua', 3],
             ['Органічна платформа знань', 'https://organic-platform.org', 4],
             ['Урядова «гаряча лінія» 1545', 'https://ukc.gov.ua', 5],
         ];

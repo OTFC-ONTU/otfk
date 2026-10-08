@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Department;
 use App\Models\Document;
+use App\Models\LegacyRedirect;
 use App\Models\DocumentCategory;
 use App\Models\Page;
 use App\Models\Program;
@@ -208,5 +209,40 @@ class LegacyContentParityTest extends TestCase
 
         $this->get('/zvity-page-test')->assertStatus(301)->assertRedirect(url('/dokumenty/zvity-test'));
         $this->get('/en/zvity-page-test')->assertStatus(301)->assertRedirect(url('/en/dokumenty/zvity-test'));
+    }
+
+    /** Репозитарій на старому сайті — лише посилання на репозитарій ОНТУ, а не порожній розділ документів. */
+    public function test_repository_is_not_an_empty_document_section(): void
+    {
+        $this->assertFalse(DocumentCategory::where('slug', 'repozytariy')->exists());
+        $this->get('/dokumenty/repozytariy')->assertNotFound();
+        $this->get('/dokumenty')->assertOk()->assertDontSee('/dokumenty/repozytariy', escape: false);
+    }
+    /** Плитка «Інформація про спеціальності» хабу «Абітурієнту» веде на розділ /spetsialnosti, а не на старий імпорт. */
+    public function test_specialties_info_tile_leads_to_new_specialties_page(): void
+    {
+        $hub = Page::firstOrCreate(['slug' => 'abituriyentu'], ['title' => 'Абітурієнту', 'is_published' => true]);
+        Page::create([
+            'parent_id' => $hub->id, 'title' => 'Інформація про спеціальності', 'slug' => 'informaciia-pro-specialnosti',
+            'is_published' => true, 'is_featured' => true, 'body' => '<p>Старий опис спеціальностей</p>',
+        ]);
+        LegacyRedirect::create(['source_path' => '/applicant/our_specialties', 'target_url' => '/informaciia-pro-specialnosti']);
+
+        $migration = require database_path('migrations/2026_10_08_150000_turn_specialties_info_page_into_route_tile.php');
+        $migration->up();
+        $migration->up();
+
+        $tile = Page::where('title', 'Інформація про спеціальності')->sole();
+        $this->assertSame('spetsialnosti', $tile->slug);
+        $this->assertNull($tile->body);
+
+        $this->get('/abituriyentu')->assertOk()
+            ->assertSee('href="'.url('/spetsialnosti').'"', escape: false)
+            ->assertDontSee('informaciia-pro-specialnosti', escape: false);
+        $this->get('/spetsialnosti')->assertOk()->assertDontSee('Старий опис спеціальностей');
+        $this->get('/informaciia-pro-specialnosti')->assertStatus(301)->assertRedirect(url('/spetsialnosti'));
+        $this->get('/en/informaciia-pro-specialnosti')->assertStatus(301)->assertRedirect(url('/en/spetsialnosti'));
+        $this->get('/applicant/our_specialties/')->assertStatus(301)->assertRedirect(url('/spetsialnosti'));
+        $this->assertSame(1, LegacyRedirect::where('source_path', '/informaciia-pro-specialnosti')->count());
     }
 }

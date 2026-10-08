@@ -20,7 +20,7 @@ class FooterLinksTest extends TestCase
             ->assertOk()
             ->assertSee('https://ontu.edu.ua', escape: false)
             ->assertSee('https://mon.gov.ua', escape: false)
-            ->assertSee('https://nmc-vfpo.com', escape: false)
+            ->assertSee('https://nmc-vfpo.gov.ua', escape: false)
             ->assertSee('https://organic-platform.org', escape: false)
             ->assertSee('https://ukc.gov.ua', escape: false)
             ->assertSee('НМЦ ВФПО')

@@ -8,17 +8,18 @@ return new class extends Migration
 {
     /**
      * Додає категорії «Публічна інформація» (DocumentCategory) + пункти меню на /dokumenty/{slug}.
+     * Репозитарій — лише зовнішнє посилання меню на репозитарій ОНТУ (як на старому сайті), без порожньої категорії.
      * Ідемпотентно: наявні (за slug / підписом) пропускаються.
      */
     public function up(): void
     {
         $root = MenuItem::whereNull('parent_id')->where('label', 'Публічна інформація')->first();
 
-        // [Підпис, slug]
+        // [Підпис, slug, зовнішня адреса — тоді категорію не створюємо]
         $items = [
             ['До обговорення', 'do-obhovorennya'],
             ['Результати опитування здобувачів освіти', 'rezultaty-opytuvannya'],
-            ['Репозитарій ВСП «ОТФК ОНТУ»', 'repozytariy'],
+            ['Репозитарій ВСП «ОТФК ОНТУ»', 'repozytariy', 'https://card-file.ontu.edu.ua/communities/874c8779-bb0e-4ef8-9c16-8374cd00322e'],
             ['Визнання результатів навчання, здобутих на ТОТ України', 'vyznannya-rezultativ-tot'],
             ['Вибори директора', 'vybory-dyrektora'],
             ['Вибори ректора ОНТУ', 'vybory-rektora'],
@@ -33,17 +34,22 @@ return new class extends Migration
         $catOrder = (int) DocumentCategory::max('sort_order');
         $menuOrder = $root ? (int) MenuItem::where('parent_id', $root->id)->max('sort_order') : 0;
 
-        foreach ($items as [$title, $slug]) {
-            DocumentCategory::firstOrCreate(
-                ['slug' => $slug],
-                ['title' => $title, 'sort_order' => ++$catOrder]
-            );
+        foreach ($items as $item) {
+            [$title, $slug] = $item;
+            $externalUrl = $item[2] ?? null;
+
+            if ($externalUrl === null) {
+                DocumentCategory::firstOrCreate(
+                    ['slug' => $slug],
+                    ['title' => $title, 'sort_order' => ++$catOrder]
+                );
+            }
 
             if ($root && ! MenuItem::where('parent_id', $root->id)->where('label', $title)->exists()) {
                 MenuItem::create([
                     'label' => $title,
                     'link_type' => 'url',
-                    'url' => '/dokumenty/' . $slug,
+                    'url' => $externalUrl ?? '/dokumenty/' . $slug,
                     'parent_id' => $root->id,
                     'sort_order' => ++$menuOrder,
                     'is_visible' => true,

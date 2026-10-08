@@ -37,9 +37,9 @@ class ContentChecklist extends FilamentPage
 
     /**
      * Слаги сторінок-плиток: їх перехоплюють явні маршрути (розклад дзвінків,
-     * FAQ, квіз), тіло таких сторінок ніколи не рендериться — наповнювати нічого.
+     * FAQ, квіз, спеціальності), тіло таких сторінок ніколи не рендериться — наповнювати нічого.
      */
-    private const ROUTE_TILE_SLUGS = ['rozklad-dzvinkiv', 'faq', 'kviz'];
+    private const ROUTE_TILE_SLUGS = ['rozklad-dzvinkiv', 'faq', 'kviz', 'spetsialnosti'];
 
     /** Сторінки без змісту (порожні або дуже короткі / з маркерами «в розробці»). */
     public function stubPages(): array
