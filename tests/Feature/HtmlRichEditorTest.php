@@ -46,6 +46,9 @@ class HtmlRichEditorTest extends TestCase
             ->assertSeeHtml('otfk-mode-toggle')
             ->assertSeeHtml("mode: 'visual'")
             ->assertSeeHtml('otfk-lossy-note')
+            ->assertSeeHtml('otfk-html-tools')
+            ->assertSeeHtml('insertDetails()')
+            ->assertSeeHtml('sectionsToDetails()')
             ->fillForm(['body' => '<p>Вступ</p><table><tbody><tr><td>2</td></tr></tbody></table>'])
             ->call('save')
             ->assertHasNoFormErrors();

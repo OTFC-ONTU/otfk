@@ -48,6 +48,23 @@
                     console.error(error)
                 }
             },
+            {{-- Розгортні блоки (resources/js/admin/html-sections.js): вставка та розділи за заголовками --}}
+            insertDetails() {
+                const tools = window.otfkHtmlEditor
+                tools && this.$refs.code._otfkEditor?.replaceSelection((selected) => tools.formatHtml(tools.detailsSnippet(selected)).trimEnd())
+            },
+            sectionsToDetails() {
+                const tools = window.otfkHtmlEditor
+                const editor = this.$refs.code._otfkEditor
+                if (! tools || ! editor) return
+                const { html, count } = tools.headingsToDetails(editor.getDoc())
+                if (! count) {
+                    alert(@js('Не знайдено заголовків (H2–H6) із вмістом під ними поза розгортними блоками.'))
+                    return
+                }
+                if (! confirm(@js('Перетворити розділи на розгортні блоки:') + ' ' + count + '? ' + @js('Заголовки стануть підписами блоків, вміст до наступного такого ж заголовка — їхнім текстом. Скасувати можна через Ctrl/Cmd+Z.'))) return
+                editor.replaceDoc(tools.formatHtml(html))
+            },
             {{-- Стан оновлюється з паузою (кожне оновлення перезавантажує Trix) і одразу — при виході з поля --}}
             queue(value) {
                 this.pending = value
@@ -95,6 +112,10 @@
         </p>
 
         <div x-show="mode === 'html'" x-cloak wire:ignore class="otfk-html-source" x-on:focusout="flush()">
+            <div x-show="codeReady" class="otfk-html-tools" role="toolbar" aria-label="Вставлення в HTML">
+                <button type="button" x-on:click="insertDetails()" title="Вставити розгортний блок; виділений HTML стане його вмістом, заголовок на початку виділення — підписом">+ Розгортний блок</button>
+                <button type="button" x-on:click="sectionsToDetails()" title="Кожен заголовок найвищого рівня разом із вмістом під ним стане окремим розгортним блоком">Розділи → розгортні блоки</button>
+            </div>
             <div x-ref="code"></div>
             <textarea x-show="! codeReady"
                 x-model.lazy="html"
@@ -109,6 +130,13 @@
         <style>
             .otfk-html-rich-editor.otfk-html-mode .fi-fo-rich-editor { display: none; }
             .otfk-html-source { margin-top: .5rem; }
+            .otfk-html-tools { display: flex; flex-wrap: wrap; gap: .375rem; margin-bottom: .375rem; }
+            .otfk-html-tools button {
+                padding: .125rem .625rem; border-radius: .375rem; font-size: .75rem; font-weight: 600; color: rgb(55 65 81);
+                box-shadow: 0 0 0 1px rgb(3 7 18 / .12); background: #fff;
+            }
+            .otfk-html-tools button:hover { background: rgb(249 250 251); }
+            .dark .otfk-html-tools button { color: rgb(229 231 235); background: rgb(255 255 255 / .05); box-shadow: 0 0 0 1px rgb(255 255 255 / .2); }
             .otfk-html-source .cm-editor { box-shadow: 0 0 0 1px rgb(3 7 18 / .1); }
             .dark .otfk-html-source .cm-editor { box-shadow: 0 0 0 1px rgb(255 255 255 / .2); }
             .otfk-lossy-note {
