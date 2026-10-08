@@ -19,7 +19,7 @@ class SearchController extends Controller
     /** Скільки результатів показуємо на сторінці. */
     private const PER_PAGE = 12;
 
-    /** Типи результатів: ключ фільтра => [назва, назва в множині, іконка]. */
+    /** Типи результатів: ключ фільтра => [назва, назва в множині, іконка]; підписи — словник public.search_*. */
     private const GROUPS = [
         'news' => ['Новина', 'Новини', 'newspaper'],
         'pages' => ['Сторінка', 'Сторінки', 'document-text'],
@@ -59,7 +59,7 @@ class SearchController extends Controller
             'results' => $results,
             'counts' => $counts,
             'total' => $all->count(),
-            'groups' => collect(self::GROUPS)->map(fn ($values, $key) => [__('public.search_'.(['news' => 'news', 'pages' => 'page', 'specialties' => 'specialty', 'documents' => 'document', 'events' => 'event'][$key])), match ($key) { 'news' => __('public.news'), 'pages' => __('feature.pages'), 'specialties' => __('public.specialties'), 'documents' => __('public.documents'), default => __('public.events') }, $values[2]])->all(),
+            'groups' => collect(self::GROUPS)->map(fn ($values, $key) => [$this->label($key), __('public.search_groups.'.$key), $values[2]])->all(),
             'quickLinks' => $this->quickLinks(),
         ]);
     }
@@ -110,12 +110,18 @@ class SearchController extends Controller
         return $news->concat($pages)->concat($specialties)->concat($documents)->concat($events)->values();
     }
 
+    /** Назва типу результату в однині («Новина», «Документ»). */
+    private function label(string $group): string
+    {
+        return __('public.search_'.['news' => 'news', 'pages' => 'page', 'specialties' => 'specialty', 'documents' => 'document', 'events' => 'event'][$group]);
+    }
+
     /** Один результат пошуку у форматі, який очікує шаблон. */
     private function item(string $group, string $title, string $url, ?string $excerpt, ?string $meta = null, bool $external = false): array
     {
         return [
             'group' => $group,
-            'label' => __('public.search_'.(['news' => 'news', 'pages' => 'page', 'specialties' => 'specialty', 'documents' => 'document', 'events' => 'event'][$group])),
+            'label' => $this->label($group),
             'icon' => self::GROUPS[$group][2],
             'title' => $title,
             'url' => $url,
