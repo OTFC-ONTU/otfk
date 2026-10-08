@@ -55,6 +55,38 @@ class Page extends Model
         return $this->hasMany(Page::class, 'parent_id')->orderBy('sort_order');
     }
 
+    /**
+     * Підпис сторінки у списках вибору адмінки: повний шлях розділів і адреса —
+     * назви на кшталт «IT» чи «Легка промисловість» повторюються в різних розділах.
+     */
+    public function adminPathLabel(): string
+    {
+        $titles = [$this->title];
+        $seen = [$this->getKey() => true];
+        for ($page = $this->parent; $page && ! isset($seen[$page->getKey()]) && count($titles) < 6; $page = $page->parent) {
+            $seen[$page->getKey()] = true;
+            array_unshift($titles, $page->title);
+        }
+
+        return implode(' › ', $titles).' · /'.$this->slug;
+    }
+
+    /**
+     * ID сторінки та всіх її нащадків — їх не можна обрати батьківським розділом (цикл).
+     *
+     * @return list<int>
+     */
+    public function selfAndDescendantIds(): array
+    {
+        $ids = [$this->getKey()];
+        for ($level = [$this->getKey()]; $level !== []; ) {
+            $level = static::whereIn('parent_id', $level)->whereNotIn('id', $ids)->pluck('id')->all();
+            $ids = array_merge($ids, $level);
+        }
+
+        return $ids;
+    }
+
     public function scopePublished($query)
     {
         return $query->where('is_published', true);
