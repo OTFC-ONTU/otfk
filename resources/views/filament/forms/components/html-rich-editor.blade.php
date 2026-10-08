@@ -1,7 +1,8 @@
 {{-- Trix + режим «чистого» HTML на тому самому стані (App\Filament\Forms\Components\HtmlRichEditor) --}}
 @php
+    use App\Filament\Forms\Components\HtmlRichEditor;
+
     $statePath = $getStatePath();
-    $startsInHtml = \App\Filament\Forms\Components\HtmlRichEditor::needsHtmlMode($getState());
 @endphp
 
 @if ($isDisabled())
@@ -9,23 +10,51 @@
 @else
     <div
         x-data="{
-            mode: @js($startsInHtml ? 'html' : 'visual'),
+            mode: 'visual',
             html: $wire.$entangle(@js($statePath), false),
-            toVisual() {
-                if (this.mode === 'visual') return
-                if (/<(table|details|iframe)\b|\s(class|style)\s*=/i.test(this.html ?? '')
-                    && ! confirm(@js('Візуальний редактор спростить таблиці, розгортні блоки, вбудовані фрейми та оформлення цього тексту. Перемкнути все одно?'))) {
+            {{-- Зміни Trix пишуться в стан лише після дії користувача у візуальному редакторі --}}
+            touched: false,
+            get lossy() {
+                const html = (this.html ?? '').replace(new RegExp(@js(HtmlRichEditor::TRIX_ATTACHMENT), 'gi'), '')
+                return new RegExp(@js(HtmlRichEditor::TRIX_LOSSY), 'i').test(html)
+            },
+            setMode(mode) {
+                this.mode = mode
+                this.touched = false
+            },
+            {{-- Навігація та копіювання текст не змінюють --}}
+            keyTouch(event) {
+                const key = event.key ?? ''
+                if (['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'Escape', 'Home', 'End', 'PageUp', 'PageDown'].includes(key) || key.startsWith('Arrow')) return
+                if ((event.metaKey || event.ctrlKey) && ['c', 'a', 'f'].includes(key.toLowerCase())) return
+                this.touch(event)
+            },
+            touch(event) {
+                if (this.mode !== 'visual' || this.touched) return
+                if (this.lossy && ! confirm(@js('Візуальний редактор спростить таблиці, розгортні блоки, вбудовані фрейми та оформлення цього тексту. Редагувати тут усе одно? «Скасувати» — перейти до режиму HTML.'))) {
+                    event.preventDefault()
+                    event.stopImmediatePropagation()
+                    this.setMode('html')
                     return
                 }
-                this.mode = 'visual'
+                this.touched = true
             },
         }"
-        {{-- У режимі HTML зміни Trix (зокрема нормалізація при завантаженні) не потрапляють у стан --}}
-        x-on:trix-change.capture="if (mode === 'html') $event.stopImmediatePropagation()"
+        x-on:trix-change.capture="if (mode === 'html' || ! touched) $event.stopImmediatePropagation()"
+        x-on:keydown.capture="if ($event.target.closest('trix-editor')) keyTouch($event)"
+        x-on:paste.capture="if ($event.target.closest('trix-editor')) touch($event)"
+        x-on:drop.capture="if ($event.target.closest('trix-editor')) touch($event)"
+        x-on:cut.capture="if ($event.target.closest('trix-editor')) touch($event)"
+        x-on:mousedown.capture="if ($event.target.closest('trix-toolbar button, trix-toolbar input')) touch($event)"
         x-bind:class="{ 'otfk-html-mode': mode === 'html' }"
         class="otfk-html-rich-editor"
     >
         @include('filament-forms::components.rich-editor')
+
+        <p x-show="mode === 'visual' && lossy" x-cloak class="otfk-lossy-note">
+            Текст містить таблиці, розгортні блоки або імпортоване оформлення, яких візуальний редактор не підтримує:
+            правки тут їх спростять. Для таких текстів користуйтеся режимом HTML.
+        </p>
 
         <div x-show="mode === 'html'" x-cloak wire:ignore class="otfk-html-source">
             <textarea
@@ -41,6 +70,11 @@
         <style>
             .otfk-html-rich-editor.otfk-html-mode .fi-fo-rich-editor { display: none; }
             .otfk-html-source { margin-top: .5rem; }
+            .otfk-lossy-note {
+                margin-top: .5rem; padding: .5rem .75rem; border-radius: .5rem; font-size: .8125rem; line-height: 1.4;
+                background: rgb(255 251 235); color: rgb(146 64 14); box-shadow: 0 0 0 1px rgb(253 230 138);
+            }
+            .dark .otfk-lossy-note { background: rgb(120 53 15 / .25); color: rgb(253 230 138); box-shadow: 0 0 0 1px rgb(146 64 14 / .6); }
             .otfk-html-source textarea {
                 display: block; width: 100%; resize: vertical; border: 0; border-radius: .5rem;
                 padding: .5rem .75rem; background: #fff; color: #030712;
