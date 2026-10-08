@@ -1,0 +1,33 @@
+{
+  "resources/css/app.css": {
+    "file": "assets/app-CnsHUYH4.css",
+    "src": "resources/css/app.css",
+    "isEntry": true,
+    "name": "app",
+    "names": [
+      "app.css"
+    ]
+  },
+  "resources/js/analytics.js": {
+    "file": "assets/analytics-BhXyXyt5.js",
+    "name": "analytics",
+    "src": "resources/js/analytics.js",
+    "isDynamicEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-B4jqqxxi.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "dynamicImports": [
+      "resources/js/holiday.js",
+      "resources/js/analytics.js"
+    ]
+  },
+  "resources/js/holiday.js": {
+    "file": "assets/holiday-D44MOV2Q.js",
+    "name": "holiday",
+    "src": "resources/js/holiday.js",
+    "isDynamicEntry": true
+  }
+}
