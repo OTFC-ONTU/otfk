@@ -2,11 +2,14 @@
 
 namespace App\Filament\Pages;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\TextInput;
 use App\Filament\Support\SettingsFormPage;
 use App\Services\TelegramPoster;
 use Filament\Actions\Action;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 
 /**
@@ -15,7 +18,7 @@ use Filament\Notifications\Notification;
  */
 class TelegramSettings extends SettingsFormPage
 {
-    protected static ?string $navigationIcon = 'heroicon-o-paper-airplane';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-paper-airplane';
 
     protected static ?int $navigationSort = 5;
 
@@ -48,18 +51,18 @@ class TelegramSettings extends SettingsFormPage
         return $state;
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Автопостинг новин')
+        return $schema
+            ->components([
+                Section::make('Автопостинг новин')
                     ->description('Опублікована новина автоматично надсилається в Telegram-канал коледжу — одноразово, при першій появі на сайті.')
                     ->schema([
-                        Forms\Components\Toggle::make('telegram_autopost')->label('Надсилати нові новини в Telegram')
+                        Toggle::make('telegram_autopost')->label('Надсилати нові новини в Telegram')
                             ->helperText('Працює лише коли заповнені токен бота і канал.'),
-                        Forms\Components\TextInput::make('telegram_bot_token')->label('Токен бота')->password()->revealable()
+                        TextInput::make('telegram_bot_token')->label('Токен бота')->password()->revealable()
                             ->helperText('Токен від @BotFather (вигляд: 1234567890:AA…). Бот має бути адміністратором каналу.'),
-                        Forms\Components\TextInput::make('telegram_channel')->label('Канал')
+                        TextInput::make('telegram_channel')->label('Канал')
                             ->helperText('@назва_каналу або числовий ID (-100…).'),
                     ]),
             ])

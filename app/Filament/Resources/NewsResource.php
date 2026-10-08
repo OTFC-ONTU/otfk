@@ -2,6 +2,25 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\ReplicateAction;
+use Filament\Actions\BulkActionGroup;
+use App\Filament\Support\SafeDeleteAction;
+use App\Filament\Resources\NewsResource\Pages\ListNews;
+use App\Filament\Resources\NewsResource\Pages\CreateNews;
+use App\Filament\Resources\NewsResource\Pages\EditNews;
 use App\Filament\Forms\Components\HtmlRichEditor;
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\NewsResource\Pages;
@@ -9,7 +28,6 @@ use App\Filament\Support\ViewOnSite;
 use App\Models\News;
 use App\Support\UniqueSlug;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -18,9 +36,9 @@ class NewsResource extends Resource
 {
     protected static ?string $model = News::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-newspaper';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-newspaper';
 
-    protected static ?string $navigationGroup = 'Контент';
+    protected static string | \UnitEnum | null $navigationGroup = 'Контент';
 
     protected static ?int $navigationSort = 1;
 
@@ -30,19 +48,19 @@ class NewsResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Новини';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\TextInput::make('title')
+        return $schema->components([
+            TextInput::make('title')
                 ->label('Заголовок')->required()->maxLength(255)->columnSpanFull(),
-            Forms\Components\TextInput::make('slug')
+            TextInput::make('slug')
                 ->label('URL (slug)')->maxLength(255)
                 ->prefix(url('/novyny') . '/')
-                ->helperText('Залиште порожнім - згенерується автоматично.'),
-            Forms\Components\Select::make('category_id')
+                ->helperText(fn ($record): string => $record?->wasPublic() ? 'Після зміни стара адреса автоматично перенаправлятиме на нову (і на сайті, і в пошуку).' : 'Залиште порожнім - згенерується автоматично.'),
+            Select::make('category_id')
                 ->label('Категорія')->relationship('category', 'title')->searchable()->preload()
                 ->helperText('Необовʼязково. За категоріями працює фільтр на сторінці «Новини».'),
-            Forms\Components\Textarea::make('excerpt')
+            Textarea::make('excerpt')
                 ->label('Короткий опис')->rows(2)->maxLength(1000)->columnSpanFull()
                 ->helperText('1-2 речення: показується в картці новини у списку та при поширенні в соцмережах і месенджерах.'),
             HtmlRichEditor::make('body')
@@ -54,17 +72,17 @@ class NewsResource extends Resource
                 ->columnSpanFull(),
 
             EnglishTranslation::section(false),
-            Forms\Components\FileUpload::make('cover_image')
+            FileUpload::make('cover_image')
                 ->label('Обкладинка')->image()->directory('news')->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('1600')->imageResizeTargetHeight('1600')
                 ->helperText('Горизонтальне фото: показується в картці у списку новин і вгорі самої новини.'),
-            Forms\Components\DateTimePicker::make('published_at')
+            DateTimePicker::make('published_at')
                 ->label('Дата публікації')->default(now())->seconds(false)
                 ->helperText('Новина з майбутньою датою зʼявиться на сайті лише коли дата настане.'),
-            Forms\Components\Toggle::make('is_published')->label('Опубліковано')->default(true)
+            Toggle::make('is_published')->label('Опубліковано')->default(true)
                 ->helperText('Вимкнено — чернетка: на сайті не видно, лишається в адмінці та у віджеті «Чернетки».'),
-            Forms\Components\Toggle::make('is_featured')->label('Рекомендована')
+            Toggle::make('is_featured')->label('Рекомендована')
                 ->helperText('Службова позначка «на майбутнє» — на сайті поки не використовується.'),
-            Forms\Components\Toggle::make('is_heritage')
+            Toggle::make('is_heritage')
                 ->label('Урочисте оформлення (heritage)')
                 ->helperText('Листоподібний стиль для ювілеїв, історичних та особливих матеріалів.'),
         ]);
@@ -74,27 +92,27 @@ class NewsResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('cover_image')->label('')->square(),
-                Tables\Columns\TextColumn::make('title')->label('Заголовок')->searchable()->limit(50)->weight('bold'),
-                Tables\Columns\TextColumn::make('category.title')->label('Категорія')->badge()->sortable(),
-                Tables\Columns\TextColumn::make('published_at')->label('Дата')->dateTime('d.m.Y')->sortable(),
-                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                ImageColumn::make('cover_image')->label('')->square(),
+                TextColumn::make('title')->label('Заголовок')->searchable()->limit(50)->weight('bold'),
+                TextColumn::make('category.title')->label('Категорія')->badge()->sortable(),
+                TextColumn::make('published_at')->label('Дата')->dateTime('d.m.Y')->sortable(),
+                TextColumn::make('translation_status')->label('Переклад EN')
                     ->state(fn (News $record) => $record->translationStatus())->badge(),
-                Tables\Columns\IconColumn::make('is_published')->label('Опубл.')->boolean(),
-                Tables\Columns\IconColumn::make('is_featured')->label('Реком.')->boolean()->toggleable(),
-                Tables\Columns\IconColumn::make('is_heritage')->label('Heritage')->boolean()->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('views')->label('Перегляди')->numeric()->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('likes')->label('Вподобайки')->numeric()->sortable()->toggleable(),
-                Tables\Columns\IconColumn::make('telegram_posted_at')->label('TG')->toggleable(isToggledHiddenByDefault: true)
+                IconColumn::make('is_published')->label('Опубл.')->boolean(),
+                IconColumn::make('is_featured')->label('Реком.')->boolean()->toggleable(),
+                IconColumn::make('is_heritage')->label('Heritage')->boolean()->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('views')->label('Перегляди')->numeric()->sortable()->toggleable(),
+                TextColumn::make('likes')->label('Вподобайки')->numeric()->sortable()->toggleable(),
+                IconColumn::make('telegram_posted_at')->label('TG')->toggleable(isToggledHiddenByDefault: true)
                     ->icon(fn ($state) => $state ? 'heroicon-s-paper-airplane' : 'heroicon-o-minus')
                     ->color(fn ($state) => $state ? 'info' : 'gray')
                     ->tooltip(fn ($state) => $state ? 'Опубліковано в Telegram' : 'Не публікувалось у Telegram'),
             ])
             ->defaultSort('published_at', 'desc')
             ->filters([
-                Tables\Filters\SelectFilter::make('category_id')->label('Категорія')
+                SelectFilter::make('category_id')->label('Категорія')
                     ->relationship('category', 'title')->preload(),
-                Tables\Filters\SelectFilter::make('year')->label('Рік')
+                SelectFilter::make('year')->label('Рік')
                     ->options(fn () => News::query()->whereNotNull('published_at')
                         ->pluck('published_at')
                         ->map(fn ($date) => $date->format('Y'))
@@ -103,14 +121,14 @@ class NewsResource extends Resource
                     ->query(fn ($query, array $data) => filled($data['value'] ?? null)
                         ? $query->whereYear('published_at', $data['value'])
                         : $query),
-                Tables\Filters\TernaryFilter::make('is_published')->label('Публікація')
+                TernaryFilter::make('is_published')->label('Публікація')
                     ->trueLabel('Опубліковані')->falseLabel('Лише чернетки')->placeholder('Всі'),
             ])
             ->emptyStateHeading('Новин ще немає')
             ->emptyStateDescription('Новини зʼявляються на головній та на сторінці «Новини». Створіть першу новину - за потреби її можна зберегти чернеткою і опублікувати пізніше.')
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\ReplicateAction::make()
+            ->recordActions([
+                EditAction::make(),
+                ReplicateAction::make()
                     ->label('Дублювати')
                     ->beforeReplicaSaved(function (News $replica, News $record) {
                         $replica->title = $record->title . ' (копія)';
@@ -125,7 +143,7 @@ class NewsResource extends Resource
                     ->successNotificationTitle('Копію створено чернеткою'),
                 ViewOnSite::table(fn (News $record) => route('news.show', $record)),
             ])
-            ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
+            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk(static::class)])]);
     }
 
     public static function getRelations(): array
@@ -136,9 +154,9 @@ class NewsResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListNews::route('/'),
-            'create' => Pages\CreateNews::route('/create'),
-            'edit' => Pages\EditNews::route('/{record}/edit'),
+            'index' => ListNews::route('/'),
+            'create' => CreateNews::route('/create'),
+            'edit' => EditNews::route('/{record}/edit'),
         ];
     }
 }

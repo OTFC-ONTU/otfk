@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSortOrder;
 use App\Models\Concerns\HasEnglishTranslation;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class QuizQuestion extends Model
 {
+    use HasSortOrder;
     use HasEnglishTranslation;
 
     protected $fillable = ['question_en', 'translation_published', 'question', 'sort_order', 'is_active'];

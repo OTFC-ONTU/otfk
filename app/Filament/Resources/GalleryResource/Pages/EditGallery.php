@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\GalleryResource\Pages;
 
+use App\Filament\Support\SafeDeleteAction;
 use App\Filament\Resources\GalleryResource;
 use App\Filament\Support\ViewOnSite;
 use Filament\Actions;
@@ -15,7 +16,7 @@ class EditGallery extends EditRecord
     {
         return [
             ViewOnSite::header(fn () => route('galleries.show', $this->record)),
-            Actions\DeleteAction::make(),
+            SafeDeleteAction::make(),
         ];
     }
 }

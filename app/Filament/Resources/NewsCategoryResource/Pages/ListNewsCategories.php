@@ -2,18 +2,22 @@
 
 namespace App\Filament\Resources\NewsCategoryResource\Pages;
 
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\NewsCategoryResource;
 use Filament\Actions;
+use App\Filament\Support\ReordersBySwappingPositions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListNewsCategories extends ListRecords
 {
+    use ReordersBySwappingPositions;
+
     protected static string $resource = NewsCategoryResource::class;
 
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

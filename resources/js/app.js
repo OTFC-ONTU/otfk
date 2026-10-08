@@ -1,9 +1,13 @@
 import './bootstrap';
 
 import Alpine from 'alpinejs';
+import { initAnchorHold } from './anchor-hold';
 
 window.Alpine = Alpine;
 Alpine.start();
+
+// Перехід до якоря не «недолітає», поки вище догружаються зображення (resources/js/anchor-hold.js)
+initAnchorHold();
 
 // Святкові частинки вантажаться окремим чанком лише коли тема активна
 if (document.body?.dataset.holiday) {

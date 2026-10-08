@@ -2,12 +2,24 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\FileUpload;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Forms\Components\Textarea;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\SettingResource\Pages\ListSettings;
+use App\Filament\Resources\SettingResource\Pages\CreateSetting;
+use App\Filament\Resources\SettingResource\Pages\EditSetting;
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\SettingResource\Pages;
 use App\Models\Setting;
 use App\Rules\SafeUrl;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -16,9 +28,9 @@ class SettingResource extends Resource
 {
     protected static ?string $model = Setting::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cog-6-tooth';
 
-    protected static ?string $navigationGroup = 'Налаштування';
+    protected static string | \UnitEnum | null $navigationGroup = 'Налаштування';
 
     protected static ?string $navigationLabel = 'Розширені налаштування';
 
@@ -34,12 +46,12 @@ class SettingResource extends Resource
         return (bool) auth()->user()?->isAdmin();
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\TextInput::make('key')->label('Ключ')->required()->maxLength(255)
+        return $schema->components([
+            TextInput::make('key')->label('Ключ')->required()->maxLength(255)
                 ->disabledOn('edit')->live()->helperText('Технічний ідентифікатор, напр. contact_phone.'),
-            Forms\Components\Select::make('type')->label('Тип значення')->default('text')->live()
+            Select::make('type')->label('Тип значення')->default('text')->live()
                 ->options([
                     'text' => 'Текст',
                     'textarea' => 'Багаторядковий',
@@ -48,14 +60,14 @@ class SettingResource extends Resource
                     'html' => 'HTML',
                     'image' => 'Зображення',
                 ]),
-            Forms\Components\FileUpload::make('image_value')->label('Зображення')->image()->imageEditor()
+            FileUpload::make('image_value')->label('Зображення')->image()->imageEditor()
                 ->directory('settings')->columnSpanFull()
-                ->visible(fn (Forms\Get $get) => $get('type') === 'image')
+                ->visible(fn (Get $get) => $get('type') === 'image')
                 ->helperText('Напр. логотип сайту. Рекомендований формат - PNG з прозорим тлом.'),
-            Forms\Components\Textarea::make('value')->label('Значення')->rows(3)->columnSpanFull()
-                ->visible(fn (Forms\Get $get) => $get('type') !== 'image')
-                ->rule(fn (Forms\Get $get) => $get('type') === 'url' ? new SafeUrl : null)
-                ->helperText(fn (Forms\Get $get) => match ($get('key')) {
+            Textarea::make('value')->label('Значення')->rows(3)->columnSpanFull()
+                ->visible(fn (Get $get) => $get('type') !== 'image')
+                ->rule(fn (Get $get) => $get('type') === 'url' ? new SafeUrl : null)
+                ->helperText(fn (Get $get) => match ($get('key')) {
                     'site_version_label' => 'Напис у підвалі сайту (напр., «Бета-версія»). Порожнє значення — приховати позначку.',
                     'site_version_color' => 'Колір позначки версії: gold (золотий), green (зелений), blue (синій), red (червоний) або gray (сірий).',
                     'telegram_autopost' => 'Автопостинг новин у Telegram: 1 — увімкнено, 0 — вимкнено. Потрібні також telegram_bot_token і telegram_channel.',
@@ -71,9 +83,9 @@ class SettingResource extends Resource
                     'bells_second_shift' => 'Друга зміна в розкладі дзвінків: 1 — показувати, 0 — сховати. Зручніше перемикати кнопкою в розділі «Розклад дзвінків».',
                     default => null,
                 }),
-            Forms\Components\TextInput::make('group')->label('Група')->default('general')->maxLength(255),
+            TextInput::make('group')->label('Група')->default('general')->maxLength(255),
             EnglishTranslation::section(contentFields: [], primaryField: 'value', primaryLabel: 'Англійське значення', primaryRows: 4)
-                ->visible(fn (Forms\Get $get) => Setting::supportsTranslation($get('key'), $get('type')))
+                ->visible(fn (Get $get) => Setting::supportsTranslation($get('key'), $get('type')))
                 ->description('Перекладаються лише публічні текстові налаштування. Порожній оригінал приховує оголошення/позначку незалежно від перекладу. Стандартні підписи бренду й опис сайту без перекладу використовують англійський словник.'),
         ]);
     }
@@ -83,15 +95,15 @@ class SettingResource extends Resource
         return $table
             ->description('Сирий key-value доступ на аварійний випадок. Звичайні налаштування зручніше міняти на сторінках «Контакти та соцмережі», «Оголошення», «Telegram», «Підвал і вигляд».')
             ->columns([
-                Tables\Columns\TextColumn::make('translation_status')->label('Переклад EN')
+                TextColumn::make('translation_status')->label('Переклад EN')
                     ->state(fn (Setting $record) => Setting::supportsTranslation($record->key, $record->type) ? $record->translationStatus() : 'Не перекладається')->badge(),
-                Tables\Columns\TextColumn::make('key')->label('Ключ')->searchable()->weight('bold'),
-                Tables\Columns\TextColumn::make('value')->label('Значення')->limit(60)->color('gray'),
-                Tables\Columns\TextColumn::make('group')->label('Група')->badge()->sortable(),
+                TextColumn::make('key')->label('Ключ')->searchable()->weight('bold'),
+                TextColumn::make('value')->label('Значення')->limit(60)->color('gray'),
+                TextColumn::make('group')->label('Група')->badge()->sortable(),
             ])
             ->defaultSort('group')
-            ->actions([Tables\Actions\EditAction::make()])
-            ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
+            ->recordActions([EditAction::make()])
+            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }
 
     public static function getRelations(): array
@@ -102,9 +114,9 @@ class SettingResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSettings::route('/'),
-            'create' => Pages\CreateSetting::route('/create'),
-            'edit' => Pages\EditSetting::route('/{record}/edit'),
+            'index' => ListSettings::route('/'),
+            'create' => CreateSetting::route('/create'),
+            'edit' => EditSetting::route('/{record}/edit'),
         ];
     }
 }

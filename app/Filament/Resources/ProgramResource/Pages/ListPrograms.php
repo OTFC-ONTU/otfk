@@ -2,18 +2,22 @@
 
 namespace App\Filament\Resources\ProgramResource\Pages;
 
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\ProgramResource;
 use Filament\Actions;
+use App\Filament\Support\ReordersBySwappingPositions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListPrograms extends ListRecords
 {
+    use ReordersBySwappingPositions;
+
     protected static string $resource = ProgramResource::class;
 
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

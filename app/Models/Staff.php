@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\KeepsPublicUrls;
+use App\Models\Concerns\HasSortOrder;
 use App\Casts\SafeHtml;
 use App\Models\Concerns\FlushesSitemap;
 use App\Models\Concerns\HasEnglishTranslation;
@@ -13,6 +15,8 @@ use Illuminate\Support\Str;
 
 class Staff extends Model
 {
+    use KeepsPublicUrls;
+    use HasSortOrder;
     use FlushesSitemap;
     use HasEnglishTranslation;
     use OptimizesUploadedImages;
@@ -207,5 +211,19 @@ class Staff extends Model
                 $person->slug = static::uniqueSlug($person->full_name, $person->id);
             }
         });
+    }
+
+    /** Маршрут публічної сторінки — для перенаправлень при зміні адреси чи видаленні (KeepsPublicUrls). */
+    public static function publicRouteName(): string
+    {
+        return 'staff.show';
+    }
+
+    /** Видалений працівник веде на сторінку свого підрозділу або на структуру. */
+    public function publicFallbackPath(): string
+    {
+        $department = $this->department_id ? Department::query()->published()->find($this->department_id) : null;
+
+        return $department ? $department->publicPath() : route('structure.index', [], false);
     }
 }

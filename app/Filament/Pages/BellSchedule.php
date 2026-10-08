@@ -2,14 +2,24 @@
 
 namespace App\Filament\Pages;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Grid;
+use Filament\Forms\Components\TimePicker;
+use Filament\Schemas\Components\Utilities\Get;
+use Closure;
+use App\Filament\Support\ViewOnSite;
 use App\Models\BellPeriod;
 use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page as FilamentPage;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\EmbeddedSchema;
+use Filament\Schemas\Components\Form;
 
 /**
  * Розклад дзвінків одним екраном: кількість пар у зміні фіксована
@@ -21,9 +31,9 @@ class BellSchedule extends FilamentPage implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-bell-alert';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-bell-alert';
 
-    protected static ?string $navigationGroup = 'Контент';
+    protected static string | \UnitEnum | null $navigationGroup = 'Контент';
 
     protected static ?int $navigationSort = 6;
 
@@ -31,7 +41,6 @@ class BellSchedule extends FilamentPage implements HasForms
 
     protected static ?string $title = 'Розклад дзвінків';
 
-    protected static string $view = 'filament.pages.bell-schedule';
 
     /** @var array<string, mixed> */
     public ?array $data = [];
@@ -56,17 +65,17 @@ class BellSchedule extends FilamentPage implements HasForms
         $this->form->fill($state);
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Що показувати на сайті')
+        return $schema
+            ->components([
+                Section::make('Що показувати на сайті')
                     ->description('Пари лишаються в базі — перемикачі керують лише тим, що бачить відвідувач.')
                     ->schema([
-                        Forms\Components\Toggle::make('second_shift')
+                        Toggle::make('second_shift')
                             ->label('Показувати другу зміну')
                             ->helperText('Вимкнено — на сайті видно лише розклад першої зміни.'),
-                        Forms\Components\Toggle::make('now_chip')
+                        Toggle::make('now_chip')
                             ->label('Показувати у верхньому меню, яка пара йде зараз')
                             ->helperText('Плашка «1-ша пара · до кінця N хв» у верхній смузі сайту.'),
                     ]),
@@ -77,21 +86,21 @@ class BellSchedule extends FilamentPage implements HasForms
     }
 
     /** Секція однієї зміни: фіксовані чотири пари, у кожної лише початок і кінець. */
-    protected function shiftSection(int $shift, string $heading, string $description): Forms\Components\Section
+    protected function shiftSection(int $shift, string $heading, string $description): Section
     {
         $rows = [];
 
         for ($n = 1; $n <= BellPeriod::PAIRS_PER_SHIFT; $n++) {
-            $rows[] = Forms\Components\Grid::make(2)->schema([
-                Forms\Components\TimePicker::make(static::field($shift, $n, 'starts'))
+            $rows[] = Grid::make(2)->schema([
+                TimePicker::make(static::field($shift, $n, 'starts'))
                     ->label($n.' пара — початок')
                     ->seconds(false)
                     ->required(),
-                Forms\Components\TimePicker::make(static::field($shift, $n, 'ends'))
+                TimePicker::make(static::field($shift, $n, 'ends'))
                     ->label($n.' пара — кінець')
                     ->seconds(false)
                     ->required()
-                    ->rule(fn (Forms\Get $get) => function (string $attribute, $value, \Closure $fail) use ($get, $shift, $n) {
+                    ->rule(fn (Get $get) => function (string $attribute, $value, Closure $fail) use ($get, $shift, $n) {
                         $starts = $get(static::field($shift, $n, 'starts'));
 
                         if ($starts && $value && strtotime((string) $value) <= strtotime((string) $starts)) {
@@ -101,7 +110,7 @@ class BellSchedule extends FilamentPage implements HasForms
             ]);
         }
 
-        return Forms\Components\Section::make($heading)->description($description)->schema($rows);
+        return Section::make($heading)->description($description)->schema($rows);
     }
 
     /** Ім'я поля форми для конкретної пари: `s1_3_starts`. */
@@ -114,7 +123,7 @@ class BellSchedule extends FilamentPage implements HasForms
     protected function getHeaderActions(): array
     {
         return [
-            \App\Filament\Support\ViewOnSite::header(route('bells')),
+            ViewOnSite::header(route('bells')),
         ];
     }
 
@@ -147,5 +156,16 @@ class BellSchedule extends FilamentPage implements HasForms
         BellPeriod::setFlag(BellPeriod::NOW_CHIP_SETTING, (bool) $state['now_chip']);
 
         Notification::make()->title('Розклад дзвінків збережено')->success()->send();
+    }
+
+    /** Форма зі збереженням — стандартна розмітка сторінки Filament 4 (без власного view). */
+    public function content(Schema $schema): Schema
+    {
+        return $schema->components([
+            Form::make([EmbeddedSchema::make('form')])
+                ->id('form')
+                ->livewireSubmitHandler('save')
+                ->footer([Actions::make($this->getFormActions())->key('form-actions')]),
+        ]);
     }
 }

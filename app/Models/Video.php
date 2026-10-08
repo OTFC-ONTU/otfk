@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSortOrder;
 use App\Models\Concerns\HasEnglishTranslation;
 use Illuminate\Database\Eloquent\Model;
 
 class Video extends Model
 {
+    use HasSortOrder;
     use HasEnglishTranslation;
 
     protected $fillable = [
@@ -62,5 +64,11 @@ class Video extends Model
     public function getPrivateEmbedUrlAttribute(): string
     {
         return "https://www.youtube-nocookie.com/embed/{$this->youtube_id}";
+    }
+
+    /** Новий запис — першим у списку, як раніше при сортуванні за датою (HasSortOrder). */
+    public static function sortNewRecordsFirst(): bool
+    {
+        return true;
     }
 }

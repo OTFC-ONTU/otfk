@@ -60,6 +60,16 @@ jobs:
           node-version: '20'
           cache: npm
 
+      # Тема адмінки (resources/css/filament/admin/theme.css) імпортує CSS із vendor/filament
+      - name: Налаштування PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Встановлення Composer-залежностей (для теми адмінки)
+        run: composer install --no-dev --no-scripts --no-interaction --prefer-dist --no-progress
+
       - name: Встановлення npm-залежностей
         run: npm ci
 

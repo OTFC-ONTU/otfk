@@ -1,12 +1,12 @@
 <x-filament-panels::page.simple>
-    <x-filament-panels::form id="form" wire:submit="verify">
+    <form id="form" wire:submit="verify" class="fi-sc-form">
         {{ $this->form }}
 
-        <x-filament-panels::form.actions
+        <x-filament::actions
             :actions="$this->getCachedFormActions()"
             :full-width="$this->hasFullWidthFormActions()"
         />
-    </x-filament-panels::form>
+    </form>
 
     <form method="POST" action="{{ filament()->getLogoutUrl() }}" class="mt-4 text-center text-sm">
         @csrf

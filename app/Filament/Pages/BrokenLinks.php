@@ -14,17 +14,17 @@ use Illuminate\Support\Facades\Cache;
  */
 class BrokenLinks extends FilamentPage
 {
-    protected static ?string $navigationIcon = 'heroicon-o-link-slash';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-link-slash';
 
     protected static ?string $navigationLabel = 'Биті посилання';
 
     protected static ?string $title = 'Биті внутрішні посилання';
 
-    protected static ?string $navigationGroup = 'Структура сайту';
+    protected static string | \UnitEnum | null $navigationGroup = 'Структура сайту';
 
     protected static ?int $navigationSort = 0;
 
-    protected static string $view = 'filament.pages.broken-links';
+    protected string $view = 'filament.pages.broken-links';
 
     private const CACHE_KEY = 'broken_links.report';
 

@@ -2,12 +2,15 @@
 
 namespace App\Filament\Pages;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use App\Filament\Support\SettingsFormPage;
 use App\Support\Analytics;
 use App\Support\StructuredData;
 use Closure;
 use Filament\Forms;
-use Filament\Forms\Form;
 
 /**
  * Дані організації для структурованої розмітки (JSON-LD EducationalOrganization,
@@ -19,9 +22,9 @@ use Filament\Forms\Form;
  */
 class SeoSettings extends SettingsFormPage
 {
-    protected static ?string $navigationGroup = 'SEO';
+    protected static string | \UnitEnum | null $navigationGroup = 'SEO';
 
-    protected static ?string $navigationIcon = 'heroicon-o-identification';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-identification';
 
     protected static ?int $navigationSort = 10;
 
@@ -53,19 +56,19 @@ class SeoSettings extends SettingsFormPage
         return $state;
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Організація в пошукових системах')
+        return $schema
+            ->components([
+                Section::make('Організація в пошукових системах')
                     ->description('Невидимі відвідувачам дані розмітки Schema.org: допомагають пошуковикам пов\'язати сайт із колишніми назвами та офіційними профілями коледжу. Вносьте лише перевірені відомості; порожнє поле не виводиться.')
                     ->schema([
-                        Forms\Components\Textarea::make(StructuredData::ALTERNATE_NAMES_KEY)
+                        Textarea::make(StructuredData::ALTERNATE_NAMES_KEY)
                             ->label('Інші назви та абревіатури')
                             ->rows(4)
                             ->maxLength(2000)
                             ->helperText('По одній у рядку: офіційні колишні назви, скорочення (напр. «ОТФК ОНТУ»). Без ключових слів і рекламних фраз.'),
-                        Forms\Components\Textarea::make(StructuredData::SAME_AS_KEY)
+                        Textarea::make(StructuredData::SAME_AS_KEY)
                             ->label('Офіційні профілі (sameAs)')
                             ->rows(5)
                             ->maxLength(4000)
@@ -82,10 +85,10 @@ class SeoSettings extends SettingsFormPage
                                 },
                             ]),
                     ]),
-                Forms\Components\Section::make('Аналітика (Google Analytics 4)')
+                Section::make('Аналітика (Google Analytics 4)')
                     ->description('Порожнє поле — аналітика повністю вимкнена, банера немає. Із заповненим ідентифікатором відвідувачі бачать банер згоди (на тестовому домені теж — для перевірки вигляду), а тег Google завантажується лише на основному домені і лише після натискання «Прийняти». Користувачі, що увійшли до адмінки, банера не бачать і не враховуються.')
                     ->schema([
-                        Forms\Components\TextInput::make(Analytics::MEASUREMENT_ID_KEY)
+                        TextInput::make(Analytics::MEASUREMENT_ID_KEY)
                             ->label('Ідентифікатор потоку (Measurement ID)')
                             ->placeholder('G-XXXXXXXXXX')
                             ->maxLength(22)

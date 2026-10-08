@@ -161,6 +161,8 @@
     .file-card__view-label { display: none; }
     /* Єдиний вигляд розкривних блоків у текстах: і відновлені панелі ліцензування (.content-accordion),
        і будь-які native <details> із CMS (конференції тощо) — без змін HTML у БД */
+    /* Розмір фото з редактора (width/height і inline-стиль у px): на вузькому екрані зменшується пропорційно */
+    .prose-site img[width], .prose-site img[style*="width"] { max-width: 100%; height: auto !important; }
     .prose-site details { @apply my-4 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200; }
     .prose-site details > summary { @apply flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-base font-semibold leading-snug text-brand-950 transition hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-brand-600; }
     .prose-site details > summary::-webkit-details-marker { display: none; }

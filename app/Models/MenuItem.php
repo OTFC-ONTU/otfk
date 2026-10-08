@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSortOrder;
 use App\Support\LocalizedUrl;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\Route;
 
 class MenuItem extends Model
 {
+    use HasSortOrder;
+
     protected $fillable = [
         'parent_id', 'label', 'label_en', 'link_type', 'page_id', 'url',
         'open_new_tab', 'sort_order', 'is_visible',

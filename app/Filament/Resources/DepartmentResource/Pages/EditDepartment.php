@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\DepartmentResource\Pages;
 
+use App\Filament\Support\SafeDeleteAction;
 use App\Filament\Resources\DepartmentResource;
 use App\Filament\Support\PreviewFormAction;
 use App\Filament\Support\ViewOnSite;
@@ -17,7 +18,7 @@ class EditDepartment extends EditRecord
         return [
             PreviewFormAction::make('department'),
             ViewOnSite::header(fn () => route('structure.show', $this->record)),
-            Actions\DeleteAction::make(),
+            SafeDeleteAction::make(),
         ];
     }
 }

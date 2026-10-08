@@ -214,4 +214,27 @@ class FormPreviewTest extends TestCase
 
         Storage::disk('local')->delete('livewire-tmp/' . $tmpName);
     }
+
+    public function test_preview_converts_visual_editor_document_to_html(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $page = Page::create(['title' => 'Бібліотека тест', 'slug' => 'biblioteka-test', 'body' => '<p>Старий текст.</p>', 'is_published' => true]);
+
+        $livewire = \Livewire\Livewire::test(\App\Filament\Resources\PageResource\Pages\EditPage::class, ['record' => $page->getRouteKey()])
+            ->set('data.body', ['type' => 'doc', 'content' => [
+                ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Текст із візуального редактора']]],
+                ['type' => 'image', 'attrs' => ['src' => '/storage/a.jpg', 'alt' => 'Фото', 'width' => '300', 'height' => '200']],
+            ]])
+            ->instance();
+
+        // Той самий слепок, що робить кнопка «Превʼю» (PreviewFormAction)
+        $token = AdminPreview::store('page', $page, \App\Filament\Forms\Components\HtmlRichEditor::rawStateWithHtml($livewire->form));
+
+        $this->get('/admin-preview/'.$token)
+            ->assertOk()
+            ->assertSee('Текст із візуального редактора')
+            ->assertSee('width="300"', false)
+            ->assertDontSee('>doc<', false);
+    }
 }

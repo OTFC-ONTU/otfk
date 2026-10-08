@@ -2,6 +2,19 @@
 
 namespace App\Filament\Resources;
 
+use Illuminate\Auth\Access\Response;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
+use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\BulkAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Get;
+use App\Filament\Resources\NotFoundLogResource\Pages\ListNotFoundLogs;
 use App\Filament\Resources\NotFoundLogResource\Pages;
 use App\Models\LegacyRedirect;
 use App\Models\NotFoundLog;
@@ -10,7 +23,6 @@ use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Actions\Action;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -30,14 +42,15 @@ class NotFoundLogResource extends Resource
         return (bool) auth()->user()?->isAdmin();
     }
 
-    public static function canCreate(): bool
+    /** Записи створює лише обробник 404; у Filament 4 доступ перевіряється через *AuthorizationResponse(). */
+    public static function getCreateAuthorizationResponse(): Response
     {
-        return false;
+        return Response::deny();
     }
 
-    protected static ?string $navigationIcon = 'heroicon-o-exclamation-triangle';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-exclamation-triangle';
 
-    protected static ?string $navigationGroup = 'SEO';
+    protected static string | \UnitEnum | null $navigationGroup = 'SEO';
 
     protected static ?int $navigationSort = 2;
 
@@ -58,13 +71,13 @@ class NotFoundLogResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('url')->label('Адреса')->wrap()
+                TextColumn::make('url')->label('Адреса')->wrap()
                     ->searchable(query: fn ($query, string $search) => $query->where('path', 'like', "%{$search}%")),
-                Tables\Columns\TextColumn::make('hits')->label('Звернень')->numeric()->sortable(),
-                Tables\Columns\TextColumn::make('referrer')->label('Звідки перехід')->wrap()->placeholder('—')->limit(60),
-                Tables\Columns\TextColumn::make('last_seen_at')->label('Останнє')->since()->sortable(),
-                Tables\Columns\TextColumn::make('first_seen_at')->label('Перше')->date('d.m.Y')->sortable()->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('status')->label('Стан')->badge()
+                TextColumn::make('hits')->label('Звернень')->numeric()->sortable(),
+                TextColumn::make('referrer')->label('Звідки перехід')->wrap()->placeholder('—')->limit(60),
+                TextColumn::make('last_seen_at')->label('Останнє')->since()->sortable(),
+                TextColumn::make('first_seen_at')->label('Перше')->date('d.m.Y')->sortable()->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('status')->label('Стан')->badge()
                     ->formatStateUsing(fn (string $state) => NotFoundLog::STATUSES[$state] ?? $state)
                     ->color(fn (string $state) => match ($state) {
                         NotFoundLog::NEW => 'warning', NotFoundLog::RESOLVED => 'success', default => 'gray',
@@ -72,14 +85,14 @@ class NotFoundLogResource extends Resource
             ])
             ->defaultSort('hits', 'desc')
             ->filters([
-                Tables\Filters\SelectFilter::make('status')->label('Стан')->options(NotFoundLog::STATUSES)->default(NotFoundLog::NEW),
-                Tables\Filters\Filter::make('external')->label('Лише з переходами з інших сайтів')
+                SelectFilter::make('status')->label('Стан')->options(NotFoundLog::STATUSES)->default(NotFoundLog::NEW),
+                Filter::make('external')->label('Лише з переходами з інших сайтів')
                     ->query(fn ($query) => $query->whereNotNull('referrer')
                         ->where('referrer', 'not like', '%://'.request()->getHost().'/%')),
             ])
             ->emptyStateHeading('Нових адрес 404 немає')
             ->emptyStateDescription('Тут з’являються старі чи помилкові адреси, за якими приходять відвідувачі. Записи без звернень понад 90 днів видаляються автоматично.')
-            ->actions([
+            ->recordActions([
                 self::redirectAction(),
                 Action::make('ignore')->label('Ігнорувати')->icon('heroicon-o-eye-slash')->color('gray')
                     ->visible(fn (NotFoundLog $record) => $record->status !== NotFoundLog::IGNORED)
@@ -87,14 +100,14 @@ class NotFoundLogResource extends Resource
                 Action::make('reopen')->label('Повернути в нові')->icon('heroicon-o-arrow-path')->color('gray')
                     ->visible(fn (NotFoundLog $record) => $record->status !== NotFoundLog::NEW)
                     ->action(fn (NotFoundLog $record) => $record->update(['status' => NotFoundLog::NEW])),
-                Tables\Actions\DeleteAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('ignore')->label('Ігнорувати')->icon('heroicon-o-eye-slash')
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    BulkAction::make('ignore')->label('Ігнорувати')->icon('heroicon-o-eye-slash')
                         ->action(fn (Collection $records) => NotFoundLog::whereKey($records->modelKeys())->update(['status' => NotFoundLog::IGNORED]))
                         ->deselectRecordsAfterCompletion(),
-                    Tables\Actions\DeleteBulkAction::make(),
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -105,14 +118,14 @@ class NotFoundLogResource extends Resource
         return Action::make('redirect')->label('Створити редирект')->icon('heroicon-o-arrow-uturn-right')->color('success')
             ->visible(fn (NotFoundLog $record) => $record->status !== NotFoundLog::RESOLVED)
             ->modalDescription(fn (NotFoundLog $record) => 'Стара адреса: '.$record->url)
-            ->form([
-                Forms\Components\Select::make('action')->label('Дія')->required()->live()->default(LegacyRedirect::REDIRECT)
+            ->schema([
+                Select::make('action')->label('Дія')->required()->live()->default(LegacyRedirect::REDIRECT)
                     ->options([LegacyRedirect::REDIRECT => 'Постійний редирект (301)', LegacyRedirect::GONE => '410 — матеріал видалено назавжди']),
-                Forms\Components\TextInput::make('target_url')->label('Нова адреса')->maxLength(2000)
-                    ->visible(fn (Forms\Get $get) => $get('action') !== LegacyRedirect::GONE)
-                    ->required(fn (Forms\Get $get) => $get('action') !== LegacyRedirect::GONE)
+                TextInput::make('target_url')->label('Нова адреса')->maxLength(2000)
+                    ->visible(fn (Get $get) => $get('action') !== LegacyRedirect::GONE)
+                    ->required(fn (Get $get) => $get('action') !== LegacyRedirect::GONE)
                     ->helperText('Відносна адреса відповідного матеріалу: відкрийте його на сайті й скопіюйте шлях, напр. /novyny/nazva.'),
-                Forms\Components\TextInput::make('note')->label('Примітка')->maxLength(500),
+                TextInput::make('note')->label('Примітка')->maxLength(500),
             ])
             ->action(function (NotFoundLog $record, array $data, Action $action) {
                 $gone = $data['action'] === LegacyRedirect::GONE;
@@ -150,7 +163,7 @@ class NotFoundLogResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListNotFoundLogs::route('/'),
+            'index' => ListNotFoundLogs::route('/'),
         ];
     }
 }
