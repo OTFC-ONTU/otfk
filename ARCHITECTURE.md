@@ -90,7 +90,7 @@ flowchart LR
 | GET | `/admin-preview/{token}` | admin.preview | `AdminPreviewController@show` | Снимок несохранённой формы на 10 минут; только после входа, гостям 404 | нет |
 | GET | `/administratsiya` | staff.administration | `StaffController` | Администрация | нет |
 | GET | `/halereya`, `/halereya/{slug}` | galleries.* | `GalleryController` | Галереи (пагинация 12, страница за пределами — 404), лайтбокс, архивный (сепия) режим | нет |
-| GET | `/poshuk`, `/poshuk/pidkazky` | search.* | `SearchController` | Поиск с фильтром типа и пагинацией 12 (`noindex, follow`) + JSON-подсказки (`throttle:60,1`) | нет |
+| GET | `/poshuk`, `/poshuk/pidkazky` | search.* | `SearchController` | Поиск с фильтром типа и пагинацией 12 (`noindex, follow`, `throttle:30,1`) + JSON-подсказки (`throttle:60,1`); запрос — `App\Support\SearchQuery::from()` (только строка, ≤100 символов, `maxlength` в полях), на MySQL `SearchQuery::prefilter()` сужает выборку по `title` LIKE до PHP-фильтра | нет |
 | GET | `/kontakty` | contacts | `ContactController` | Контактные карточки, карта, соцсети и локализованный body опубликованной CMS-страницы `kontakty` (если есть). Встроенной формы отправки нет. CMS-страница `/zvorotniy-zvyazok` со ссылками обратной связи остаётся публичной через catch-all | нет |
 | GET | `/sitemap.xml`, `/robots.txt` | sitemap, robots | `SitemapController` / closure | Sitemap: только украинские канонические URL опубликованных материалов (+ подразделения и индексируемые пары `/en`, без RSS), кеш `sitemap.entries` 3600с со сбросом `FlushesSitemap`; robots не запрещает обход и на тестовом домене | нет |
 | GET | `/up` | — | Laravel health | Health-check | нет |

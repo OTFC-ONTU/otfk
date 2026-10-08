@@ -146,4 +146,27 @@ class SearchPageTest extends TestCase
             ->assertJsonPath('results.0.group', 'Новина')
             ->assertJsonPath('results.0.title', 'Унікальний турнір з робототехніки');
     }
+
+    public function test_huge_or_array_query_is_trimmed_and_does_not_break_search(): void
+    {
+        $this->makeNews('Олімпіада з програмування');
+        $huge = 'олімпіада'.str_repeat('я', 20000);
+
+        $html = $this->get('/poshuk?q='.urlencode($huge))->assertOk()->getContent();
+        $this->assertStringNotContainsString(str_repeat('я', \App\Support\SearchQuery::MAX_LENGTH + 1), $html);
+        $this->assertStringContainsString('maxlength="'.\App\Support\SearchQuery::MAX_LENGTH.'"', $html);
+
+        $this->get('/poshuk?q[]=олімпіада&type[]=news')->assertOk();
+        $this->getJson('/poshuk/pidkazky?q[]=олімпіада')->assertOk()->assertJsonPath('total', 0);
+        $this->get('/poshuk?q='.urlencode('олімпіада'.str_repeat(' ', 300).'x'))->assertOk();
+        $this->getJson('/poshuk/pidkazky?q='.urlencode($huge))->assertOk()->assertJsonPath('total', 0);
+    }
+
+    public function test_search_page_is_rate_limited(): void
+    {
+        foreach (range(1, 30) as $i) {
+            $this->get('/poshuk?q=тест')->assertOk();
+        }
+        $this->get('/poshuk?q=тест')->assertStatus(429);
+    }
 }

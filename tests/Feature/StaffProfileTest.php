@@ -92,4 +92,15 @@ class StaffProfileTest extends TestCase
 
         $this->get('/sitemap.xml')->assertOk()->assertSee(route('staff.show', $teacher), false);
     }
+
+    public function test_admin_edit_urls_use_id_and_open(): void
+    {
+        $teacher = $this->makeTeacher();
+        $editUrl = \App\Filament\Resources\StaffResource::getUrl('edit', ['record' => $teacher]);
+
+        $this->assertStringEndsWith('/admin/staff/'.$teacher->id.'/edit', $editUrl);
+        $this->actingAs(\App\Models\User::factory()->create());
+        $this->get(\App\Filament\Resources\StaffResource::getUrl('index'))->assertOk()->assertSee($editUrl, false);
+        $this->get($editUrl)->assertOk();
+    }
 }

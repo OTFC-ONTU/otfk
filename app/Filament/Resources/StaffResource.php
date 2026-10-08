@@ -30,6 +30,19 @@ class StaffResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Персонал';
 
+    /**
+     * Адреси админки — за ID, хоча публічний ключ моделі — slug: Filament передає модель у route(),
+     * і Laravel підставив би getRouteKey() (slug), який потім шукається як id → 404.
+     */
+    public static function getUrl(string $name = 'index', array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null): string
+    {
+        if (($parameters['record'] ?? null) instanceof Staff) {
+            $parameters['record'] = $parameters['record']->getKey();
+        }
+
+        return parent::getUrl($name, $parameters, $isAbsolute, $panel, $tenant);
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([

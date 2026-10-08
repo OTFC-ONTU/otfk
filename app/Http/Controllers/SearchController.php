@@ -9,6 +9,7 @@ use App\Models\News;
 use App\Models\Page;
 use App\Models\Specialty;
 use App\Support\LocalizedUrl;
+use App\Support\SearchQuery;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -29,8 +30,8 @@ class SearchController extends Controller
 
     public function index(Request $request)
     {
-        $q = trim((string) $request->query('q', ''));
-        $type = (string) $request->query('type', '');
+        $q = SearchQuery::from($request);
+        $type = SearchQuery::from($request, 'type');
 
         if (! isset(self::GROUPS[$type])) {
             $type = '';
@@ -49,7 +50,7 @@ class SearchController extends Controller
             $filtered->count(),
             self::PER_PAGE,
             $page,
-            ['path' => LocalizedUrl::route('search'), 'query' => $request->query()],
+            ['path' => LocalizedUrl::route('search'), 'query' => array_filter(['q' => $q, 'type' => $type])],
         );
 
         return view('search.index', [
@@ -66,7 +67,7 @@ class SearchController extends Controller
     /** Миттєві підказки для пошуку в шапці (JSON, до 9 результатів). */
     public function suggest(Request $request)
     {
-        $q = trim((string) $request->query('q', ''));
+        $q = SearchQuery::from($request);
 
         if (mb_strlen($q) < 2) {
             return response()->json(['results' => [], 'total' => 0]);
@@ -91,7 +92,7 @@ class SearchController extends Controller
      *
      * Фільтруємо колекцію в PHP через mb_stripos, а не через `where('title','like',…)`:
      * у SQLite (dev/тести) LIKE регістронезалежний лише для ASCII, тож «положення»
-     * не знайшло б «Положення …» (Gotcha 21). Повні атрибути потрібні для перевірки цілісності перекладу.
+     * не знайшло б «Положення …» (Gotcha 21); на MySQL SearchQuery::prefilter() спершу звужує вибірку. Повні атрибути потрібні для перевірки цілісності перекладу.
      */
     private function collectResults(string $q): Collection
     {
@@ -99,7 +100,7 @@ class SearchController extends Controller
             if (app()->getLocale() === 'en') {
                 return $query->searchPublic($q)->get();
             }
-            return $query->get()->filter(fn ($row) => mb_stripos((string) $row->title, $q) !== false)->values();
+            return SearchQuery::prefilter($query, 'title', $q)->get()->filter(fn ($row) => mb_stripos((string) $row->title, $q) !== false)->values();
         };
         $news = $rows(News::published()->recent())->map(fn (News $n) => $this->item('news', $n->localized('title'), LocalizedUrl::route('news.show', $n), $n->localized('excerpt'), $n->published_at?->translatedFormat('j F Y')));
         $pages = $rows(Page::published()->with('parent'))->map(fn (Page $p) => $this->item('pages', $p->localized('title'), LocalizedUrl::to('/'.$p->slug), $p->localized('excerpt'), $p->parent?->localized('title')));

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DocumentCategory;
+use App\Support\SearchQuery;
 use App\Support\Seo;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -29,7 +30,7 @@ class DocumentController extends Controller
         // Пошук по назві: у найбільшій категорії майже сотня PDF з довгими назвами.
         // Фільтруємо в PHP, бо LIKE/LOWER у SQLite не бачить регістру кирилиці,
         // а документів у категорії щонайбільше кілька сотень.
-        $search = trim((string) $request->query('q', ''));
+        $search = SearchQuery::from($request);
 
         Seo::translation($documentCategory);
         $all = $documentCategory->documents()->published()->get();
@@ -48,7 +49,7 @@ class DocumentController extends Controller
             $page,
             [
                 'path' => LengthAwarePaginator::resolveCurrentPath(),
-                'query' => $request->query(),
+                'query' => array_filter(['q' => $search]),
             ]
         );
 

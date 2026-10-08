@@ -32,6 +32,15 @@ class TwoFactorTest extends TestCase
         return $engine->oathTotp($secret, $engine->getTimestamp() + $shift);
     }
 
+    /** Google2FA бере реальний time(): біля межі 30-секундного кроку «той самий» код став би кодом наступного кроку. */
+    private function awayFromStepBoundary(): void
+    {
+        $left = 30 - time() % 30;
+        if ($left < 10) {
+            sleep($left);
+        }
+    }
+
     public function test_user_without_factor_is_sent_to_setup_and_cannot_use_panel_or_livewire(): void
     {
         $user = User::factory()->create();
@@ -179,6 +188,7 @@ class TwoFactorTest extends TestCase
 
     public function test_regenerating_recovery_codes_and_reenrolling_require_current_code(): void
     {
+        $this->awayFromStepBoundary();
         $user = User::factory()->withTwoFactor()->create();
         $this->actingAs($user);
 
