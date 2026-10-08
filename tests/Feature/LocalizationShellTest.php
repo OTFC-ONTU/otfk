@@ -22,7 +22,8 @@ class LocalizationShellTest extends TestCase
             ->assertSee('href="'.url('/en/abituriyentu').'"', false)
             ->assertSee('action="'.url('/en/poshuk').'"', false)
             ->assertSee('href="'.url('/en/novyny').'"', false)
-            ->assertHeader('X-Robots-Tag', 'noindex, follow');
+            // FAQ — розділ з перекладеним каркасом, на /en індексується.
+            ->assertHeaderMissing('X-Robots-Tag');
 
         $this->get('/faq')->assertOk()
             ->assertSee('lang="uk"', false)

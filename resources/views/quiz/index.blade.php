@@ -1,4 +1,4 @@
-<x-layouts.app title="{{ __('public.quiz') }}" description="Короткий профорієнтаційний тест: кілька питань — і дізнаєшся, яка спеціальність коледжу пасує саме тобі.">
+<x-layouts.app title="{{ __('public.quiz') }}" description="{{ __('feature.meta_quiz_description') }}">
 
     @php
         $s = \App\Models\Setting::publicMap();

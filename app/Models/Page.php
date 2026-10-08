@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Casts\SafeHtml;
+use App\Models\Concerns\FlushesSitemap;
 use App\Models\Concerns\HasEnglishTranslation;
 use App\Models\Concerns\OptimizesUploadedImages;
 use App\Support\AccreditationContent;
@@ -13,6 +14,7 @@ use Illuminate\Support\Str;
 
 class Page extends Model
 {
+    use FlushesSitemap;
     use HasEnglishTranslation;
     use OptimizesUploadedImages;
 

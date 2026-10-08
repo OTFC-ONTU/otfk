@@ -31,7 +31,7 @@ npm run build
 
 ### 1. Залить код
 ```bash
-# выбрать в панели версию PHP 8.2/8.3 для сайта (Сайти → Налаштування → Версія PHP)
+# выбрать в панели версию PHP 8.3 для сайта (Сайти → Налаштування → Версія PHP)
 # подключиться по SSH, перейти в каталог сайта:
 cd ~/ВАШ-ДОМЕН/www
 
@@ -45,7 +45,8 @@ git clone https://github.com/ВАШ_РЕПОЗИТОРИЙ.git .
 composer install --no-dev --optimize-autoloader
 
 cp .env.production.example .env
-# отредактировать .env: APP_URL, APP_KEY (скопировать из локального), DB_*
+# отредактировать .env: APP_URL, APP_KEY, DB_*
+# при переносе существующей БД сохранить APP_KEY исходного сервера (секреты 2FA)
 nano .env
 ```
 
@@ -90,17 +91,20 @@ php artisan optimize             # кеш конфигов/роутов/вью (
 
 ## Чек-лист «не забыть»
 
-- [ ] PHP **8.2+** выбран для сайта
+- [ ] PHP **8.3** выбран для сайта и CLI (версия CI и platform.php)
 - [ ] PHP-расширение **GD с поддержкой WebP** (для авто-оптимизации картинок). Если нет — сайт работает, но изображения не сжимаются в WebP (молча пропускается). Проверка: `php -r "var_dump(function_exists('imagewebp'));"`
 - [ ] Корень сайта = **`public`**
 - [ ] `.env`: `APP_ENV=production`, `APP_DEBUG=false`, `APP_KEY` заполнен, `APP_URL=https://домен`, `DB_*`, `SESSION_SECURE_COOKIE=true`, `ADMIN_EMAIL`/`ADMIN_PASSWORD`
-- [ ] `php artisan migrate --seed --force` (или импорт `otfk.sql`)
+- [ ] Индексация: `SEO_INDEXING=auto` (по умолчанию) открывает индекс только на `SEO_PRIMARY_HOST=otfk.od.ua`; тестовый хостинг получает `X-Robots-Tag: noindex, nofollow` автоматически. После запуска на основном домене проверить: `curl -sI https://otfk.od.ua/` без `X-Robots-Tag`, `/robots.txt` без `Disallow: /`
+- [ ] Для переноса существующего сайта: импорт актуального дампа БД и `php artisan migrate --force`; **без seed**. `migrate --seed --force` — только для пустого демо-окружения, затем требуется замена демо-контента
 - [ ] `php artisan storage:link` (фото из админки)
 - [ ] `php artisan filament:assets` (стили админки)
 - [ ] `public/build` залитий на сервер (автодеплоєм або вручну після `npm run build`)
 - [ ] права на запись: `chmod -R 775 storage bootstrap/cache` (если будут ошибки 500)
 
 ## Проверить после деплоя
+
+SEO smoke-проверка выполняется в `deploy.yml` автоматически, если заданы переменные репозитория (Settings → Secrets and variables → Actions → Variables): `SEO_SMOKE_BASE_URL` (например `https://just-test.shop`) и `SEO_SMOKE_EXPECT` (`closed` для тестового хостинга, `indexable` для otfk.od.ua — переключить в том же окне, когда снимается барьер). Вручную: `php artisan otfk:seo-smoke --base=https://otfk.od.ua --expect=indexable --check-redirects --sitemap-sample=10`; до переключения DNS — добавить `--resolve=otfk.od.ua:443:<IP нового сервера>`. Сразу после переключения: `curl -I http://otfk.od.ua/` и `https://www.otfk.od.ua/` — один 301 на `https://otfk.od.ua/` без цикла; при цикле включить «редирект на HTTPS» в панели хостинга и убрать HTTPS-правило из `public/.htaccess`.
 
 1. `https://домен/` — сайт, плитки, новости
 2. `https://домен/admin` — вход под `ADMIN_EMAIL` / `ADMIN_PASSWORD` из `.env` → сменить пароль в профиле, создать личные учётки сотрудников с ролью «Редактор» (`Налаштування → Користувачі`)
@@ -141,6 +145,19 @@ php artisan otfk:two-factor admin@домен --reset # скинути факто
 php artisan schedule:list
 php artisan otfk:backup
 ```
+
+## Карта старих адрес і журнал 404
+
+Старі адреси, що змінилися, переносяться таблицею `legacy_redirects`: редирект 301/308 на нову сторінку чи файл або 410 для свідомо видаленого. Масово — з CSV (колонки `source,target,code,note`; `target` — лише відносний шлях `/...`):
+
+```bash
+php artisan otfk:legacy-redirects storage/app/private/redirects.csv
+php artisan otfk:legacy-redirects storage/app/private/redirects.csv --apply
+```
+
+Перший запуск лише показує нові/змінені записи й конфлікти (жива адреса, відсутнє чи зовнішнє призначення, дублі, ланцюжки); `--apply` записує без конфліктних рядків і зберігає копію CSV та звіт у `storage/app/private/legacy-redirects/`. Повторний запуск ідемпотентний.
+
+CSV збирає `php artisan otfk:legacy-map --out=storage/app/private/legacy-map/map.csv --sitemap=https://otfk.od.ua/sitemap.xml --urls=gsc-pages.csv --scan-dir=<збережені сторінки старого сайту> --verify` (лише читання; запускати на хостингу, де лежать файли `storage`). Редактор розбирає `map.csv.unmapped.csv` (матеріал / 410 за затвердженим списком / 404) і `map.csv.conflicts.csv`, доповнює CSV, далі — dry-run і `--apply` командою вище. Точкові правки — «SEO → Редиректи старих адрес» в адмінці; адреси, за якими відвідувачі отримують 404, — «SEO → Журнал 404» (там же «Створити редирект»). Записи журналу без звернень понад 90 днів видаляє `model:prune` (через cron `schedule:run`). Файли, що фізично лежать у `public/`, Apache віддає без Laravel — для них редирект не спрацює.
 
 ## Файли старого сайту і переїзд на постійний хостинг
 

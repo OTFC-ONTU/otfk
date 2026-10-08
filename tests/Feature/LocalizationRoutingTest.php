@@ -27,10 +27,23 @@ class LocalizationRoutingTest extends TestCase
     }
 
     #[DataProvider('englishPages')]
-    public function test_english_routes_respond_without_being_indexed(string $path): void
+    public function test_english_routes_respond_with_per_page_indexing(string $path): void
     {
-        $this->get($path)->assertOk()->assertHeader('X-Robots-Tag', 'noindex, follow');
+        $response = $this->get($path)->assertOk();
         $this->assertSame('en', app()->getLocale());
+
+        // Розділи з перекладеним каркасом індексуються; пошук, RSS і CMS-сторінки
+        // без повного незастарілого перекладу — noindex, follow (EnglishIndexingTest).
+        $page = fn (string $slug) => Page::published()->where('slug', $slug)->first();
+        $indexed = match (strtok($path, '?')) {
+            '/en/poshuk', '/en/novyny/feed.xml' => false,
+            '/en/abituriyentu' => (bool) $page('abituriyentu')?->hasIndexableEnglishTranslation(),
+            '/en/kontakty' => ! filled($page('kontakty')?->body) || $page('kontakty')->hasIndexableEnglishTranslation(),
+            default => true,
+        };
+        $indexed
+            ? $response->assertHeaderMissing('X-Robots-Tag')
+            : $response->assertHeader('X-Robots-Tag', 'noindex, follow');
     }
 
     public function test_original_materials_and_shared_views_are_preserved(): void

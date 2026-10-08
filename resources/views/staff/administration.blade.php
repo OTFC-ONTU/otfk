@@ -1,5 +1,5 @@
 <x-layouts.app title="{{ __('public.administration') }}"
-               description="Керівництво Одеського технічного фахового коледжу ОНТУ: директор, заступники директора та завідувачі відділень.">
+               description="{{ __('feature.meta_administration_description') }}">
 
     @php
         $s = \App\Models\Setting::publicMap();

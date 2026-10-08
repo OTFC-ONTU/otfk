@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\DocumentCategory;
 use App\Models\Gallery;
 use App\Models\News;
+use App\Models\NewsCategory;
 use App\Models\Page;
 use App\Models\Specialty;
 use App\Support\LocalizedHtml;
@@ -21,6 +22,14 @@ class LocalizationNavigationTest extends TestCase
 
     public function test_switcher_preserves_material_query_and_active_language(): void
     {
+        // Невідома категорія і сторінка за межами пагінації дають 404 (SeoIndexingTest),
+        // тому фільтр отримує справжню категорію з двома сторінками новин.
+        $category = NewsCategory::create(['title' => 'Тест', 'slug' => 'test']);
+        foreach (range(1, 10) as $i) {
+            News::create(['title' => 'Новина фільтра '.$i, 'body' => '<p>Текст</p>', 'is_published' => true,
+                'category_id' => $category->id, 'published_at' => '2026-01-0'.min($i, 9).' 10:00:00']);
+        }
+
         $response = $this->get('/en/novyny?year=2026&category=test&page=2')->assertOk();
         $dom = new DOMDocument;
         @$dom->loadHTML($response->getContent());

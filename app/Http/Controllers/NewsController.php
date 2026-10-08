@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\MenuItem;
 use App\Models\News;
 use App\Models\NewsCategory;
+use App\Support\Seo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -18,10 +19,9 @@ class NewsController extends Controller
 
         $activeCategory = null;
         if ($slug = $request->query('category')) {
-            $activeCategory = NewsCategory::where('slug', $slug)->first();
-            if ($activeCategory) {
-                $query->where('category_id', $activeCategory->id);
-            }
+            // Невідома категорія — 404, а не дубль загальної стрічки.
+            $activeCategory = NewsCategory::where('slug', $slug)->firstOrFail();
+            $query->where('category_id', $activeCategory->id);
         }
 
         // Фільтр за роком (архів з 2014-го)
@@ -36,6 +36,8 @@ class NewsController extends Controller
             ->unique()->sortDesc()->values();
 
         $news = $query->paginate(9)->withQueryString();
+        // Сторінка за межами пагінації не індексується як порожній дубль.
+        abort_if($news->currentPage() > $news->lastPage(), 404);
 
         return view('news.index', compact('news', 'categories', 'activeCategory', 'years', 'activeYear'));
     }
@@ -43,14 +45,16 @@ class NewsController extends Controller
     public function show(Request $request, News $news)
     {
         // Чернетки бачать лише залогінені адміністратори (превʼю з адмінки).
-        abort_unless($news->is_published || auth()->check(), 404);
+        // Майбутні новини до дати публікації теж закриті, як і в списках.
+        abort_unless($news->isPubliclyVisible() || auth()->check(), 404);
 
         $news->loadMissing('category');
+        Seo::translation($news);
 
         // Чесний лічильник: +1 лише раз за сесію відвідувача (не накручується F5);
         // превʼю чернетки перегляди не накручує.
-        if ($news->is_published && ! $request->session()->has("viewed_news.{$news->id}")) {
-            $news->increment('views');
+        if ($news->isPubliclyVisible() && ! $request->session()->has("viewed_news.{$news->id}")) {
+            $news->incrementCounterQuietly('views');
             $request->session()->put("viewed_news.{$news->id}", true);
         }
 
@@ -120,7 +124,7 @@ class NewsController extends Controller
     /** Вподобайка без реєстрації: один лайк на відвідувача, повторний клік знімає. */
     public function like(Request $request, News $news)
     {
-        abort_unless($news->is_published, 404);
+        abort_unless($news->isPubliclyVisible(), 404);
 
         $fp = $this->fingerprint($request);
 
@@ -128,11 +132,12 @@ class NewsController extends Controller
 
         if ($existing) {
             $existing->delete();
-            $news->where('id', $news->id)->where('likes', '>', 0)->decrement('likes');
+            // Запит повз Eloquent-builder: лічильник не змінює updated_at (lastmod у sitemap).
+            News::whereKey($news->id)->where('likes', '>', 0)->toBase()->decrement('likes');
             $liked = false;
         } else {
             $news->likeRecords()->create(['fingerprint' => $fp]);
-            $news->increment('likes');
+            $news->incrementCounterQuietly('likes');
             $liked = true;
         }
 

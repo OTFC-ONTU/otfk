@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Casts\SafeHtml;
+use App\Models\Concerns\FlushesSitemap;
 use App\Models\Concerns\HasEnglishTranslation;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,6 +11,7 @@ use Illuminate\Support\Str;
 
 class Department extends Model
 {
+    use FlushesSitemap;
     use HasEnglishTranslation;
 
     public const TYPES = [

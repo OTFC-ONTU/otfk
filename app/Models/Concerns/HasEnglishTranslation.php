@@ -114,6 +114,23 @@ trait HasEnglishTranslation
             && $this->translation_source_hash !== $this->currentTranslationSourceHash();
     }
 
+    /**
+     * Чи індексується англійська версія сторінки матеріалу (App\Support\Seo):
+     * повний опублікований переклад, оригінал після нього не змінювався.
+     */
+    public function hasIndexableEnglishTranslation(): bool
+    {
+        return $this->hasPublishedEnglishTranslation() && ! $this->translationIsStale();
+    }
+
+    /** Колонки, потрібні для перевірки перекладу без завантаження всього запису (sitemap). */
+    public function translationColumns(): array
+    {
+        $source = $this->translationSourceFields();
+
+        return array_merge($source, array_map(fn ($field) => $field.'_en', $source), ['translation_published', 'translation_source_hash']);
+    }
+
     /** Переклад обирається для всього матеріалу, без змішування полів двох мов. */
     public function localized(string $field): ?string
     {

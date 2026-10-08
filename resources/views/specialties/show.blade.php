@@ -1,4 +1,5 @@
-<x-layouts.app :title="$specialty->localized('title')" :description="$specialty->localized('short_description')"
+<x-layouts.app :title="__('feature.meta_specialty_title', ['title' => $specialty->localized('title')])"
+               :description="\App\Support\MetaText::from($specialty->localized('short_description'), $specialty->localized('description'), __('feature.meta_specialty_description', ['title' => $specialty->localized('title')]))"
                :og-image="$specialty->cover_image ? asset('storage/' . $specialty->cover_image) : null">
 
     @if (! empty($adminPreview))
@@ -16,7 +17,7 @@
             'description' => $specialty->localized('short_description') ?: __('feature.specialty_schema', ['title' => $specialty->localized('title'), 'brand' => \App\Models\Setting::publicGet('brand_name') ?: __('layout.brand_name')]),
             'courseCode' => $specialty->code,
             'url' => \App\Support\LocalizedUrl::route('specialties.show', $specialty),
-            'provider' => ['@type' => 'CollegeOrUniversity', 'name' => config('app.name'), 'url' => \App\Support\LocalizedUrl::to('/')],
+            'provider' => ['@type' => 'CollegeOrUniversity', '@id' => \App\Support\StructuredData::organizationId(), 'name' => \App\Support\StructuredData::siteName(), 'url' => url('/')],
         ]);
 
         $facts = array_filter([
@@ -80,7 +81,7 @@
     <section class="container-site grid gap-10 py-12 lg:grid-cols-12">
         <div class="lg:col-span-8">
             @if ($specialty->cover_image)
-                <x-picture :path="$specialty->cover_image" :alt="$specialty->localized('title')" loading="lazy" decoding="async" class="mb-8 w-full rounded-2xl object-cover" />
+                <x-picture :path="$specialty->cover_image" :alt="$specialty->localized('title')" sized decoding="async" class="mb-8 w-full rounded-2xl object-cover" />
             @endif
 
             {{-- «Про спеціальність»: короткий опис винесено в помітну картку над основним текстом --}}
@@ -100,7 +101,7 @@
                 <div @class([
                     'prose prose-slate max-w-none prose-headings:font-display prose-a:text-brand-700',
                     'mt-8' => filled($specialty->localized('short_description')),
-                ])>{!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($specialty->localized('description')))) !!}</div>
+                ])>{!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($specialty->localized('description')))), false) !!}</div>
             @endif
 
             {{-- Освітні програми --}}
@@ -115,6 +116,37 @@
                     </ul>
                 </div>
             @endif
+
+            {{-- Наступний крок шляху «спеціальність → умови вступу → контакти» (docs/seo-plan.md, етап 2) --}}
+            <nav class="mt-10" aria-labelledby="specialty-next-step" data-next-step>
+                <h2 id="specialty-next-step" class="text-xl font-bold text-slate-900">{{ __('feature.specialty_next_step') }}</h2>
+                <div class="accent-rule"></div>
+                <p class="mt-4 text-slate-600">{{ __('feature.specialty_next_step_text') }}</p>
+                <ol class="mt-5 grid gap-4 sm:grid-cols-2">
+                    <li>
+                        <a href="{{ \App\Support\LocalizedUrl::to('/abituriyentu') }}" class="card group flex h-full gap-3 p-5 transition hover:ring-brand-300">
+                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-50 text-brand-700">
+                                <x-ico name="academic-cap" class="h-5 w-5" aria-hidden="true" />
+                            </span>
+                            <span>
+                                <span class="block font-semibold text-slate-900 group-hover:text-brand-700">{{ __('feature.specialty_next_admission') }}</span>
+                                <span class="mt-1 block text-sm text-slate-600">{{ __('feature.specialty_next_admission_text') }}</span>
+                            </span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ \App\Support\LocalizedUrl::route('contacts') }}" class="card group flex h-full gap-3 p-5 transition hover:ring-brand-300">
+                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-50 text-brand-700">
+                                <x-ico name="map-pin" class="h-5 w-5" aria-hidden="true" />
+                            </span>
+                            <span>
+                                <span class="block font-semibold text-slate-900 group-hover:text-brand-700">{{ __('feature.specialty_next_contacts') }}</span>
+                                <span class="mt-1 block text-sm text-slate-600">{{ __('feature.specialty_next_contacts_text') }}</span>
+                            </span>
+                        </a>
+                    </li>
+                </ol>
+            </nav>
 
             {{-- Золота смуга з виходом на приймальну комісію --}}
             <div class="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-gold-50 px-6 py-5 ring-1 ring-gold-200/80">

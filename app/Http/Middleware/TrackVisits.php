@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\SiteVisit;
+use App\Support\Seo;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -43,6 +44,12 @@ class TrackVisits
     private function shouldTrack(Request $request, Response $response): bool
     {
         if (! $request->isMethod('GET') || $response->getStatusCode() !== 200) {
+            return false;
+        }
+
+        // Рахуємо лише справжніх відвідувачів основного домену: персонал, що
+        // увійшов до адмінки, і тестовий хостинг/локальні копії не враховуються.
+        if (auth()->check() || ! Seo::indexable($request)) {
             return false;
         }
 

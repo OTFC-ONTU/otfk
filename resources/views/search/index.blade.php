@@ -1,5 +1,6 @@
 <x-layouts.app :title="$q !== '' ? __('feature.search_title', ['query' => $q]) : __('public.site_search')"
-               description="{{ __('feature.search_news_pages_specialties_documents_and_events_2') }}">
+               description="{{ __('feature.search_news_pages_specialties_documents_and_events_2') }}"
+               robots="noindex, follow">
 
     @php
         $s = \App\Models\Setting::publicMap();

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DocumentCategory;
+use App\Support\Seo;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -30,6 +31,7 @@ class DocumentController extends Controller
         // а документів у категорії щонайбільше кілька сотень.
         $search = trim((string) $request->query('q', ''));
 
+        Seo::translation($documentCategory);
         $all = $documentCategory->documents()->published()->get();
         $totalCount = $all->count();
 

@@ -84,3 +84,31 @@ jobs:
             php artisan route:cache
             php artisan view:cache
           '
+
+      # HTTP smoke-перевірка SEO вже викладеного сайту ззовні, з раннера
+      # (docs/seo-plan.md, етап 1): статуси ключових сторінок, noindex/canonical,
+      # robots.txt, sitemap.xml, 404. Параметри — змінні репозиторію:
+      # SEO_SMOKE_BASE_URL (без неї крок пропускається з попередженням) і
+      # SEO_SMOKE_EXPECT (closed для тестового хостингу — типово, indexable
+      # для otfk.od.ua). Провал робить запуск червоним, але викладку не відкочує.
+      - name: SEO smoke check skipped
+        if: ${{ vars.SEO_SMOKE_BASE_URL == '' }}
+        run: echo "::notice title=SEO smoke::Змінна SEO_SMOKE_BASE_URL не задана — HTTP-перевірку пропущено."
+
+      - uses: shivammathur/setup-php@v2
+        if: ${{ vars.SEO_SMOKE_BASE_URL != '' }}
+        with:
+          php-version: '8.3'
+          extensions: mbstring, curl, dom, libxml, intl, fileinfo
+          coverage: none
+
+      - name: SEO smoke check
+        if: ${{ vars.SEO_SMOKE_BASE_URL != '' }}
+        env:
+          SEO_SMOKE_BASE_URL: ${{ vars.SEO_SMOKE_BASE_URL }}
+          SEO_SMOKE_EXPECT: ${{ vars.SEO_SMOKE_EXPECT || 'closed' }}
+        run: |
+          composer install --no-dev --no-interaction --prefer-dist --no-progress
+          cp .env.example .env
+          php artisan key:generate
+          php artisan otfk:seo-smoke --base="$SEO_SMOKE_BASE_URL" --expect="$SEO_SMOKE_EXPECT" --sitemap-sample=5 --timeout=20 --retries=3 --retry-delay=3000

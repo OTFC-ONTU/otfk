@@ -12,7 +12,7 @@
 <section class="container-site py-10 lg:py-14">
 
     @if ($page->cover_image)
-        <x-picture :path="$page->cover_image" :alt="$page->localized('title')" loading="lazy" decoding="async"
+        <x-picture :path="$page->cover_image" :alt="$page->localized('title')" sized decoding="async"
                    class="mb-8 max-h-80 w-full rounded-2xl object-cover" />
     @endif
 
@@ -117,7 +117,7 @@
                     <h2 class="text-2xl font-extrabold text-brand-950">{{ __('feature.about_this_section') }}</h2>
                     <div class="accent-rule"></div>
                     <x-prose.article :drop-cap="false" class="mt-6 !max-w-none">
-                        {!! \App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->publicBody()))) !!}
+                        {!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->publicBody()))), ! $page->cover_image) !!}
                     </x-prose.article>
                 </div>
             @endif
