@@ -147,4 +147,28 @@ class LegacyContentParityTest extends TestCase
 
         $this->assertStringContainsString('file-card', $html);
     }
+
+    public function test_document_category_with_section_page_shows_page_content(): void
+    {
+        $category = DocumentCategory::create(['title' => 'Моніторинг показників якості освіти', 'slug' => 'monitorynh-test']);
+        $this->get('/dokumenty/monitorynh-test')->assertOk()->assertSee(__('public.no_documents'));
+
+        $page = Page::create([
+            'title' => 'Моніторинг показників якості освіти', 'slug' => 'monitorynh-page-test', 'is_published' => true,
+            'body' => '<p><strong>РЕЗУЛЬТАТИ УСПІШНОСТІ ЗДОБУВАЧІВ ОСВІТИ ЗА 2024-2025 н.р.</strong></p>'
+                .'<p><img src="/storage/mirror/otfk.od.ua/public_information/monitoring/img/1.jpg" alt="" /></p>'
+                .'<p><a href="/storage/mirror/otfk.od.ua/public_information/monitoring/files/report.pdf">Звіт моніторингу</a></p>',
+        ]);
+        $category->update(['page_id' => $page->id]);
+
+        $html = $this->get('/dokumenty/monitorynh-test')->assertOk()
+            ->assertSee('РЕЗУЛЬТАТИ УСПІШНОСТІ ЗДОБУВАЧІВ ОСВІТИ ЗА 2024-2025 н.р.')
+            ->assertSee('/storage/mirror/otfk.od.ua/public_information/monitoring/img/1.jpg', false)
+            ->assertDontSee(__('public.no_documents'))
+            ->getContent();
+        $this->assertStringContainsString('file-card', $html);
+
+        $page->update(['is_published' => false]);
+        $this->get('/dokumenty/monitorynh-test')->assertOk()->assertSee(__('public.no_documents'));
+    }
 }

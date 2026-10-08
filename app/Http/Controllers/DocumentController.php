@@ -60,6 +60,8 @@ class DocumentController extends Controller
             'categories' => $categories,
             'search' => $search,
             'totalCount' => $totalCount,
+            // Повний текст розділу як на оригіналі (таблиці, зображення, підзаголовки) — з прив'язаної CMS-сторінки
+            'sectionPage' => $documentCategory->sectionPage(),
         ]);
     }
 }
