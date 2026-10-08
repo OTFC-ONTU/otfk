@@ -146,14 +146,19 @@ class PageVariantsTest extends TestCase
             ->assertDontSee('Навігація по сторінці');
     }
 
-    public function test_every_variant_ends_with_the_same_call_to_action(): void
+    public function test_content_pages_end_with_call_to_action_and_hub_shows_it_once(): void
     {
         $this->hubWithChildren(3);
 
-        foreach (['/testovyy-rozdil', '/dochirnya-storinka-1'] as $uri) {
-            $this->get($uri)
-                ->assertOk()
-                ->assertSee('Не знайшли потрібну інформацію?');
-        }
+        $this->get('/dochirnya-storinka-1')
+            ->assertOk()
+            ->assertSee('Не знайшли потрібну інформацію?');
+
+        // Хаб: лише контактна картка сайдбару (з FAQ), без дубля фінальної смуги
+        $this->get('/testovyy-rozdil')
+            ->assertOk()
+            ->assertSee('Не знайшли потрібну сторінку?')
+            ->assertSee('Часті запитання')
+            ->assertDontSee('Не знайшли потрібну інформацію?');
     }
 }

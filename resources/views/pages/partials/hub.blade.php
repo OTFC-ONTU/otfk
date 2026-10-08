@@ -123,7 +123,8 @@
             @endif
         </div>
 
-        {{-- Сайдбар розділу: короткий опис зі сторінки + прямий контакт --}}
+        {{-- Сайдбар розділу: короткий опис зі сторінки + прямий контакт.
+             Картка замінює на хабі спільну фінальну смугу (show.blade.php), щоб на мобільному не було двох однакових закликів поспіль. --}}
         <aside class="space-y-6 lg:sticky lg:top-24 lg:self-start">
             @if (filled($page->publicBody()) && ! $bodyIsLong)
                 <div class="card p-6">
@@ -173,6 +174,9 @@
                 <div class="mt-6 space-y-3">
                     <a href="{{ \App\Support\LocalizedUrl::route('contacts') }}" class="btn-primary w-full">
                         {{ __('feature.college_contacts') }} <x-ico name="arrow-right" class="h-4 w-4" />
+                    </a>
+                    <a href="{{ \App\Support\LocalizedUrl::route('faq') }}" class="btn-outline w-full">
+                        {{ __('feature.frequently_asked_questions') }} <x-ico name="arrow-right" class="h-4 w-4" />
                     </a>
                 </div>
             </div>

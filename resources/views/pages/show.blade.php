@@ -158,7 +158,8 @@
         @include('pages.partials.content')
     @endif
 
-    {{-- Спільна фінальна смуга — однакова для всіх трьох варіантів шаблону --}}
+    {{-- Спільна фінальна смуга для сторінок-матеріалів; на хабі її роль виконує контактна картка сайдбару --}}
+    @unless ($isHub)
     <section class="border-t border-slate-200/70 bg-slate-50/60">
         <div class="container-site py-12">
             <div class="relative overflow-hidden rounded-2xl bg-brand-950 px-6 py-8 sm:px-10">
@@ -183,5 +184,6 @@
             </div>
         </div>
     </section>
+    @endunless
 
 </x-layouts.app>
