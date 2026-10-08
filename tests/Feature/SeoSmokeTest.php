@@ -254,6 +254,30 @@ class SeoSmokeTest extends TestCase
         $this->assertTrue($storage < $www && $www < $slash);
     }
 
+    public function test_htaccess_redirects_index_php_prefix_to_clean_path(): void
+    {
+        $htaccess = file_get_contents(public_path('.htaccess'));
+        $cond = 'RewriteCond %{THE_REQUEST} ^[A-Z]+\s/index\.php(?:/([^\s?]*))?[\s?]';
+        $rule = 'RewriteRule ^ /%1 [L,R=301,NE]';
+
+        // Корінь і префікс /index.php/<шлях> за вихідним запитом (без циклу після переписування).
+        $this->assertMatchesRegularExpression('~'.preg_quote($cond, '~').'\n\s*'.preg_quote($rule, '~').'~', $htaccess);
+        $pattern = '~'.substr($cond, strlen('RewriteCond %{THE_REQUEST} ')).'~';
+        $this->assertSame(1, preg_match($pattern, 'GET /index.php HTTP/1.1', $m));
+        $this->assertSame('', $m[1] ?? '');
+        $this->assertSame(1, preg_match($pattern, 'GET /index.php/spetsialnosti?page=2 HTTP/1.1', $m));
+        $this->assertSame('spetsialnosti', $m[1]);
+        $this->assertSame(0, preg_match($pattern, 'GET /structure/index.php HTTP/1.1'));
+        $this->assertSame(0, preg_match($pattern, 'GET /index.phpx HTTP/1.1'));
+        $this->assertSame(0, preg_match($pattern, 'GET / HTTP/1.1'));
+
+        // Після захисту /storage і прапорця старого сайту, до фронт-контролера.
+        $at = strpos($htaccess, $rule);
+        $this->assertTrue(strpos($htaccess, 'RewriteRule ^storage/') < $at);
+        $this->assertTrue(strpos($htaccess, 'E=OTFK_LEGACY:1') < $at);
+        $this->assertTrue($at < strpos($htaccess, 'RewriteRule ^ index.php [L]'));
+    }
+
     public function test_english_paths_and_reciprocal_hreflang_are_checked(): void
     {
         $set = fn (string $en) => '<link rel="alternate" hreflang="uk" href="'.self::BASE.'"><link rel="alternate" hreflang="en" href="'.$en.'">'

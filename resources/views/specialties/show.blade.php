@@ -17,7 +17,7 @@
             'description' => $specialty->localized('short_description') ?: __('feature.specialty_schema', ['title' => $specialty->localized('title'), 'brand' => \App\Models\Setting::publicGet('brand_name') ?: __('layout.brand_name')]),
             'courseCode' => $specialty->code,
             'url' => \App\Support\LocalizedUrl::route('specialties.show', $specialty),
-            'provider' => ['@type' => 'CollegeOrUniversity', '@id' => \App\Support\StructuredData::organizationId(), 'name' => \App\Support\StructuredData::siteName(), 'url' => url('/')],
+            'provider' => \App\Support\StructuredData::reference(),
         ]);
 
         $facts = array_filter([
