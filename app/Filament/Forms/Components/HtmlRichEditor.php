@@ -47,6 +47,9 @@ class HtmlRichEditor extends RichEditor
 
         $this->plugins([EmbedPlugin::make()]);
 
+        // Розмір зображення — перетягуванням кутика (width/height зберігаються, пропорції — так само)
+        $this->resizableImages();
+
         $this->hint(fn (self $component): ?HtmlString => $component->isDisabled()
             ? null
             : new HtmlString(view('filament.forms.components.html-rich-editor-toggle')->render()));

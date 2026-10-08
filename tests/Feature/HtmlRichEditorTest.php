@@ -20,6 +20,11 @@ class HtmlRichEditorTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_images_are_resizable(): void
+    {
+        $this->assertTrue(HtmlRichEditor::make('body')->hasResizableImages());
+    }
+
     public function test_lossy_markup_is_detected(): void
     {
         $this->assertFalse(HtmlRichEditor::isLossy('<p>Текст із <strong>жирним</strong> і <a href="/novyny" target="_blank">посиланням</a>.</p><ul><li>Пункт</li></ul>'));
@@ -53,6 +58,10 @@ class HtmlRichEditorTest extends TestCase
             ->assertSeeHtml('otfk-html-tools')
             ->assertSeeHtml('insertDetails()')
             ->assertSeeHtml('sectionsToDetails()')
+            // Обгортку шукаємо від елемента події: $root/$refs із кнопки перемикача вказують на інший x-data
+            ->assertSeeHtml("closest('.otfk-html-rich-editor')")
+            ->assertSeeHtml('data-otfk-code')
+            ->assertDontSeeHtml('$root')
             ->assertSet('data.body', $stored)
             ->call('save')
             ->assertHasNoFormErrors();

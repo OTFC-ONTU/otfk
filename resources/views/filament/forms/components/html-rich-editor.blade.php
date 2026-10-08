@@ -15,8 +15,11 @@
             html: $wire.$entangle(@js($statePath), false),
             source: '',
             markers: [],
-            {{-- Зміни TipTap приймаються в стан лише після дії користувача у візуальному редакторі --}}
-            touched: false,
+            {{-- Документ TipTap одразу після завантаження тексту (нормалізований HTML): зміна стану, що не відрізняється
+                 від нього, — службова нормалізація TipTap, а не правка користувача --}}
+            baseline: null,
+            {{-- Користувач погодився на спрощення «lossy»-тексту у візуальному режимі --}}
+            confirmed: false,
             get lossy() {
                 return new RegExp(@js(HtmlRichEditor::LOSSY), 'i').test(this.source ?? '')
             },
@@ -26,14 +29,40 @@
             timer: null,
             init() {
                 this.remember(this.html)
+                this.whenEditor((editor) => { this.baseline = this.normalized(editor) })
                 this.$watch('html', (value) => {
                     if (typeof value === 'string' || value === null) {
                         this.remember(value)
                         return
                     }
-                    {{-- TipTap сам змінив документ (нормалізація, службовий вузол) — повертаємо незмінений HTML --}}
-                    if (this.mode !== 'visual' || ! this.touched) this.write(this.source)
+                    const editor = this.rich()?.getEditor()
+                    {{-- Документ не змінився по суті (лише нормалізація TipTap) — лишаємо вихідний HTML без змін --}}
+                    if (this.mode !== 'visual' || ! editor || this.baseline === null || this.normalized(editor) === this.baseline) {
+                        this.write(this.source)
+                        return
+                    }
+                    {{-- Справжня правка будь-яким способом (клавіатура, панель, перетягування, розмір зображення) --}}
+                    if (this.lossy && ! this.confirmed) {
+                        if (! confirm(this.lossyMessage)) {
+                            editor.commands.setContent(this.source, { emitUpdate: false })
+                            this.write(this.source)
+                            this.setMode('html')
+                            return
+                        }
+                        this.confirmed = true
+                    }
                 })
+            },
+            lossyMessage: @js('Візуальний редактор спростить оформлення (class/style), ширини таблиць, якорі (id) і службові коментарі цього тексту. Редагувати тут усе одно? «Скасувати» — перейти до режиму HTML.'),
+            whenEditor(callback, attempts = 100) {
+                const editor = this.rich()?.getEditor()
+                if (editor) return callback(editor)
+                if (attempts > 0) setTimeout(() => this.whenEditor(callback, attempts - 1), 100)
+            },
+            {{-- HTML документа TipTap без службової розмітки й порожніх абзаців у кінці (TrailingNode) --}}
+            normalized(editor) {
+                const html = editor.getHTML()
+                return (window.otfkHtmlEditor?.cleanEditorHtml(html) ?? html).replace(/(?:<p><\/p>)+$/, '').trim()
             },
             remember(value) {
                 if (typeof value !== 'string' && value !== null) return
@@ -41,10 +70,19 @@
                 const found = this.source.match(/<!--imported-from:[^>]*-->/g) ?? []
                 this.markers = [...new Set([...this.markers, ...found])]
             },
+            {{-- Обгортка поля: $root/$refs з кнопки перемикача в підказці вказують на інший x-data (обгортку поля Filament) --}}
+            root() {
+                return this.$el.closest('.otfk-html-rich-editor')
+            },
+            code() {
+                return this.root()?.querySelector('.otfk-html-source [data-otfk-code]')
+            },
             {{-- Компонент RichEditor усередині поля (Alpine-дані richEditorFormComponent) --}}
             rich() {
-                const el = this.$root.querySelector('[x-data^=richEditorFormComponent]')
-                return el && window.Alpine ? window.Alpine.$data(el) : null
+                const el = this.root()?.querySelector('[x-data^=richEditorFormComponent]')
+                const data = el && window.Alpine ? window.Alpine.$data(el) : null
+                {{-- До ініціалізації (x-load) $data повертає дані батьківського компонента — тобто цієї обгортки --}}
+                return typeof data?.getEditor === 'function' ? data : null
             },
             {{-- Запис рядка в стан без повторного завантаження в TipTap (інакше він одразу поверне нормалізований документ) --}}
             write(value) {
@@ -71,15 +109,17 @@
                     this.$nextTick(() => this.showCode())
                 } else {
                     this.mode = 'visual'
-                    this.rich()?.getEditor()?.commands.setContent(this.source, { emitUpdate: false })
+                    const editor = this.rich()?.getEditor()
+                    editor?.commands.setContent(this.source, { emitUpdate: false })
+                    this.baseline = editor ? this.normalized(editor) : null
                 }
-                this.touched = false
+                this.confirmed = false
             },
             async showCode() {
                 const tools = window.otfkHtmlEditor
                 if (! tools) return
                 const text = tools.formatHtml(this.source)
-                const holder = this.$refs.code
+                const holder = this.code()
                 if (holder._otfkEditor) {
                     holder._otfkEditor.setDoc(text)
                     return
@@ -98,11 +138,11 @@
             {{-- Розгортні блоки (resources/js/admin/html-sections.js): вставка та розділи за заголовками --}}
             insertDetails() {
                 const tools = window.otfkHtmlEditor
-                tools && this.$refs.code._otfkEditor?.replaceSelection((selected) => tools.formatHtml(tools.detailsSnippet(selected)).trimEnd())
+                tools && this.code()._otfkEditor?.replaceSelection((selected) => tools.formatHtml(tools.detailsSnippet(selected)).trimEnd())
             },
             sectionsToDetails() {
                 const tools = window.otfkHtmlEditor
-                const editor = this.$refs.code._otfkEditor
+                const editor = this.code()._otfkEditor
                 if (! tools || ! editor) return
                 const { html, count } = tools.headingsToDetails(editor.getDoc())
                 if (! count) {
@@ -131,15 +171,16 @@
                 if ((event.metaKey || event.ctrlKey) && ['c', 'a', 'f'].includes(key.toLowerCase())) return
                 this.touch(event)
             },
+            {{-- Для «lossy»-тексту підтвердження ще до першої дії, щоб правку можна було не почати --}}
             touch(event) {
-                if (this.mode !== 'visual' || this.touched) return
-                if (this.lossy && ! confirm(@js('Візуальний редактор спростить вбудовані фрейми, оформлення (class/style), ширини таблиць і службові коментарі цього тексту. Редагувати тут усе одно? «Скасувати» — перейти до режиму HTML.'))) {
+                if (this.mode !== 'visual' || this.confirmed || ! this.lossy) return
+                if (! confirm(this.lossyMessage)) {
                     event.preventDefault()
                     event.stopImmediatePropagation()
                     this.setMode('html')
                     return
                 }
-                this.touched = true
+                this.confirmed = true
             },
         }"
         x-on:keydown.capture="if ($event.target.closest('.fi-fo-rich-editor-content')) keyTouch($event)"
@@ -155,7 +196,7 @@
         {!! $field->toEmbeddedHtml() !!}
 
         <p x-show="mode === 'visual' && lossy" x-cloak class="otfk-lossy-note">
-            Текст містить вбудовані фрейми, імпортоване оформлення (class/style), ширини таблиць або службові коментарі,
+            Текст містить імпортоване оформлення (class/style), ширини таблиць, якорі (id) або службові коментарі,
             яких візуальний редактор не зберігає: правки тут їх спростять. Для таких текстів користуйтеся режимом HTML.
         </p>
 
@@ -164,7 +205,7 @@
                 <button type="button" x-on:click="insertDetails()" title="Вставити розгортний блок; виділений HTML стане його вмістом, заголовок на початку виділення — підписом">+ Розгортний блок</button>
                 <button type="button" x-on:click="sectionsToDetails()" title="Кожен заголовок найвищого рівня разом із вмістом під ним стане окремим розгортним блоком">Розділи → розгортні блоки</button>
             </div>
-            <div x-ref="code"></div>
+            <div data-otfk-code></div>
             <textarea x-show="! codeReady"
                 x-bind:value="source"
                 x-on:change="write($event.target.value)"
