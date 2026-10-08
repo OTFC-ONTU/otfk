@@ -254,6 +254,21 @@ class SeoSmokeTest extends TestCase
         $this->assertTrue($storage < $www && $www < $slash);
     }
 
+    public function test_htaccess_redirects_root_index_php_to_home(): void
+    {
+        $htaccess = file_get_contents(public_path('.htaccess'));
+
+        // Лише точний /index.php у вихідному запиті (THE_REQUEST — без циклу після
+        // внутрішнього переписування), query зберігається Apache автоматично.
+        $this->assertMatchesRegularExpression('~RewriteCond %\{THE_REQUEST\} \^\[A-Z\]\+\\\\s/index\\\\\.php\(\?:\\\\\?\\\\S\*\)\?\\\\s\n\s*RewriteRule \^index\\\\\.php\$ / \[L,R=301\]~', $htaccess);
+
+        // Після захисту /storage і прапорця старого сайту, до фронт-контролера.
+        $rule = strpos($htaccess, 'RewriteRule ^index\.php$ /');
+        $this->assertTrue(strpos($htaccess, 'RewriteRule ^storage/') < $rule);
+        $this->assertTrue(strpos($htaccess, 'E=OTFK_LEGACY:1') < $rule);
+        $this->assertTrue($rule < strpos($htaccess, 'RewriteRule ^ index.php [L]'));
+    }
+
     public function test_english_paths_and_reciprocal_hreflang_are_checked(): void
     {
         $set = fn (string $en) => '<link rel="alternate" hreflang="uk" href="'.self::BASE.'"><link rel="alternate" hreflang="en" href="'.$en.'">'

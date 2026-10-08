@@ -106,6 +106,12 @@ php artisan optimize             # кеш конфигов/роутов/вью (
 
 SEO smoke-проверка выполняется в `deploy.yml` автоматически, если заданы переменные репозитория (Settings → Secrets and variables → Actions → Variables): `SEO_SMOKE_BASE_URL` (например `https://just-test.shop`) и `SEO_SMOKE_EXPECT` (`closed` для тестового хостинга, `indexable` для otfk.od.ua — переключить в том же окне, когда снимается барьер). Вручную: `php artisan otfk:seo-smoke --base=https://otfk.od.ua --expect=indexable --check-redirects --sitemap-sample=10`; до переключения DNS — добавить `--resolve=otfk.od.ua:443:<IP нового сервера>`. Сразу после переключения: `curl -I http://otfk.od.ua/` и `https://www.otfk.od.ua/` — один 301 на `https://otfk.od.ua/` без цикла; при цикле включить «редирект на HTTPS» в панели хостинга и убрать HTTPS-правило из `public/.htaccess`.
 
+После переключения домена дополнительно:
+
+- [ ] Настройка панели хостинга «принудительный HTTPS» на vhost otfk.od.ua: если панель редиректит на https раньше `.htaccess` (так на just-test.shop), старые ссылки `http://otfk.od.ua/news/…/` проходят 2 перехода (панель → https, затем Laravel → новая адрес). Для одного 301 — выключить её и оставить HTTPS-правило `public/.htaccess` (проверить отсутствие цикла).
+- [ ] `curl -I https://otfk.od.ua/index.php` — один 301 на `/` (правило `public/.htaccess`).
+- [ ] Убрать тестовый GA4 ID `G-TEST000000` (`php storage/app/private/privacy-2026-10-08/set_test_ga_id.php --remove` на копии с тестовой БД или очистить поле в «SEO → Розмітка та аналітика») и только потом вписать настоящий ID.
+
 1. `https://домен/` — сайт, плитки, новости
 2. `https://домен/admin` — вход под `ADMIN_EMAIL` / `ADMIN_PASSWORD` из `.env` → сменить пароль в профиле, создать личные учётки сотрудников с ролью «Редактор» (`Налаштування → Користувачі`)
 4. Чек-лист безопасности после деплоя — раздел 6 [`docs/security-audit.md`](docs/security-audit.md): заголовки на `/admin/login`, проба `storage/app/public/_probe.php` → 403, журнал `storage/logs/security-*.log`; затем `php artisan otfk:sanitize-content` (отчёт) и `php artisan otfk:sanitize-content --apply` (очистка старого HTML с бэкапом)

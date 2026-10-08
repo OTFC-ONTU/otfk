@@ -170,7 +170,8 @@ class LegacyRedirects
     /**
      * Старі посилання http:// і www. основного домену .htaccess пропускає до Laravel
      * (розділи старого сайту), тож редирект одразу веде на https без www — один перехід.
-     * Інші домени (тестовий хостинг, localhost) отримують відносну адресу як раніше.
+     * Для інших доменів (тестовий хостинг, localhost) повертаємо відносну адресу, а
+     * redirect()->to() доповнює її поточними схемою і хостом запиту (Location абсолютний).
      */
     private static function absoluteTarget(Request $request, string $target): string
     {

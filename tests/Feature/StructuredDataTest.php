@@ -6,6 +6,7 @@ use App\Filament\Pages\SeoSettings;
 use App\Models\Banner;
 use App\Models\News;
 use App\Models\Setting;
+use App\Models\Specialty;
 use App\Models\User;
 use App\Support\LazyMedia;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -70,6 +71,21 @@ class StructuredDataTest extends TestCase
         // Англійська версія — місто англійською
         $en = $this->ldOfType($this->get('/en')->assertOk()->getContent(), 'EducationalOrganization');
         $this->assertSame('Odesa', $en['address']['addressLocality']);
+    }
+
+    public function test_course_provider_references_the_same_organization_node(): void
+    {
+        $specialty = Specialty::create(['title' => 'Спеціальність для розмітки', 'slug' => 'course-ld', 'code' => '121', 'is_published' => true]);
+
+        $html = $this->get('/spetsialnosti/'.$specialty->slug)->assertOk()->getContent();
+        $org = $this->ldOfType($html, 'EducationalOrganization');
+        $provider = $this->ldOfType($html, 'Course')['provider'];
+
+        // Той самий вузол: однаковий @id і тип, name/url — для валідаторів без зведення за @id.
+        $this->assertSame($org['@id'], $provider['@id']);
+        $this->assertSame($org['@type'], $provider['@type']);
+        $this->assertSame($org['name'], $provider['name']);
+        $this->assertSame($org['url'], $provider['url']);
     }
 
     public function test_organization_outputs_alternate_names_and_same_as_when_set(): void
