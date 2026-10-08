@@ -13,7 +13,7 @@ use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Actions\EditAction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use App\Filament\Support\SafeDeleteAction;
 use App\Filament\Resources\SpecialtyResource\Pages\ListSpecialties;
 use App\Filament\Resources\SpecialtyResource\Pages\CreateSpecialty;
 use App\Filament\Resources\SpecialtyResource\Pages\EditSpecialty;
@@ -52,7 +52,7 @@ class SpecialtyResource extends Resource
                     ->helperText('Офіційний код спеціальності — бейдж на картці.'),
                 TextInput::make('slug')->label('URL (slug)')->maxLength(255)
                     ->prefix(url('/spetsialnosti') . '/')
-                    ->helperText('Залиште порожнім - згенерується автоматично.'),
+                    ->helperText(fn ($record): string => $record?->wasPublic() ? 'Після зміни стара адреса автоматично перенаправлятиме на нову (і на сайті, і в пошуку).' : 'Залиште порожнім - згенерується автоматично.'),
                 Textarea::make('short_description')->label('Короткий опис')->rows(2)->columnSpanFull()
                     ->helperText('1-2 речення в картці спеціальності у списку та в результаті квізу.'),
                 HtmlRichEditor::make('description')->label('Повний опис')->columnSpanFull()
@@ -91,7 +91,7 @@ class SpecialtyResource extends Resource
                 EditAction::make(),
                 ViewOnSite::table(fn (Specialty $record) => route('specialties.show', $record)),
             ])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk()])]);
     }
 
     public static function getRelations(): array

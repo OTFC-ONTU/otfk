@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\KeepsPublicUrls;
 use App\Models\Concerns\HasSortOrder;
 use App\Casts\SafeHtml;
 use App\Models\Concerns\FlushesSitemap;
@@ -15,6 +16,7 @@ use Illuminate\Support\Str;
 
 class Page extends Model
 {
+    use KeepsPublicUrls;
     use HasSortOrder;
     use FlushesSitemap;
     use HasEnglishTranslation;
@@ -186,5 +188,38 @@ class Page extends Model
                 $page->slug = Str::slug($page->title);
             }
         });
+
+        // Підсторінки видаленої сторінки лишаються в її розділі, а не стають сторінками верхнього рівня
+        static::deleting(function (Page $page): void {
+            static::query()->where('parent_id', $page->getKey())->update(['parent_id' => $page->parent_id]);
+        });
+    }
+
+    /**
+     * Адреси, на які спирається код сайту (шаблони, контролери): їх не можна змінити чи видалити
+     * в адмінці — особлива поведінка й жорсткі посилання зламалися б навіть із перенаправленням.
+     */
+    public const PROTECTED_SLUGS = [
+        'abituriyentu', 'studentu', 'istoriya', 'kontakty', 'zvorotniy-zvyazok', 'ciklovi-komisiyi',
+        'litsenzuvannya-ta-akredytatsiya', 'osvitno-profesiyni-prohramy', 'polityka-konfidentsiynosti',
+    ];
+
+    public function isProtected(): bool
+    {
+        return in_array((string) $this->getOriginal('slug'), self::PROTECTED_SLUGS, true);
+    }
+
+    /** Маршрут публічної сторінки — для перенаправлень при зміні адреси чи видаленні (KeepsPublicUrls). */
+    public static function publicRouteName(): string
+    {
+        return 'pages.show';
+    }
+
+    /** Видалена сторінка веде на свій розділ (якщо він опублікований) або на головну. */
+    public function publicFallbackPath(): string
+    {
+        $parent = $this->parent_id ? static::query()->published()->find($this->parent_id) : null;
+
+        return $parent ? $parent->publicPath() : '/';
     }
 }

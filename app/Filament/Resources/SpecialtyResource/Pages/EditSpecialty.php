@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\SpecialtyResource\Pages;
 
-use Filament\Actions\DeleteAction;
+use App\Filament\Support\SafeDeleteAction;
 use App\Filament\Resources\SpecialtyResource;
 use App\Filament\Support\PreviewFormAction;
 use App\Filament\Support\ViewOnSite;
@@ -18,7 +18,7 @@ class EditSpecialty extends EditRecord
         return [
             PreviewFormAction::make('specialty'),
             ViewOnSite::header(fn () => route('specialties.show', $this->record)),
-            DeleteAction::make(),
+            SafeDeleteAction::make(),
         ];
     }
 }

@@ -17,7 +17,7 @@ use Filament\Tables\Filters\TernaryFilter;
 use Filament\Actions\EditAction;
 use Filament\Actions\ReplicateAction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use App\Filament\Support\SafeDeleteAction;
 use App\Filament\Resources\NewsResource\Pages\ListNews;
 use App\Filament\Resources\NewsResource\Pages\CreateNews;
 use App\Filament\Resources\NewsResource\Pages\EditNews;
@@ -56,7 +56,7 @@ class NewsResource extends Resource
             TextInput::make('slug')
                 ->label('URL (slug)')->maxLength(255)
                 ->prefix(url('/novyny') . '/')
-                ->helperText('Залиште порожнім - згенерується автоматично.'),
+                ->helperText(fn ($record): string => $record?->wasPublic() ? 'Після зміни стара адреса автоматично перенаправлятиме на нову (і на сайті, і в пошуку).' : 'Залиште порожнім - згенерується автоматично.'),
             Select::make('category_id')
                 ->label('Категорія')->relationship('category', 'title')->searchable()->preload()
                 ->helperText('Необовʼязково. За категоріями працює фільтр на сторінці «Новини».'),
@@ -143,7 +143,7 @@ class NewsResource extends Resource
                     ->successNotificationTitle('Копію створено чернеткою'),
                 ViewOnSite::table(fn (News $record) => route('news.show', $record)),
             ])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk()])]);
     }
 
     public static function getRelations(): array

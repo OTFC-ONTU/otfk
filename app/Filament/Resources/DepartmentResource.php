@@ -10,7 +10,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Actions\EditAction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use App\Filament\Support\SafeDeleteAction;
 use App\Filament\Resources\DepartmentResource\Pages\ListDepartments;
 use App\Filament\Resources\DepartmentResource\Pages\CreateDepartment;
 use App\Filament\Resources\DepartmentResource\Pages\EditDepartment;
@@ -49,7 +49,7 @@ class DepartmentResource extends Resource
                 ->helperText('Визначає, у якій групі підрозділ показується на сторінці «Структура».'),
             TextInput::make('slug')->label('URL (slug)')->maxLength(255)
                 ->prefix(url('/struktura') . '/')
-                ->helperText('Залиште порожнім - згенерується автоматично.'),
+                ->helperText(fn ($record): string => $record?->wasPublic() ? 'Після зміни стара адреса автоматично перенаправлятиме на нову (і на сайті, і в пошуку).' : 'Залиште порожнім - згенерується автоматично.'),
             HtmlRichEditor::make('description')->label('Опис')->columnSpanFull()
                 ->helperText('Основний текст на сторінці підрозділу; перші речення видно в його картці на сторінці «Структура».'),
             Toggle::make('is_published')->label('Опубліковано')->default(true)
@@ -80,7 +80,7 @@ class DepartmentResource extends Resource
                 EditAction::make(),
                 ViewOnSite::table(fn (Department $record) => route('structure.show', $record)),
             ])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk()])]);
     }
 
     public static function getRelations(): array

@@ -15,7 +15,7 @@ use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Actions\EditAction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use App\Filament\Support\SafeDeleteAction;
 use App\Filament\Resources\GalleryResource\Pages\ListGalleries;
 use App\Filament\Resources\GalleryResource\Pages\CreateGallery;
 use App\Filament\Resources\GalleryResource\Pages\EditGallery;
@@ -52,7 +52,7 @@ class GalleryResource extends Resource
             TextInput::make('title')->label('Назва альбому')->required()->maxLength(255)->columnSpanFull(),
             TextInput::make('slug')->label('URL (slug)')->maxLength(255)
                 ->prefix(url('/halereya') . '/')
-                ->helperText('Залиште порожнім - згенерується автоматично.'),
+                ->helperText(fn ($record): string => $record?->wasPublic() ? 'Після зміни стара адреса автоматично перенаправлятиме на нову (і на сайті, і в пошуку).' : 'Залиште порожнім - згенерується автоматично.'),
             DatePicker::make('published_at')->label('Дата')->default(now())
                 ->helperText('Дата альбому в картці; новіші альбоми показуються першими.'),
             Textarea::make('description')->label('Опис')->rows(2)->columnSpanFull()
@@ -104,7 +104,7 @@ class GalleryResource extends Resource
                 EditAction::make(),
                 ViewOnSite::table(fn (Gallery $record) => route('galleries.show', $record)),
             ])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk()])]);
     }
 
     public static function getRelations(): array

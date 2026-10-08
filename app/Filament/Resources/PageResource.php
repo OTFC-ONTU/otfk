@@ -16,7 +16,7 @@ use Filament\Tables\Filters\TernaryFilter;
 use Filament\Actions\EditAction;
 use Filament\Actions\ReplicateAction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use App\Filament\Support\SafeDeleteAction;
 use App\Filament\Resources\PageResource\Pages\ListPages;
 use App\Filament\Resources\PageResource\Pages\CreatePage;
 use App\Filament\Resources\PageResource\Pages\EditPage;
@@ -55,7 +55,14 @@ class PageResource extends Resource
                 TextInput::make('title')->label('Назва сторінки')->required()->maxLength(255)->columnSpanFull(),
                 TextInput::make('slug')->label('URL (slug)')->maxLength(255)
                     ->prefix(url('/') . '/')
-                    ->helperText('Залиште порожнім - згенерується автоматично.'),
+                    // Системні адреси (Page::PROTECTED_SLUGS) використовує код сайту — не змінюються
+                    ->disabled(fn (?Page $record): bool => (bool) $record?->isProtected())
+                    ->dehydrated(fn (?Page $record): bool => ! $record?->isProtected())
+                    ->helperText(fn (?Page $record): string => match (true) {
+                        (bool) $record?->isProtected() => 'Системна адреса: на неї спирається код сайту, тому її не можна змінити.',
+                        (bool) $record?->wasPublic() => 'Після зміни стара адреса автоматично перенаправлятиме на нову (і на сайті, і в пошуку).',
+                        default => 'Залиште порожнім - згенерується автоматично.',
+                    }),
                 Select::make('parent_id')->label('Батьківський розділ')
                     ->relationship('parent', 'title', fn (Builder $query, ?Page $record) => $query
                         ->with('parent.parent.parent')
@@ -137,7 +144,7 @@ class PageResource extends Resource
                     ->successNotificationTitle('Копію створено чернеткою'),
                 ViewOnSite::table(fn (Page $record) => url('/' . $record->slug)),
             ])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk()])]);
     }
 
     public static function getRelations(): array

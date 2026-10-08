@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\StaffResource\Pages;
 
-use Filament\Actions\DeleteAction;
+use App\Filament\Support\SafeDeleteAction;
 use App\Filament\Resources\StaffResource;
 use App\Filament\Support\ViewOnSite;
 use Filament\Actions;
@@ -16,7 +16,7 @@ class EditStaff extends EditRecord
     {
         return [
             ViewOnSite::header(fn () => route('staff.show', $this->record)),
-            DeleteAction::make(),
+            SafeDeleteAction::make(),
         ];
     }
 }

@@ -15,7 +15,7 @@ use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Actions\EditAction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use App\Filament\Support\SafeDeleteAction;
 use App\Filament\Resources\StaffResource\Pages\ListStaff;
 use App\Filament\Resources\StaffResource\Pages\CreateStaff;
 use App\Filament\Resources\StaffResource\Pages\EditStaff;
@@ -66,7 +66,7 @@ class StaffResource extends Resource
             TextInput::make('full_name')->label('ПІБ')->required()->maxLength(255)->columnSpanFull(),
             TextInput::make('slug')->label('Слаг (URL персональної сторінки)')->maxLength(255)->unique(ignoreRecord: true)
                 ->prefix(url('/personal') . '/')
-                ->helperText('Порожній — згенерується з ПІБ.')->columnSpanFull(),
+                ->helperText(fn ($record): string => $record?->wasPublic() ? 'Після зміни стара адреса автоматично перенаправлятиме на нову (і на сайті, і в пошуку).' : 'Порожній — згенерується з ПІБ.')->columnSpanFull(),
             TextInput::make('position')->label('Посада')->maxLength(255)->columnSpanFull()
                 ->helperText('Показується під ПІБ. На сторінці «Адміністрація» за посадою людей групують у блоки.'),
             Select::make('category')->label('Категорія')->required()->default('teacher')
@@ -121,7 +121,7 @@ class StaffResource extends Resource
                 EditAction::make(),
                 ViewOnSite::table(fn (Staff $record) => route('staff.show', $record)),
             ])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk()])]);
     }
 
     public static function getRelations(): array

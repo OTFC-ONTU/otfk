@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\KeepsPublicUrls;
 use App\Models\Concerns\HasSortOrder;
 use App\Casts\SafeHtml;
 use App\Models\Concerns\FlushesSitemap;
@@ -12,6 +13,7 @@ use Illuminate\Support\Str;
 
 class Department extends Model
 {
+    use KeepsPublicUrls;
     use HasSortOrder;
     use FlushesSitemap;
     use HasEnglishTranslation;
@@ -71,5 +73,16 @@ class Department extends Model
     protected function translationRequiredFields(): array
     {
         return $this->translationSourceFields();
+    }
+
+    /** Маршрут публічної сторінки — для перенаправлень при зміні адреси чи видаленні (KeepsPublicUrls). */
+    public static function publicRouteName(): string
+    {
+        return 'structure.show';
+    }
+
+    public function publicFallbackPath(): string
+    {
+        return route('structure.index', [], false);
     }
 }

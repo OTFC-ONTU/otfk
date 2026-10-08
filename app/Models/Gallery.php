@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\KeepsPublicUrls;
 use App\Models\Concerns\HasSortOrder;
 use App\Models\Concerns\FlushesSitemap;
 use App\Models\Concerns\HasEnglishTranslation;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Gallery extends Model
 {
+    use KeepsPublicUrls;
     use HasSortOrder;
     use FlushesSitemap;
     use HasEnglishTranslation;
@@ -103,5 +105,16 @@ class Gallery extends Model
     public function publicCaption(Photo $photo): ?string
     {
         return $this->hasEnglishAlbum() && filled($photo->caption) ? $photo->caption_en : $photo->caption;
+    }
+
+    /** Маршрут публічної сторінки — для перенаправлень при зміні адреси чи видаленні (KeepsPublicUrls). */
+    public static function publicRouteName(): string
+    {
+        return 'galleries.show';
+    }
+
+    public function publicFallbackPath(): string
+    {
+        return route('galleries.index', [], false);
     }
 }
