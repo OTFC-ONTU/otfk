@@ -112,22 +112,41 @@ class LegacyContentParityTest extends TestCase
         $this->get($staffUrl)->assertOk();
     }
 
-    public function test_specialty_cards_list_programs_with_file_links(): void
+    public function test_specialty_cards_link_programs_to_anchors_on_specialty_page(): void
     {
         $specialty = Specialty::query()->where('is_published', true)->first();
-        Program::create([
+        $specialty->update(['description' => '<h2>ОПП «Тестова освітня програма»</h2><p>Мета програми.</p>']);
+        $program = Program::create([
             'specialty_id' => $specialty->id, 'title' => 'Тестова освітня програма',
             'external_url' => 'https://example.org/opp-test.pdf', 'sort_order' => 99,
         ]);
+        $orphan = Program::create([
+            'specialty_id' => $specialty->id, 'title' => 'Програма без розділу',
+            'external_url' => 'https://example.org/opp-orphan.pdf', 'sort_order' => 100,
+        ]);
+        $showUrl = LocalizedUrl::route('specialties.show', $specialty);
 
+        // У картці списку — посилання на якорі сторінки спеціальності, без файлів
         $html = $this->get('/spetsialnosti')->assertOk()
             ->assertSee('Тестова освітня програма')
-            ->assertSee('href="https://example.org/opp-test.pdf"', false)
+            ->assertSee('href="'.$showUrl.'#opp-testova-osvitnia-programa"', false)
+            ->assertSee('href="'.$showUrl.'#opp-programa-bez-rozdilu"', false)
+            ->assertDontSee('href="https://example.org/opp-test.pdf"', false)
             ->assertSee(__('public.programs'))
             ->getContent();
 
         // Картка — не обгортка-посилання: посилання ОПП не вкладені в інше посилання.
         $this->assertStringContainsString('<article class="card card-interactive group relative', $html);
+
+        // Якір — на заголовку опису; програма без заголовка — на картці файлу в списку ОПП
+        $page = $this->get($showUrl)->assertOk()->getContent();
+        $this->assertStringContainsString('<h2 id="opp-testova-osvitnia-programa">ОПП «Тестова освітня програма»</h2>', $page);
+        $this->assertSame(1, substr_count($page, 'id="opp-testova-osvitnia-programa"'));
+        $this->assertStringNotContainsString(':code', $page);
+        $this->assertMatchesRegularExpression('~<li\s+id="opp-programa-bez-rozdilu"[^>]*>\s*<div class="file-card-container">~', $page);
+        $this->assertStringContainsString('href="https://example.org/opp-test.pdf"', $page);
+        $this->assertSame('<h2>ОПП «Тестова освітня програма»</h2><p>Мета програми.</p>', $specialty->fresh()->description);
+        $this->assertNotNull($orphan->id);
     }
 
     public function test_structure_commission_section_shows_intro_and_rating_files(): void

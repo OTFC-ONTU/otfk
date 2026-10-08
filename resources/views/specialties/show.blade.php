@@ -97,11 +97,15 @@
                 </div>
             @endif
 
-            @if (filled($specialty->localized('description')))
+            {{-- Заголовки «ОПП «…»» опису отримують якорі програм — на них ведуть посилання з карток списку --}}
+            @php
+                [$description, $anchoredPrograms] = \App\Support\ProgramAnchors::apply($specialty, $specialty->localized('description'));
+            @endphp
+            @if (filled($description))
                 <div @class([
-                    'prose prose-slate max-w-none prose-headings:font-display prose-a:text-brand-700',
+                    'prose prose-slate max-w-none prose-headings:font-display prose-a:text-brand-700 [&_h2]:scroll-mt-24 [&_h3]:scroll-mt-24 [&_h4]:scroll-mt-24',
                     'mt-8' => filled($specialty->localized('short_description')),
-                ])>{!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($specialty->localized('description')))), false) !!}</div>
+                ])>{!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($description))), false) !!}</div>
             @endif
 
             {{-- Освітні програми --}}
@@ -111,7 +115,7 @@
                     <div class="accent-rule"></div>
                     <ul class="mt-5 space-y-3">
                         @foreach ($specialty->programs as $program)
-                            <li><x-file-card :href="$program->file_url" :download="(bool) $program->file_path && !$program->external_url" :title="$program->localized('title')" :description="$program->localized('description')" :extension="$program->file_url ? pathinfo(parse_url($program->file_url, PHP_URL_PATH), PATHINFO_EXTENSION) : ''" /></li>
+                            <li @if (! in_array($program->id, $anchoredPrograms, true)) id="{{ \App\Support\ProgramAnchors::anchor($program) }}" class="scroll-mt-24" @endif><x-file-card :href="$program->file_url" :download="(bool) $program->file_path && !$program->external_url" :title="$program->localized('title')" :description="$program->localized('description')" :extension="$program->file_url ? pathinfo(parse_url($program->file_url, PHP_URL_PATH), PATHINFO_EXTENSION) : ''" /></li>
                         @endforeach
                     </ul>
                 </div>
@@ -173,7 +177,7 @@
                 <div class="accent-rule"></div>
                 <dl class="mt-4 divide-y divide-slate-100 text-sm">
                     @foreach (array_filter([
-                        __('feature.specialty_code') => $specialty->code,
+                        __('feature.specialty_code_2') => $specialty->code,
                         __('public.degree') => $specialty->localized('degree'),
                         __('public.study_form') => $specialty->localized('study_form'),
                         __('public.duration') => $specialty->localized('duration'),

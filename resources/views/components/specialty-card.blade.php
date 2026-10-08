@@ -53,19 +53,19 @@
             ])>{{ $specialty->localized('short_description') }}</p>
         @endif
 
-        {{-- Усі ОПП спеціальності одразу видно в картці (як на старому сайті) —
-             абітурієнт шукає конкретну програму, а не назву спеціальності --}}
+        {{-- Усі ОПП спеціальності одразу видно в картці (як на старому сайті) — абітурієнт шукає
+             конкретну програму; посилання веде до її розділу на сторінці спеціальності, файли — там же --}}
         @if ($showProgram && $specialty->programs->isNotEmpty())
             <div class="mt-5 border-t border-slate-100 pt-5">
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('public.programs') }}</p>
-                <ul class="mt-3 space-y-2.5">
+                <ul class="mt-3 space-y-2">
                     @foreach ($specialty->programs as $program)
                         <li>
-                            @if ($program->file_url)
-                                <x-file-card class="relative z-10" :href="$program->file_url" :download="(bool) $program->file_path && !$program->external_url" :title="$program->localized('title')" :extension="pathinfo(parse_url($program->file_url, PHP_URL_PATH), PATHINFO_EXTENSION)" />
-                            @else
-                                <span class="text-[15px] font-bold leading-snug text-slate-900">{{ $program->localized('title') }}</span>
-                            @endif
+                            <a href="{{ \App\Support\ProgramAnchors::url($specialty, $program) }}"
+                               class="relative z-10 inline-flex items-start gap-2 text-[15px] font-semibold leading-snug text-brand-800 transition hover:text-brand-600 hover:underline focus-visible:underline">
+                                <x-ico name="arrow-right" class="mt-1 h-3.5 w-3.5 shrink-0 text-gold-600" aria-hidden="true" />
+                                <span>{{ $program->localized('title') }}</span>
+                            </a>
                         </li>
                     @endforeach
                 </ul>
