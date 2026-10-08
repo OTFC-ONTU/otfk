@@ -32,7 +32,8 @@ class SitemapController extends Controller
         foreach (News::published()->get() as $n) {
             $entries[] = ['loc' => route('news.show', $n), 'lastmod' => optional($n->updated_at)->toDateString(), 'changefreq' => 'monthly', 'priority' => '0.7'];
         }
-        foreach (Page::published()->get() as $p) {
+        // Сторінки розділів публічної інформації переадресовуються на /dokumenty/{slug} — у sitemap лише сам розділ
+        foreach (Page::published()->whereNotIn('id', \App\Models\DocumentCategory::whereNotNull('page_id')->pluck('page_id'))->get() as $p) {
             $entries[] = ['loc' => url('/' . $p->slug), 'lastmod' => optional($p->updated_at)->toDateString(), 'changefreq' => 'monthly', 'priority' => '0.6'];
         }
         foreach (Specialty::published()->get() as $s) {

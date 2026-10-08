@@ -171,4 +171,21 @@ class LegacyContentParityTest extends TestCase
         $page->update(['is_published' => false]);
         $this->get('/dokumenty/monitorynh-test')->assertOk()->assertSee(__('public.no_documents'));
     }
+
+    public function test_file_cards_keep_manual_numbering_of_the_original(): void
+    {
+        $html = FileCards::render('<p>1) <a href="/storage/polozhennya.pdf">Положення про коледж</a></p><p>93. <a href="/storage/nakaz.pdf">Наказ</a></p>');
+
+        $this->assertStringContainsString('1) Положення про коледж', $html);
+        $this->assertStringContainsString('93. Наказ', $html);
+    }
+
+    public function test_section_page_own_url_redirects_to_its_document_category(): void
+    {
+        $page = Page::create(['title' => 'Звіти', 'slug' => 'zvity-page-test', 'is_published' => true, 'body' => '<p>Звіти коледжу</p>']);
+        DocumentCategory::create(['title' => 'Звіти', 'slug' => 'zvity-test', 'page_id' => $page->id]);
+
+        $this->get('/zvity-page-test')->assertStatus(301)->assertRedirect(url('/dokumenty/zvity-test'));
+        $this->get('/en/zvity-page-test')->assertStatus(301)->assertRedirect(url('/en/dokumenty/zvity-test'));
+    }
 }
