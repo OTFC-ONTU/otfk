@@ -33,7 +33,8 @@ class HtmlRichEditorTest extends TestCase
         $this->assertTrue(HtmlRichEditor::isLossy('<p style="font-size: 14pt; text-align: center">Текст</p>'));
         $this->assertTrue(HtmlRichEditor::isLossy('<table style="width:100%"><tr><td>1</td></tr></table>'));
         $this->assertTrue(HtmlRichEditor::isLossy('<td width="30%">1</td>'));
-        $this->assertTrue(HtmlRichEditor::isLossy('<iframe src="https://www.youtube.com/embed/x"></iframe>'));
+        $this->assertFalse(HtmlRichEditor::isLossy('<p><iframe src="/storage/a.pdf" class="w-full" style="min-height:24rem;border:0" loading="lazy"></iframe></p>'));
+        $this->assertTrue(HtmlRichEditor::isLossy('<video src="/storage/a.mp4"></video>'));
         $this->assertTrue(HtmlRichEditor::isLossy('<div><p>Обгортка</p></div>'));
         $this->assertTrue(HtmlRichEditor::isLossy('<p>Текст</p><!-- примітка -->'));
     }

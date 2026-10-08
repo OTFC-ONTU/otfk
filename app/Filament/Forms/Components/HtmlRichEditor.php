@@ -4,6 +4,7 @@ namespace App\Filament\Forms\Components;
 
 use DOMDocument;
 use DOMElement;
+use App\Filament\Forms\Components\RichEditor\EmbedPlugin;
 use DOMXPath;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\RichEditor\StateCasts\RichEditorStateCast;
@@ -27,13 +28,14 @@ class HtmlRichEditor extends RichEditor
     /**
      * Розмітка, яку TipTap не зберігає без втрат (без розділювачів — спільна для PHP і JS).
      * Зберігаються: заголовки, списки, цитати, таблиці (colspan/rowspan), details, посилання
-     * з target, зображення з width/height, вирівнювання тексту абзаців і заголовків.
+     * з target, зображення з width/height, вирівнювання тексту абзаців і заголовків,
+     * <iframe> з усіма атрибутами (вузол EmbedExtension; обгортка <p> навколо нього зникає).
      */
-    public const LOSSY = '<(?:iframe|video|audio|object|embed|dl|dt|dd|section|article|aside|figure|figcaption|div|span|font|center|caption|colgroup|abbr|cite|q|kbd|ins|form|input|button|svg)\\b'
-        .'|<[a-z][a-z0-9]*\\b[^>]*\\s(?:class|id|align|valign|bgcolor|border|cellpadding|cellspacing)\\s*='
-        .'|<(?!(?:p|h[1-6]|img)\\b)[a-z][a-z0-9]*\\b[^>]*\\sstyle\\s*='
-        .'|\\sstyle\\s*=\\s*"(?:[^"]*;)?\\s*(?!(?:text-align|width|height)\\s*:)[a-z-]+\\s*:'
-        .'|<(?!img\\b)[a-z][a-z0-9]*\\b[^>]*\\s(?:width|height)\\s*='
+    public const LOSSY = '<(?:video|audio|object|embed|dl|dt|dd|section|article|aside|figure|figcaption|div|span|font|center|caption|colgroup|abbr|cite|q|kbd|ins|form|input|button|svg)\\b'
+        .'|<(?!iframe\\b)[a-z][a-z0-9]*\\b[^>]*\\s(?:class|id|align|valign|bgcolor|border|cellpadding|cellspacing)\\s*='
+        .'|<(?!(?:p|h[1-6]|img|iframe)\\b)[a-z][a-z0-9]*\\b[^>]*\\sstyle\\s*='
+        .'|<(?:p|h[1-6]|img)\\b[^>]*\\sstyle\\s*=\\s*"(?:[^"]*;)?\\s*(?!(?:text-align|width|height)\\s*:)[a-z-]+\\s*:'
+        .'|<(?!(?:img|iframe)\\b)[a-z][a-z0-9]*\\b[^>]*\\s(?:width|height)\\s*='
         .'|<!--(?!imported-from:)';
 
     /** Маркери імпорту (їх читають Page::publicBody(), карта старих адрес, синхронізація). */
@@ -42,6 +44,8 @@ class HtmlRichEditor extends RichEditor
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->plugins([EmbedPlugin::make()]);
 
         $this->hint(fn (self $component): ?HtmlString => $component->isDisabled()
             ? null
@@ -55,7 +59,7 @@ class HtmlRichEditor extends RichEditor
             ['h2', 'h3', 'h4'],
             ['alignStart', 'alignCenter', 'alignEnd', 'alignJustify'],
             ['blockquote', 'bulletList', 'orderedList', 'horizontalRule'],
-            ['table', 'details', ...($this->hasFileAttachments(default: true) ? ['attachFiles'] : [])],
+            ['table', 'details', EmbedPlugin::NAME, ...($this->hasFileAttachments(default: true) ? ['attachFiles'] : [])],
             ['clearFormatting', 'undo', 'redo'],
         ];
     }
