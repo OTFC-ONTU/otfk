@@ -91,6 +91,20 @@ class LegacyMapTest extends TestCase
         $this->assertSame('301', $result['map'][0]['code']);
     }
 
+    public function test_staff_list_page_maps_straight_to_department_staff_block(): void
+    {
+        $department = \App\Models\Department::create([
+            'title' => 'Комісія тестова', 'slug' => 'komisiia-testova', 'type' => 'tsyklova-komisiya', 'is_published' => true,
+            'description' => '<p><a href="/vikladaci-komisiyi-testova">Викладацький склад комісії</a></p>',
+        ]);
+        \App\Models\Staff::create(['full_name' => 'Іваненко Іван', 'slug' => 'ivanenko-ivan', 'department_id' => $department->id, 'category' => 'teacher', 'is_published' => true]);
+        Page::create(['title' => 'Викладачі комісії', 'slug' => 'vikladaci-komisiyi-testova', 'body' => $this->marker('https://otfk.od.ua/structure/cycles_commissions/test/personel--'), 'is_published' => true]);
+
+        $result = $this->build();
+
+        $this->assertSame('/struktura/komisiia-testova#vykladachi', $this->targetOf($result['map'], '/structure/cycles_commissions/test/personel--'));
+    }
+
     public function test_unpublished_and_future_records_are_reported_not_mapped(): void
     {
         Page::create(['title' => 'Чернетка', 'slug' => 'chernetka', 'body' => $this->marker('https://otfk.od.ua/draft.html'), 'is_published' => false]);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\DocumentCategory;
 use App\Models\Page;
 use App\Support\Seo;
+use App\Support\DepartmentStaffAnchor;
 use App\Support\LocalizedUrl;
 
 class PageController extends Controller
@@ -19,6 +20,10 @@ class PageController extends Controller
         // Сторінка розділу публічної інформації має одну адресу — розділ документів, без дубля вмісту
         if ($page->is_published && $category = DocumentCategory::where('page_id', $page->id)->first()) {
             return redirect(LocalizedUrl::route('documents.category', $category), 301);
+        }
+        // Стара сторінка «Викладачі комісії …» — дубль карток викладачів на сторінці комісії
+        if ($page->is_published && $department = DepartmentStaffAnchor::departmentFor($page)) {
+            return redirect(DepartmentStaffAnchor::url($department), 301);
         }
 
         return view('pages.show', compact('page'));
