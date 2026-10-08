@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Department;
 use App\Models\Document;
+use App\Models\DocumentCategory;
 use App\Models\FileMirror;
 use App\Models\LegacyRedirect;
 use App\Models\News;
@@ -165,6 +166,13 @@ class LegacyMapBuilder
 
     private function collectMarkers(): void
     {
+        // CMS-сторінка розділу публічної інформації сама переадресовує на /dokumenty/{slug}
+        // (PageController) — карта веде одразу туди, без проміжного переходу.
+        $sectionTargets = Schema::hasColumn('document_categories', 'page_id')
+            ? DocumentCategory::query()->whereNotNull('page_id')->pluck('slug', 'page_id')
+                ->map(fn ($slug) => route('documents.category', $slug, false))->all()
+            : [];
+
         foreach (self::MARKER_SOURCES as $source) {
             /** @var class-string<Model> $model */
             $model = $source['model'];
@@ -179,7 +187,7 @@ class LegacyMapBuilder
                 ->select(['id', 'slug', $source['column'].' as html'])
                 ->where($source['column'], 'like', '%<!--imported-from:%')
                 ->orderBy('id')
-                ->chunk(200, function ($records) use ($source, $visible, $origin) {
+                ->chunk(200, function ($records) use ($source, $visible, $origin, $sectionTargets) {
                     foreach ($records as $record) {
                         preg_match_all('/<!--imported-from:(.+?)-->/u', (string) $record->html, $m);
                         foreach (array_unique($m[1]) as $url) {
@@ -192,6 +200,9 @@ class LegacyMapBuilder
                             [$path, $query] = $parsed;
                             $this->known[$path] = $path;
                             $target = blank($record->slug) ? null : route($source['route'], $record->slug, false);
+                            if ($source['model'] === Page::class && isset($sectionTargets[$record->id])) {
+                                $target = $sectionTargets[$record->id];
+                            }
                             $note = "{$source['label']} #{$record->id}";
 
                             if (! isset($visible[$record->id]) || $target === null) {

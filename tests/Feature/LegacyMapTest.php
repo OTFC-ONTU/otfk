@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\DocumentCategory;
 use App\Models\FileMirror;
 use App\Models\LegacyRedirect;
 use App\Models\News;
@@ -196,5 +197,16 @@ class LegacyMapTest extends TestCase
         $this->get('/about/history.html')->assertStatus(301)->assertRedirect(url('/istoriya-koledzhu'));
         $this->get('/news/?id=12&utm_source=fb')->assertStatus(301)->assertRedirect(url('/novyny/novyna-1'));
         $this->get('/uploads/'.rawurlencode('План 2024.pdf'))->assertStatus(301);
+    }
+
+    public function test_section_page_maps_straight_to_document_category(): void
+    {
+        $page = Page::create(['title' => 'Кошторис', 'slug' => 'koshtorys', 'body' => $this->marker('https://otfk.od.ua/public_information/budget_of_the_college/'), 'is_published' => true]);
+        DocumentCategory::create(['title' => 'Кошторис', 'slug' => 'koshtorys-dok', 'page_id' => $page->id]);
+
+        $result = $this->build(['--verify' => true]);
+
+        // Без проміжного переходу через /koshtorys, який сам переадресовує на розділ.
+        $this->assertSame('/dokumenty/koshtorys-dok', $this->targetOf($result['map'], '/public_information/budget_of_the_college'));
     }
 }

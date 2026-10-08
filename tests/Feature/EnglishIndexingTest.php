@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\SitemapController;
 use App\Models\Department;
+use App\Models\DocumentCategory;
 use App\Models\Gallery;
 use App\Models\News;
 use App\Models\Page;
@@ -210,5 +211,24 @@ class EnglishIndexingTest extends TestCase
         $page->update(['title_en' => 'Cache', 'body_en' => '<p>T</p>', 'translation_published' => true]);
 
         $this->assertStringContainsString('<loc>'.url('/en/kesh-seo').'</loc>', $this->get('/sitemap.xml')->getContent());
+    }
+
+    public function test_document_section_needs_translated_section_page(): void
+    {
+        $page = Page::create(['title' => 'Кошторис', 'slug' => 'koshtorys', 'body' => '<p>Текст розділу</p>', 'is_published' => true]);
+        $category = DocumentCategory::create(['title' => 'Кошторис', 'slug' => 'koshtorys-dok', 'title_en' => 'Budget', 'translation_published' => true, 'page_id' => $page->id]);
+
+        // Назву перекладено, а сторінку розділу — ні: англійська версія закрита й не в sitemap.
+        $this->assertNoindexWithoutAlternates($this->get('/en/dokumenty/koshtorys-dok'));
+        $this->assertStringNotContainsString('/en/dokumenty/koshtorys-dok', $this->get('/sitemap.xml')->getContent());
+
+        $page->update(['title_en' => 'Budget', 'body_en' => '<p>Section text</p>', 'translation_published' => true]);
+        $this->assertIndexable($this->get('/en/dokumenty/koshtorys-dok'));
+        $this->assertStringContainsString('/en/dokumenty/koshtorys-dok', $this->get('/sitemap.xml')->getContent());
+
+        // Оригінал сторінки змінено — переклад застарів, розділ знову закритий.
+        $page->update(['body' => '<p>Новий текст розділу</p>']);
+        $this->assertNoindexWithoutAlternates($this->get('/en/dokumenty/koshtorys-dok'));
+        $this->assertFalse($category->fresh()->hasIndexableEnglishTranslation());
     }
 }

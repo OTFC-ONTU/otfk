@@ -6,6 +6,7 @@ use App\Filament\Resources\LegacyRedirectResource;
 use App\Filament\Resources\LegacyRedirectResource\Pages\CreateLegacyRedirect;
 use App\Filament\Resources\NotFoundLogResource;
 use App\Filament\Resources\NotFoundLogResource\Pages\ListNotFoundLogs;
+use App\Models\DocumentCategory;
 use App\Models\LegacyRedirect;
 use App\Models\News;
 use App\Models\NotFoundLog;
@@ -362,5 +363,19 @@ class LegacyRedirectsTest extends TestCase
 
         $this->assertSame(NotFoundLog::RESOLVED, $log->fresh()->status);
         $this->get('/staryi-rozdil/abituriyentam')->assertRedirect(url('/pro-koledzh'));
+    }
+
+    public function test_drafts_and_redirecting_pages_are_not_valid_targets(): void
+    {
+        Page::create(['title' => 'Чернетка', 'slug' => 'chernetka', 'is_published' => false]);
+        News::create(['title' => 'Майбутня', 'slug' => 'maibutnia', 'body' => '<p>x</p>', 'is_published' => true, 'published_at' => now()->addWeek()]);
+        $section = Page::create(['title' => 'Розділ', 'slug' => 'rozdil', 'body' => '<p>x</p>', 'is_published' => true]);
+        DocumentCategory::create(['title' => 'Розділ', 'slug' => 'rozdil-dok', 'page_id' => $section->id]);
+
+        $this->assertFalse(LegacyRedirects::resolves('/chernetka'), 'чернетка гостю — 404');
+        $this->assertFalse(LegacyRedirects::resolves('/novyny/maibutnia'), 'майбутня новина гостю — 404');
+        $this->assertFalse(LegacyRedirects::resolves('/rozdil'), 'сторінка сама переадресовує на розділ');
+        $this->assertTrue(LegacyRedirects::resolves('/dokumenty/rozdil-dok'));
+        $this->assertTrue(LegacyRedirects::resolves('/pro-koledzh'));
     }
 }

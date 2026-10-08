@@ -2,8 +2,11 @@
 
 namespace App\Support;
 
+use App\Models\DocumentCategory;
 use App\Models\LegacyRedirect;
 use App\Models\NotFoundLog;
+use App\Models\Page;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Routing\ImplicitRouteBinding;
 use Illuminate\Support\Facades\Cache;
@@ -138,6 +141,27 @@ class LegacyRedirects
             ImplicitRouteBinding::resolveForRoute(app(), $route);
         } catch (Throwable) {
             return false;
+        }
+
+        // Модель знайдено — але гість має отримати 200: чернетка, майбутня новість
+        // чи CMS-сторінка, що сама переадресовує на розділ документів, не є призначенням.
+        foreach ($route->parameters() as $parameter) {
+            if ($parameter instanceof Model && ! self::publiclyServed($parameter)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /** Чи віддає публічна частина цей запис гостю зі статусом 200 (той самий scope published()). */
+    private static function publiclyServed(Model $model): bool
+    {
+        if ($model instanceof Page && DocumentCategory::where('page_id', $model->getKey())->exists()) {
+            return false;
+        }
+        if (method_exists($model, 'scopePublished')) {
+            return $model->newQuery()->published()->whereKey($model->getKey())->exists();
         }
 
         return true;
