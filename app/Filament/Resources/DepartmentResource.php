@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\Components\HtmlRichEditor;
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\DepartmentResource\Pages;
 use App\Filament\Support\ViewOnSite;
@@ -38,7 +39,7 @@ class DepartmentResource extends Resource
             Forms\Components\TextInput::make('slug')->label('URL (slug)')->maxLength(255)
                 ->prefix(url('/struktura') . '/')
                 ->helperText('Залиште порожнім - згенерується автоматично.'),
-            Forms\Components\RichEditor::make('description')->label('Опис')->columnSpanFull()
+            HtmlRichEditor::make('description')->label('Опис')->columnSpanFull()
                 ->helperText('Основний текст на сторінці підрозділу; перші речення видно в його картці на сторінці «Структура».'),
             Forms\Components\TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
                 ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),

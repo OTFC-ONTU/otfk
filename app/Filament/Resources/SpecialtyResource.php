@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\Components\HtmlRichEditor;
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\SpecialtyResource\Pages;
 use App\Filament\Support\ViewOnSite;
@@ -40,7 +41,7 @@ class SpecialtyResource extends Resource
                     ->helperText('Залиште порожнім - згенерується автоматично.'),
                 Forms\Components\Textarea::make('short_description')->label('Короткий опис')->rows(2)->columnSpanFull()
                     ->helperText('1-2 речення в картці спеціальності у списку та в результаті квізу.'),
-                Forms\Components\RichEditor::make('description')->label('Повний опис')->columnSpanFull()
+                HtmlRichEditor::make('description')->label('Повний опис')->columnSpanFull()
                     ->helperText('Основний текст на сторінці спеціальності.'),
                 Forms\Components\FileUpload::make('cover_image')->label('Зображення')->image()->directory('specialties')->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('1600')->imageResizeTargetHeight('1600')->columnSpanFull()
                     ->helperText('Горизонтальне фото в картці та вгорі сторінки спеціальності.'),

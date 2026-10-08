@@ -4,9 +4,12 @@
     // Пошук по назвах — на клієнті, без запитів на сервер (сторінок у розділі до кількох десятків)
     $needles = $rest->map(fn ($child) => mb_strtolower($child->localized('title')))->values();
 
-    // Сайдбар «Про розділ» розрахований на короткий опис; довгий текст (як-от «Виховна робота»)
-    // у вузькій липкій колонці не читається — показуємо його статтею в основній колонці
+    // Короткий опис іде вступом над картками; довгий текст (як-от «Виховна робота») —
+    // окремою статтею «Про розділ» під картками
     $bodyIsLong = mb_strlen(trim(strip_tags((string) $page->publicBody()))) > 800;
+
+    // Короткий опис — вступом над картками, без рядків-посилань, що дублюють ці картки
+    $intro = $bodyIsLong ? '' : \App\Support\HubIntro::withoutChildLinks($page->publicBody(), $children->pluck('slug'));
 @endphp
 
 <section class="container-site py-10 lg:py-14">
@@ -14,6 +17,12 @@
     @if ($page->cover_image)
         <x-picture :path="$page->cover_image" :alt="$page->localized('title')" sized decoding="async"
                    class="mb-8 max-h-80 w-full rounded-2xl object-cover" />
+    @endif
+
+    @if ($intro !== '')
+        <x-prose.article :drop-cap="false" class="mb-10 !max-w-none">
+            {!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($intro))), ! $page->cover_image) !!}
+        </x-prose.article>
     @endif
 
     {{-- Ключові дії розділу — сторінки з прапорцем «Ключова сторінка розділу» в адмінці --}}
@@ -123,19 +132,9 @@
             @endif
         </div>
 
-        {{-- Сайдбар розділу: короткий опис зі сторінки + прямий контакт.
+        {{-- Сайдбар розділу: прямий контакт.
              Картка замінює на хабі спільну фінальну смугу (show.blade.php), щоб на мобільному не було двох однакових закликів поспіль. --}}
         <aside class="space-y-6 lg:sticky lg:top-24 lg:self-start">
-            @if (filled($page->publicBody()) && ! $bodyIsLong)
-                <div class="card p-6">
-                    <h2 class="text-lg font-bold text-brand-950">{{ __('feature.about_this_section') }}</h2>
-                    <div class="accent-rule"></div>
-                    <x-prose.article :drop-cap="false" class="mt-4 !max-w-none !bg-transparent !px-0 !py-0 !text-base !shadow-none !ring-0 prose-p:text-slate-600">
-                        {!! $page->publicBody() !!}
-                    </x-prose.article>
-                </div>
-            @endif
-
             <div class="card bg-brand-50/60 p-6 ring-brand-100">
                 <h2 class="text-lg font-bold text-brand-950">{{ __('feature.cannot_find_the_page_you_need') }}</h2>
                 <p class="mt-2 text-sm leading-relaxed text-slate-600">
