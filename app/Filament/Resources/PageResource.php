@@ -144,7 +144,7 @@ class PageResource extends Resource
                     ->successNotificationTitle('Копію створено чернеткою'),
                 ViewOnSite::table(fn (Page $record) => url('/' . $record->slug)),
             ])
-            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk()])]);
+            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk(static::class)])]);
     }
 
     public static function getRelations(): array

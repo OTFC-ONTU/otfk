@@ -65,4 +65,10 @@ class Video extends Model
     {
         return "https://www.youtube-nocookie.com/embed/{$this->youtube_id}";
     }
+
+    /** Новий запис — першим у списку, як раніше при сортуванні за датою (HasSortOrder). */
+    public static function sortNewRecordsFirst(): bool
+    {
+        return true;
+    }
 }

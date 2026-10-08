@@ -51,6 +51,9 @@ export function initAnchorHold() {
         event.preventDefault()
         history.replaceState(history.state, '', url.hash)
         element.scrollIntoView({ block: 'start' })
+        // Як у звичайного переходу за якорем: фокус переходить до цілі («Перейти до вмісту», клавіатура)
+        if (! element.matches('a[href], button, input, select, textarea, [tabindex]')) element.setAttribute('tabindex', '-1')
+        element.focus({ preventScroll: true })
         requestAnimationFrame(() => holdAnchor(element))
     })
 }

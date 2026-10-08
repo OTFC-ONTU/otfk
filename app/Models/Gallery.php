@@ -117,4 +117,10 @@ class Gallery extends Model
     {
         return route('galleries.index', [], false);
     }
+
+    /** Новий запис — першим у списку, як раніше при сортуванні за датою (HasSortOrder). */
+    public static function sortNewRecordsFirst(): bool
+    {
+        return true;
+    }
 }

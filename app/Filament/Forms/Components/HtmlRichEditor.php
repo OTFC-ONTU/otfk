@@ -32,13 +32,17 @@ class HtmlRichEditor extends RichEditor
      * Розмітка, яку TipTap не зберігає без втрат (без розділювачів — спільна для PHP і JS).
      * Зберігаються: заголовки, списки, цитати, таблиці (colspan/rowspan), details, посилання
      * з target, зображення з width/height, вирівнювання тексту абзаців і заголовків,
-     * <iframe> з усіма атрибутами (вузол EmbedExtension; обгортка <p> навколо нього зникає).
+     * <iframe> з усіма атрибутами (вузол EmbedExtension; обгортка <p> навколо нього зникає),
+     * рядок заголовка таблиці (thead стає першим рядком tbody з тими самими <th>).
      */
     public const LOSSY = '<(?:video|audio|object|embed|dl|dt|dd|section|article|aside|figure|figcaption|div|span|font|center|caption|colgroup|abbr|cite|q|kbd|ins|form|input|button|svg)\\b'
         .'|<(?!iframe\\b)[a-z][a-z0-9]*\\b[^>]*\\s(?:class|id|align|valign|bgcolor|border|cellpadding|cellspacing)\\s*='
         .'|<(?!(?:p|h[1-6]|img|iframe)\\b)[a-z][a-z0-9]*\\b[^>]*\\sstyle\\s*='
         .'|<(?:p|h[1-6]|img)\\b[^>]*\\sstyle\\s*=\\s*"(?:[^"]*;)?\\s*(?!(?:text-align|width|height)\\s*:)[a-z-]+\\s*:'
         .'|<(?!(?:img|iframe)\\b)[a-z][a-z0-9]*\\b[^>]*\\s(?:width|height)\\s*='
+        .'|<a\\b(?![^>]*\\shref\\s*=)'
+        .'|<details\\b[^>]*\\sopen\\b'
+        .'|\\s(?:srcset|sizes|download|lang|dir)\\s*='
         .'|<!--(?!imported-from:)';
 
     /** Кнопки розміру зображення: частка колонки сайту (html-editor.js imageSizes) або вся ширина. */
@@ -95,11 +99,41 @@ class HtmlRichEditor extends RichEditor
         return [...$casts, new HtmlStateCast($this)];
     }
 
-    /** Вкладення обробляються лише в документі TipTap; HTML-рядок не перетворюємо. */
+    /**
+     * Вкладення документа TipTap обробляє Filament. У HTML-рядку (після переходу в режим HTML)
+     * лишаються <img data-id="…"> ще не збережених завантажень із тимчасовою адресою Livewire —
+     * їх переносимо в постійне сховище й підставляємо постійну адресу; решту HTML не чіпаємо.
+     */
     public function saveFileAttachments(): void
     {
-        if (is_array($this->getRawState())) {
+        $state = $this->getRawState();
+        if (is_array($state)) {
             parent::saveFileAttachments();
+
+            return;
+        }
+        if (! is_string($state) || ! str_contains($state, 'data-id=')) {
+            return;
+        }
+
+        $html = preg_replace_callback('~<img\b[^>]*>~i', function (array $match): string {
+            $tag = $match[0];
+            if (! preg_match('~\sdata-id\s*=\s*(["\'])([^"\']+)\1~i', $tag, $id) || ! ($attachment = $this->getUploadedFileAttachment($id[2]))) {
+                return $tag;
+            }
+            $path = $this->saveUploadedFileAttachment($attachment);
+            $url = $path ? $this->getFileAttachmentUrl($path) : null;
+            if (blank($url)) {
+                return $tag;
+            }
+
+            $tag = (string) preg_replace('~(\sdata-id\s*=\s*)(["\'])[^"\']*\2~i', '$1$2'.e($path).'$2', $tag);
+
+            return (string) preg_replace('~(\ssrc\s*=\s*)(["\'])[^"\']*\2~i', '$1$2'.e($url).'$2', $tag);
+        }, $state);
+
+        if ($html !== null && $html !== $state) {
+            $this->rawState($html);
         }
     }
 

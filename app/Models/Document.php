@@ -96,4 +96,10 @@ class Document extends Model
 
         return max(1, (int) round($bytes / 1024)) . ' КБ';
     }
+
+    /** Новий запис — першим у списку, як раніше при сортуванні за датою (HasSortOrder). */
+    public static function sortNewRecordsFirst(): bool
+    {
+        return true;
+    }
 }

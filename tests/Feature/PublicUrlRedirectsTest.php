@@ -97,4 +97,35 @@ class PublicUrlRedirectsTest extends TestCase
         $this->assertNotNull($inMenu->fresh());
         $this->assertNull($page->fresh());
     }
+
+    public function test_incoming_redirects_found_by_normalized_path_and_manual_records_respected(): void
+    {
+        $page = Page::create(['title' => 'Сторінка', 'slug' => 'probe-a', 'is_published' => true]);
+        // Ціль записано зі слешем — модель вважає її тією самою адресою
+        LegacyRedirect::create(['source_path' => '/old/probe', 'target_url' => '/probe-a/', 'status_code' => 301]);
+        // Ручний запис адміністратора з джерелом, що збігається з новою адресою
+        LegacyRedirect::create(['source_path' => '/probe-b', 'target_url' => '/istoriya', 'status_code' => 301, 'note' => 'Вручну']);
+
+        $page->update(['slug' => 'probe-b']);
+
+        $this->get('/old/probe')->assertRedirect('http://localhost/probe-b');
+        $this->get('/probe-a')->assertRedirect('http://localhost/probe-b');
+        $this->get('/probe-b')->assertOk();
+        $this->assertFalse((bool) LegacyRedirect::query()->where('note', 'like', 'Вручну%')->value('is_active'));
+
+        // Після видалення ручний запис повертається з його власною ціллю, а не перезаписується
+        $page->delete();
+        $this->get('/probe-b')->assertRedirect('http://localhost/istoriya');
+    }
+
+    public function test_target_that_redirects_itself_is_replaced_by_final_address(): void
+    {
+        $section = Page::create(['title' => 'Розділ документів', 'slug' => 'rozdil-dokumentiv', 'body' => '<p>Вступ</p>', 'is_published' => true]);
+        $category = \App\Models\DocumentCategory::create(['title' => 'Розділ', 'slug' => 'rozdil', 'page_id' => $section->id]);
+        $child = Page::create(['title' => 'Дочірня', 'slug' => 'dochirnia', 'parent_id' => $section->id, 'is_published' => true]);
+
+        $child->delete();
+
+        $this->assertSame('/dokumenty/'.$category->slug, LegacyRedirect::query()->where('source_path', '/dochirnia')->value('target_url'));
+    }
 }

@@ -18,7 +18,7 @@
         @foreach ($groups as $heading => $links)
             <x-filament::section>
                 <x-slot name="heading">{{ $heading }}</x-slot>
-                <x-slot name="headerEnd">
+                <x-slot name="afterHeader">
                     <a href="{{ $links->first()['edit_url'] }}"
                        class="text-sm font-medium text-primary-600 hover:underline dark:text-primary-400">Редагувати →</a>
                 </x-slot>

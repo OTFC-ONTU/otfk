@@ -91,7 +91,7 @@ class SpecialtyResource extends Resource
                 EditAction::make(),
                 ViewOnSite::table(fn (Specialty $record) => route('specialties.show', $record)),
             ])
-            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk()])]);
+            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk(static::class)])]);
     }
 
     public static function getRelations(): array

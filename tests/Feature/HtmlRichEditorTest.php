@@ -50,6 +50,11 @@ class HtmlRichEditorTest extends TestCase
         $this->assertTrue(HtmlRichEditor::isLossy('<video src="/storage/a.mp4"></video>'));
         $this->assertTrue(HtmlRichEditor::isLossy('<div><p>Обгортка</p></div>'));
         $this->assertTrue(HtmlRichEditor::isLossy('<p>Текст</p><!-- примітка -->'));
+        $this->assertTrue(HtmlRichEditor::isLossy('<p><a name="rozdil">Якір</a></p>'));
+        $this->assertTrue(HtmlRichEditor::isLossy('<details open><summary>Відкритий</summary><p>x</p></details>'));
+        $this->assertTrue(HtmlRichEditor::isLossy('<p lang="en">Text</p>'));
+        $this->assertTrue(HtmlRichEditor::isLossy('<img src="/a.jpg" srcset="/a-2x.jpg 2x" alt="">'));
+        $this->assertFalse(HtmlRichEditor::isLossy('<table><thead><tr><th>A</th></tr></thead><tbody><tr><td>1</td></tr></tbody></table>'));
     }
 
     public function test_page_editor_has_mode_toggle_and_keeps_html_without_normalization(): void
@@ -124,5 +129,25 @@ class HtmlRichEditorTest extends TestCase
             .'<table><tbody><tr><td rowspan="2"><p>x</p></td></tr></tbody></table>',
             HtmlRichEditor::cleanEditorHtml($html),
         );
+    }
+
+    public function test_attachment_uploaded_in_visual_mode_is_stored_when_saved_from_html_mode(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $this->actingAs(User::firstOrFail());
+        $page = Page::create(['title' => 'Вкладення', 'slug' => 'vkladennia-test', 'body' => '<p>Текст</p>', 'is_published' => true]);
+
+        // Картинку завантажено у візуальному режимі, потім перемкнулися в HTML: стан — рядок із data-id
+        Livewire::test(EditPage::class, ['record' => $page->getRouteKey()])
+            ->set('componentFileAttachments.data.body.abc123', \Illuminate\Http\UploadedFile::fake()->image('foto.jpg', 40, 30))
+            ->set('data.body', '<p>Текст</p><p><img data-id="abc123" src="http://localhost/livewire/preview-file/tmp.jpg?expires=1&signature=x" alt="Фото"></p>')
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $body = $page->fresh()->body;
+        $this->assertStringNotContainsString('livewire/preview-file', $body);
+        $this->assertMatchesRegularExpression('~<img src="/storage/pages/[^"]+\.jpg" alt="Фото"~', $body);
+        preg_match('~/storage/(pages/[^"]+)"~', $body, $match);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($match[1]);
     }
 }

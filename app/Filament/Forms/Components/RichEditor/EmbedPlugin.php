@@ -14,6 +14,8 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 /**
  * Кнопка «PDF / відео» редактора: вставляє <iframe> з PDF (посилання або завантажений файл),
@@ -92,7 +94,8 @@ class EmbedPlugin implements RichContentPlugin
                         ->directory('documents/vbudovani')
                         ->acceptedFileTypes(['application/pdf'])
                         ->maxSize(20480)
-                        ->preserveFilenames()
+                        // Читабельне й унікальне ім'я: однакові «Наказ.pdf» з різних сторінок не перезаписують одне одного
+                        ->getUploadedFileNameForStorageUsing(fn (TemporaryUploadedFile $file): string => (Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) ?: 'dokument').'-'.Str::lower(Str::random(6)).'.pdf')
                         ->live()
                         ->hidden(fn (Get $get): bool => filled($get('url'))),
                     TextInput::make('title')
@@ -102,7 +105,7 @@ class EmbedPlugin implements RichContentPlugin
                 ])
                 ->action(function (array $arguments, array $data, RichEditor $component): void {
                     $source = filled($data['file'] ?? null)
-                        ? ['src' => '/storage/'.ltrim((string) $data['file'], '/'), 'kind' => EmbedSource::KIND_PDF]
+                        ? ['src' => '/storage/'.implode('/', array_map('rawurlencode', explode('/', ltrim((string) $data['file'], '/')))), 'kind' => EmbedSource::KIND_PDF]
                         : EmbedSource::normalize($data['url'] ?? null);
 
                     if ($source === null) {

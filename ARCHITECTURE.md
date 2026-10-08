@@ -6,7 +6,7 @@
 ## TL;DR
 
 - **Что это:** новый сайт Одесского технического фахового колледжа ОНТУ (замена старого otfk.od.ua), пишется с нуля как **proof-of-concept**. Публичная часть + админка.
-- **Стек (подтверждён по коду, НЕ «чистый PHP»):** PHP ^8.2 (CI/прод — 8.3), **Laravel 12**, **Filament 4** (вся админка; тема `resources/css/filament/admin/theme.css`), Blade + **Tailwind CSS v4** + **Alpine.js 3**, Vite 7. БД: SQLite в dev/тестах, **MySQL в проде**. Composer + npm.
+- **Стек (подтверждён по коду, НЕ «чистый PHP»):** PHP ^8.2 (CI/прод — 8.3), **Laravel 12**, **Filament 4** (вся админка; тема `resources/css/filament/admin/theme.css`; адрес диска `public` относительный — `/storage`), Blade + **Tailwind CSS v4** + **Alpine.js 3**, Vite 7. БД: SQLite в dev/тестах, **MySQL в проде**. Composer + npm.
 - **Хостинг:** shared-хостинг ukraine.com.ua (SSH, без Node, без queue-воркера) — отсюда ключевые паттерны: фронтенд собирается в CI и заливается на сервер rsync-ом (деплой-workflow), фоновые задачи только через `dispatch(...)->afterResponse()`.
 - **Локально:** `php artisan serve --port=8002` (см. `.claude/launch.json`), или `composer run dev` (также запускает queue:listen, pail и Vite; очередь только для dev, на проде воркера нет). Тесты: `composer test` (SQLite `:memory:`).
 - **PoC-статус:** сид-данные фейковые, в футере бейдж «Альфа-версія»; роли `admin`/`editor` и базовая защита админки введены 06.10.2026 (см. «Авторизация и роли», `docs/security-audit.md`). Полный список — в разделе [PoC-only](#poc-only).

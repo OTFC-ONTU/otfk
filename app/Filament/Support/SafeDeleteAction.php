@@ -44,32 +44,35 @@ class SafeDeleteAction
                 Action::make('unpublishInstead')
                     ->label('Зняти з публікації')
                     ->color('gray')
+                    ->authorize(fn ($livewire): bool => ! method_exists($livewire, 'getResource') || $livewire->getResource()::canEdit($record))
                     ->action(function ($livewire) use ($record): void {
                         $record->update(['is_published' => false]);
                         if (method_exists($livewire, 'refreshFormData')) {
                             $livewire->refreshFormData(['is_published']);
                         }
                         Notification::make()->success()->title('Знято з публікації')
-                            ->body('Матеріал лишився в адмінці, на сайті його не видно.')->send();
+                            ->body('Матеріал лишився в адмінці, на сайті його не видно; доки його знову не опублікують, його адреса відповідатиме «сторінку не знайдено».')->send();
                     })
                     ->cancelParentActions(),
             ] : []);
     }
 
     /** Масове видалення: заблоковані матеріали пропускаються з повідомленням. */
-    public static function bulk(): BulkAction
+    /** @param class-string<\Filament\Resources\Resource> $resource */
+    public static function bulk(string $resource): BulkAction
     {
         return BulkAction::make('delete')
+            ->authorize(fn (): bool => $resource::canDeleteAny())
             ->label('Видалити вибране')
             ->icon(Heroicon::OutlinedTrash)
             ->color('danger')
             ->requiresConfirmation()
             ->modalHeading('Видалити вибрані матеріали?')
             ->modalDescription('Адреси опублікованих матеріалів перенаправлятимуться на їхній розділ або список; підсторінки перейдуть до розділу видаленої сторінки. Сторінки з меню, розділів документів і системні адреси буде пропущено.')
-            ->action(function (Collection $records): void {
+            ->action(function (Collection $records) use ($resource): void {
                 $skipped = [];
                 foreach ($records as $record) {
-                    if (self::blockers($record)) {
+                    if (self::blockers($record) || ! $resource::canDelete($record)) {
                         $skipped[] = $record->title ?? $record->full_name ?? '#'.$record->getKey();
 
                         continue;
@@ -140,7 +143,7 @@ class SafeDeleteAction
     {
         $blockers = self::blockers($record);
         $items = $blockers ?: self::consequences($record);
-        $intro = $blockers ? '' : '<p>Дію не можна скасувати. Якщо матеріал лише тимчасово не потрібен — краще «Зняти з публікації».</p>';
+        $intro = $blockers ? '' : '<p>Дію не можна скасувати. Якщо матеріал лише тимчасово не потрібен — краще «Зняти з публікації» (тоді адреса до повторної публікації відповідатиме «сторінку не знайдено», без перенаправлення).</p>';
 
         return new HtmlString($intro.($items ? '<ul style="margin-top:.5rem;list-style:disc;padding-left:1.25rem;text-align:left">'.implode('', array_map(fn (string $line) => '<li>'.e($line).'</li>', $items)).'</ul>' : ''));
     }

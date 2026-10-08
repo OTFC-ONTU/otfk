@@ -1,7 +1,7 @@
 // CodeMirror 6 для режиму «HTML»: підсвітка синтаксису, номери рядків, парні теги, пошук (Ctrl/Cmd+F),
 // перенесення довгих рядків. Тема стежить за світлою/темною темою адмінки Filament.
 import { basicSetup } from 'codemirror'
-import { Annotation, Compartment, EditorState } from '@codemirror/state'
+import { Annotation, Compartment, EditorState, Transaction } from '@codemirror/state'
 import { EditorView, keymap } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
 import { html } from '@codemirror/lang-html'
@@ -107,7 +107,8 @@ export function createEditor(parent, { doc, label, onChange }) {
             if (text === view.state.doc.toString()) return
             view.dispatch({
                 changes: { from: 0, to: view.state.doc.length, insert: text },
-                annotations: external.of(true),
+                // Заміна ззовні (перемикання режиму) не йде в історію: Ctrl/Cmd+Z не поверне текст до правок у візуальному режимі
+                annotations: [external.of(true), Transaction.addToHistory.of(false)],
                 selection: { anchor: 0 },
             })
             view.scrollDOM.scrollTop = 0

@@ -41,7 +41,10 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Відносна адреса: поля файлів і вкладення Filament працюють на будь-якому хості (www, піддомен,
+            // тестовий хостинг) без CORS, а збережений HTML не прив'язується до хоста адмінки.
+            // Публічні шаблони будують абсолютні адреси через asset().
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

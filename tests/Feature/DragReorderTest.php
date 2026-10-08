@@ -59,9 +59,17 @@ class DragReorderTest extends TestCase
 
     public function test_new_record_goes_to_the_end_and_form_has_no_order_field(): void
     {
-        $max = (int) Banner::max('sort_order');
+        $max = (int) \App\Models\Faq::max('sort_order');
+        $faq = \App\Models\Faq::create(['question' => 'Нове питання?', 'answer' => 'Відповідь', 'is_active' => true]);
+        $this->assertSame($max + 1, $faq->sort_order);
+
+        // Стрічки «новіше вгорі» (банери, альбоми, відео, документи) — новий запис першим, як раніше за датою
+        $min = (int) Banner::min('sort_order');
         $banner = Banner::create(['title' => 'Новий', 'is_published' => true]);
-        $this->assertSame($max + 1, $banner->sort_order);
+        $this->assertSame($min - 1, $banner->sort_order);
+        $this->assertSame($banner->id, Banner::query()->ordered()->value('id'));
+        $gallery = Gallery::create(['title' => 'Новий альбом', 'slug' => 'novyi-albom-test', 'published_at' => now(), 'is_published' => true]);
+        $this->assertSame($gallery->id, Gallery::query()->ordered()->value('id'));
 
         $this->actingAs(User::firstOrFail());
         $this->get(StaffResource::getUrl('create'))->assertOk()->assertDontSee('data.sort_order', false);
@@ -79,5 +87,14 @@ class DragReorderTest extends TestCase
 
         $this->assertSame($before, Gallery::query()->ordered()->pluck('id')->all());
         $this->assertSame([1, 2, 3], [$first->fresh()->sort_order, $new->fresh()->sort_order, $old->fresh()->sort_order]);
+    }
+
+    public function test_tables_have_no_automatic_key_sort_that_breaks_group_by_on_mysql(): void
+    {
+        $this->actingAs(User::firstOrFail());
+        $widget = Livewire::test(\App\Filament\Widgets\TopPages::class)->instance();
+
+        $this->assertFalse($widget->getTable()->hasDefaultKeySort());
+        $this->assertStringNotContainsString('"site_visits"."id" asc', $widget->getFilteredSortedTableQuery()->toSql());
     }
 }

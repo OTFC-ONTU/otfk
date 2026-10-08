@@ -134,8 +134,11 @@ class AdminEditingToolsTest extends TestCase
 
     public function test_broken_links_admin_page_renders(): void
     {
+        Page::create(['title' => 'З битим посиланням', 'slug' => 'z-bytym-posylanniam', 'body' => '<p><a href="/nema-takoyi-storinky">x</a></p>', 'is_published' => true]);
+
         $this->get(BrokenLinks::getUrl())->assertOk()
-            ->assertSee('Биті внутрішні посилання');
+            ->assertSee('Биті внутрішні посилання')
+            ->assertSee('Редагувати →');
     }
 
     public function test_drafts_widget_lists_unpublished_content(): void

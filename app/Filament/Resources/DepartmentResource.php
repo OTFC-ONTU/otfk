@@ -80,7 +80,7 @@ class DepartmentResource extends Resource
                 EditAction::make(),
                 ViewOnSite::table(fn (Department $record) => route('structure.show', $record)),
             ])
-            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk()])]);
+            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk(static::class)])]);
     }
 
     public static function getRelations(): array

@@ -99,4 +99,32 @@ class EditorEmbedTest extends TestCase
         $this->assertStringContainsString('<iframe src="/storage/documents/plan.pdf" title="План" class="w-full"', $body);
         $this->assertFalse(HtmlRichEditor::isLossy($body), $body);
     }
+
+    public function test_uploaded_pdf_gets_unique_readable_name_and_does_not_overwrite(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $this->actingAs(User::firstOrFail());
+        $page = Page::create(['title' => 'PDF', 'slug' => 'pdf-test', 'body' => '<p>x</p>', 'is_published' => true]);
+        $sources = [];
+
+        foreach ([1, 2] as $attempt) {
+            Livewire::test(EditPage::class, ['record' => $page->getRouteKey()])
+                ->callAction(
+                    TestAction::make(EmbedPlugin::NAME)->schemaComponent('body', schema: 'form')->arguments(['editorSelection' => ['type' => 'text', 'anchor' => 1, 'head' => 1]]),
+                    data: ['file' => \Illuminate\Http\UploadedFile::fake()->create('Наказ №1.pdf', 20, 'application/pdf')],
+                )
+                ->assertHasNoFormErrors()
+                ->assertDispatched('run-rich-editor-commands', function (string $event, array $params) use (&$sources): bool {
+                    $sources[] = $params['commands'][0]['arguments'][0]['attrs']['src'] ?? '';
+
+                    return true;
+                });
+        }
+
+        $this->assertCount(2, array_unique($sources));
+        foreach ($sources as $src) {
+            $this->assertMatchesRegularExpression('~^/storage/documents/vbudovani/nakaz-1-[a-z0-9]{6}\.pdf$~', $src);
+            \Illuminate\Support\Facades\Storage::disk('public')->assertExists(substr($src, strlen('/storage/')));
+        }
+    }
 }

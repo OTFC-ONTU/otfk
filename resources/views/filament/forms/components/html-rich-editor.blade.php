@@ -54,10 +54,12 @@
                 })
             },
             lossyMessage: @js('Візуальний редактор спростить оформлення (class/style), ширини таблиць, якорі (id) і службові коментарі цього тексту. Редагувати тут усе одно? «Скасувати» — перейти до режиму HTML.'),
-            whenEditor(callback, attempts = 100) {
+            {{-- Без ліміту: TipTap вантажиться лінивим чанком (x-load), на повільному з'єднанні — довго;
+                 до появи знімка (baseline) правки неможливі, бо редактора ще немає --}}
+            whenEditor(callback, delay = 100) {
                 const editor = this.rich()?.getEditor()
                 if (editor) return callback(editor)
-                if (attempts > 0) setTimeout(() => this.whenEditor(callback, attempts - 1), 100)
+                setTimeout(() => this.whenEditor(callback, Math.min(delay * 2, 1000)), delay)
             },
             {{-- HTML документа TipTap без службової розмітки й порожніх абзаців у кінці (TrailingNode) --}}
             normalized(editor) {
@@ -184,6 +186,7 @@
             },
         }"
         x-on:keydown.capture="if ($event.target.closest('.fi-fo-rich-editor-content')) keyTouch($event)"
+        x-on:keydown.window.capture="if (($event.metaKey || $event.ctrlKey) && ($event.key ?? '').toLowerCase() === 's') flush()"
         x-on:beforeinput.capture="if ($event.target.closest('.fi-fo-rich-editor-content')) touch($event)"
         x-on:paste.capture="if ($event.target.closest('.fi-fo-rich-editor-content')) touch($event)"
         x-on:drop.capture="if ($event.target.closest('.fi-fo-rich-editor-content')) touch($event)"

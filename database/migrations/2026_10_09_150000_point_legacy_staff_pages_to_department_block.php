@@ -34,7 +34,7 @@ return new class extends Migration
 
             LegacyRedirect::query()->where('target_url', '/'.$slug)->get()->each(function (LegacyRedirect $redirect) use ($target, $slug): void {
                 try {
-                    $redirect->note = trim(($redirect->note ? $redirect->note.'; ' : '').'було: /'.$slug);
+                    $redirect->note = mb_substr(trim(($redirect->note ? $redirect->note.'; ' : '').'було: /'.$slug), 0, 500);
                     $redirect->target_url = $target;
                     $redirect->save();
                 } catch (Throwable $e) {

@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Support\PublicStorageUrl;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -30,10 +29,5 @@ class AppServiceProvider extends ServiceProvider
 
             return $this->app->isProduction() ? $rule->uncompromised() : $rule;
         });
-
-        // Адреси файлів Filament — від хоста запиту (див. PublicStorageUrl)
-        if (! $this->app->runningInConsole() && $this->app->bound('request')) {
-            PublicStorageUrl::useRequestHost(request());
-        }
     }
 }

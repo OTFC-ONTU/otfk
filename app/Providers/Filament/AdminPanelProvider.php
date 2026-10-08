@@ -98,11 +98,12 @@ class AdminPanelProvider extends PanelProvider
 
     /**
      * Поведінка Filament 3, яку Filament 4 змінив типово (upgrade guide, «silent changes»):
-     * фільтри таблиць застосовуються одразу, секції/сітки на всю ширину форми.
+     * фільтри таблиць застосовуються одразу, без автоматичного сортування за ключем, секції/сітки на всю ширину форми.
      */
     public function boot(): void
     {
-        Table::configureUsing(fn (Table $table) => $table->deferFilters(false));
+        // Без автоматичного «order by id»: на MySQL (ONLY_FULL_GROUP_BY) він ламає таблиці з GROUP BY (віджет «Топ сторінок»)
+        Table::configureUsing(fn (Table $table) => $table->deferFilters(false)->defaultKeySort(false));
         Section::configureUsing(fn (Section $section) => $section->columnSpanFull());
         Grid::configureUsing(fn (Grid $grid) => $grid->columnSpanFull());
         Fieldset::configureUsing(fn (Fieldset $fieldset) => $fieldset->columnSpanFull());

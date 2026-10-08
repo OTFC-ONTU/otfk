@@ -143,7 +143,7 @@ class NewsResource extends Resource
                     ->successNotificationTitle('Копію створено чернеткою'),
                 ViewOnSite::table(fn (News $record) => route('news.show', $record)),
             ])
-            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk()])]);
+            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk(static::class)])]);
     }
 
     public static function getRelations(): array

@@ -121,7 +121,7 @@ class StaffResource extends Resource
                 EditAction::make(),
                 ViewOnSite::table(fn (Staff $record) => route('staff.show', $record)),
             ])
-            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk()])]);
+            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk(static::class)])]);
     }
 
     public static function getRelations(): array
