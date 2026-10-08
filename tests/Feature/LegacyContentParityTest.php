@@ -11,6 +11,7 @@ use App\Models\Setting;
 use App\Models\Specialty;
 use App\Models\Staff;
 use App\Support\FileCards;
+use App\Support\LocalizedUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -90,24 +91,25 @@ class LegacyContentParityTest extends TestCase
             FileCards::render('<p>Текст <a href="/plan.pdf?version=2#page=4">плану</a></p>'));
     }
 
-    public function test_teacher_card_links_to_profile_and_qualification_pages(): void
+    public function test_teacher_card_is_one_link_to_staff_page(): void
     {
         $department = Department::query()->first();
         $department->update(['is_published' => true]);
         $profile = Page::create(['title' => 'Результати професійної діяльності викладача', 'slug' => 'prof-test', 'is_published' => true]);
         $qualification = Page::create(['title' => 'Відомості про підвищення кваліфікації викладача', 'slug' => 'kval-test', 'is_published' => true]);
-        Staff::create([
+        $staff = Staff::create([
             'full_name' => 'Тестова Олена Петрівна', 'position' => 'викладач', 'category' => 'teacher',
             'department_id' => $department->id, 'is_published' => true,
             'profile_page_id' => $profile->id, 'qualification_page_id' => $qualification->id,
         ]);
+        $staffUrl = LocalizedUrl::route('staff.show', $staff);
 
-        $this->get('/struktura/'.$department->slug)->assertOk()
-            ->assertSee('href="'.url('/prof-test').'"', false)
-            ->assertSee('href="'.url('/kval-test').'"', false)
-            ->assertSee(__('public.staff_qualification_page'));
-        $this->get('/en/struktura/'.$department->slug)->assertOk()
-            ->assertSee('href="'.url('/en/prof-test').'"', false);
+        $html = $this->get('/struktura/'.$department->slug)->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('~<a href="'.preg_quote($staffUrl, '~').'"\s+class="card card-interactive~', $html);
+        $this->assertStringNotContainsString('href="'.url('/prof-test').'"', $html);
+        $this->assertStringNotContainsString('public.staff_', $html);
+
+        $this->get($staffUrl)->assertOk();
     }
 
     public function test_specialty_cards_list_programs_with_file_links(): void
