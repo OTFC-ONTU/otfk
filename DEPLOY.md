@@ -101,21 +101,29 @@ php artisan optimize             # кеш конфигов/роутов/вью (
 
 **Панель Plesk (поддомен `new.otfk.od.ua`):**
 - «Сертифікати SSL/TLS»: Let's Encrypt; в «Хостинг та DNS» — перенаправление HTTP → HTTPS.
-- Корень документов — `new.otfk.od.ua/public` (Toolkit требует: `artisan` в родительском каталоге).
+- Корень документов: Toolkit ставит приложение в текущий корень и сам переводит корень на его `public` (`artisan` — в родительском каталоге). Для новой установки оставить корень `new.otfk.od.ua`; у нынешней установки корень заранее был `…/public`, поэтому приложение в `new.otfk.od.ua/public`, веб-корень `new.otfk.od.ua/public/public`.
 - «PHP»: 8.3, «FPM-застосунок обслуговується Apache» (не nginx — нужен `.htaccess`), `upload_max_filesize` 25M, `post_max_size` 32M (админка принимает файлы до 20 МБ).
 - «Налаштування Apache і nginx»: выключить «Обслуговувати статичні файли напряму через nginx» — иначе файлы `/storage/` уходят мимо `storage/app/public/.htaccess` (CSP `sandbox` для HTML/SVG).
 - «Бази даних»: отдельная база и пользователь; старую БД сайта не трогать.
 - Квота подписки — 10 ГБ на старый и новый сайт вместе (учитывать `storage/mirror` и бэкапы).
 
-**Первичная установка:**
-1. Каталог `new.otfk.od.ua` очистить от заглушек Plesk (`index.html` и т. п.).
-2. Laravel Toolkit → «Установлення програми» → из Git: `https://github.com/gotthejuicee/otfk.git`, ветка **`plesk-build`**, путь `new.otfk.od.ua`.
-3. Окружение (вкладка env Toolkit или `.env` в «Файли»): по `.env.production.example` — `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://new.otfk.od.ua`, `DB_*`, `ADMIN_PASSWORD`; `SEO_PRIMARY_HOST` не трогать. При переносе БД — **`APP_KEY` исходного сервера** (иначе не расшифруются секреты 2FA).
-4. Данные: дамп БД тестового хостинга импортировать в новую базу («Бази даних» → импорт), **не** `db:seed`. Файлы: архив `otfk:storage-export` загрузить через «Файли» и выполнить `otfk:storage-import` во вкладке Artisan Toolkit.
-5. Сценарий развёртывания Toolkit: `composer install --no-dev --optimize-autoloader`, `migrate --force`, `optimize:clear`, `config:cache`/`route:cache`/`view:cache`; npm-шаги выключить (сборка уже в ветке). Очередь (queue worker) не включать — в проекте `afterResponse()`.
-6. Artisan: `storage:link`.
-7. Планировщик: включить `schedule:run` в Toolkit (или «Заплановані завдання» → PHP-скрипт `artisan`, аргумент `schedule:run`, PHP 8.3, щоминуты). `otfk:backup` требует `mysqldump`; если его нет в окружении задачи — полагаться на «Резервна копія та відновлення» Plesk.
-8. Включить автоматическое развёртывание репозитория и скопировать его URL вебхука в секрет GitHub `PLESK_DEPLOY_WEBHOOK`.
+**Первичная установка (выполнена 2026-10-08):**
+1. Laravel Toolkit («Почніть роботу» → Laravel) → из Git `https://github.com/gotthejuicee/otfk.git`. Мастер ветку не спрашивает и берёт `master` — после установки ветку переключить на **`plesk-build`** в «Git» домена и развернуть заново. Toolkit кладёт приложение в **текущий корень документов** и переносит корень на его `public`: при корне `new.otfk.od.ua/public` приложение оказалось в **`new.otfk.od.ua/public`**, а веб-корень — **`new.otfk.od.ua/public/public`** (так и оставлено; `.env`/`composer.json` снаружи — 403).
+2. `.env` (Toolkit → «Змінні середовища»): Toolkit создаёт локальный шаблон (`APP_ENV=local`, `APP_DEBUG=true`, **SQLite**) — заменить целиком по `.env.production.example`: `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://new.otfk.od.ua`, `DB_CONNECTION=mysql` + `DB_*`, `SESSION_SECURE_COOKIE=true`; `SEO_PRIMARY_HOST=otfk.od.ua` не менять. При переносе БД — **`APP_KEY` исходного сервера** (иначе не расшифруются секреты 2FA). После любой правки `.env` — «Виконавець»: `optimize:clear`, `config:cache` (развёртывание кеширует конфиг; признак старого конфига — `<title>Laravel` и cookie `laravel-session`).
+3. Данные: дамп БД тестового хостинга («Бази даних» → «Імпортувати дамп», `.zip`), **не** `db:seed`; проверка — `db:show` в «Виконавець».
+4. Файлы `storage/app/public` (3,1 ГБ) заливались по FTP (`lftp mirror -R`, FTPS). **FTP пользователя подписки открывается в `httpdocs` старого сайта** — относительный путь `new.otfk.od.ua/...` создаёт папку внутри старого сайта. Правильное место — `/new.otfk.od.ua/public/storage/app/public/` (от корня подписки); переносить внутри сервера через «Файли» → «Перемістити». Не класть файлы в веб-корень `public/public/storage` — там должна быть **ссылка** `storage:link` (иначе нет защитного `.htaccess` и новые загрузки не видны).
+5. Сценарий развёртывания Toolkit («Розгортання»): этапы режим обслуживания + composer + «Запуск сценарію розгортання»; **package.json выключен** (Node 21 в Toolkit не подходит Vite 7, сборка уже в ветке). Сценарий запускается в chroot, где `php` — 7.2, поэтому **полный путь**:
+   ```
+   /opt/plesk/php/8.3/bin/php artisan migrate --force
+   /opt/plesk/php/8.3/bin/php artisan optimize:clear
+   /opt/plesk/php/8.3/bin/php artisan config:cache
+   /opt/plesk/php/8.3/bin/php artisan route:cache
+   /opt/plesk/php/8.3/bin/php artisan view:cache
+   ```
+   Очередь (queue worker) не включать — в проекте `afterResponse()`.
+6. «Виконавець»: `storage:link`.
+7. Планировщик: «Заплановані завдання» на панели Toolkit включить (`schedule:run`). `otfk:backup` требует `mysqldump`; если его нет в окружении задачи — полагаться на «Резервна копія та відновлення» Plesk.
+8. Автоматическое развёртывание: «Розгортання» → режим **«Автоматичний»**; URL вебхука (`https://hosting9.tenet.ua:8443/modules/git/public/web-hook.php?uuid=…`) — в секрет GitHub `PLESK_DEPLOY_WEBHOOK`. В ручном режиме вебхук только подтягивает код, не разворачивая.
 
 `mirror-files.yml` работает только по SSH тестового хостинга; на Plesk очередь `file_mirrors` обрабатывает планировщик (или команда `otfk:mirror-files` во вкладке Artisan).
 
