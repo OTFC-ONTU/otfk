@@ -4,9 +4,9 @@
 
 > ✅ Перед прод-деплоем уже сделано в коде: `User::canAccessPanel()` (иначе Filament отдаёт 403 на проде) и шаблон `.env.production.example`.
 
-> 🧭 **Два окружения (с 2026-10-08):** основная ветка — `prod`, push в неё выкладывает на Plesk-поддомен `new.otfk.od.ua` (GitHub Environment `plesk`, раздел «Plesk: new.otfk.od.ua» ниже); push в `master` — по-прежнему на тестовый хостинг just-test.shop (секреты репозитория). Старый сайт на otfk.od.ua в это время работает как был.
+> 🧭 **Два окружения (с 2026-10-08):** основная ветка — `prod`, push в неё выкладывает на Plesk-поддомен `new.otfk.od.ua` через ветку `plesk-build` и Laravel Toolkit (раздел «Plesk: new.otfk.od.ua» ниже); push в `master` — по-прежнему по SSH на тестовый хостинг just-test.shop (секреты репозитория). Старый сайт на otfk.od.ua в это время работает как был.
 >
-> 🚀 **Автодеплой:** после первичной настройки по этому документу обновления едут сами — workflow `.github/workflows/deploy.yml` на каждый push в `prod`/`master` (или вручную через Run workflow): после успешных тестов и аудита того же workflow собирает фронтенд в CI, по SSH делает `git reset --hard ${{ github.sha }}` + `composer install`, заливает `public/build/` rsync-ом и выполняет `migrate --force` + пересборку кэшей. Нужны секреты репозитория `REMOTE_KEY` (приватный SSH-ключ), `REMOTE_HOST`, `REMOTE_USER`, `REMOTE_PATH` (каталог сайта), опционально `REMOTE_PORT`. Раздел «Обновление сайта потом» ниже — ручной запасной путь.
+> 🚀 **Автодеплой (тестовый хостинг):** после первичной настройки по этому документу обновления едут сами — workflow `.github/workflows/deploy.yml` на каждый push в `master` (или вручную через Run workflow из другой ветки, кроме `prod`): после успешных тестов и аудита того же workflow собирает фронтенд в CI, по SSH делает `git reset --hard ${{ github.sha }}` + `composer install`, заливает `public/build/` rsync-ом и выполняет `migrate --force` + пересборку кэшей. Нужны секреты репозитория `REMOTE_KEY` (приватный SSH-ключ), `REMOTE_HOST`, `REMOTE_USER`, `REMOTE_PATH` (каталог сайта), опционально `REMOTE_PORT`. Раздел «Обновление сайта потом» ниже — ручной запасной путь.
 > Переревью безопасности 06.10.2026: в `deploy.yml` реализован собственный job `tests`, `deploy` зависит от него и устанавливает тот же SHA. Ручной запуск вне master требует отдельной проверки получения выбранного SHA. Атомарность проверки и записи `otfk:sanitize-content --apply` реализована условным UPDATE (разделы 16–17 аудита). Приёмка на хостинге остаётся обязательной; локальный тест команды требует изоляции storage, чтобы не удалять рабочие бэкапы.
 >
 > ⚠️ `public/build/` больше **не** коммитится в git — сборка живёт только в CI/деплое; локально `npm run build` или `npm run dev`.
@@ -95,48 +95,31 @@ php artisan optimize             # кеш конфигов/роутов/вью (
 
 Новый сайт живёт на поддомене подписки otfk.od.ua рядом со старым. Всё, что зависит от домена, привязано к `SEO_PRIMARY_HOST=otfk.od.ua`, поэтому поддомен автоматически `noindex`, без GA4 и без правил www/HTTPS из `public/.htaccess`; редиректы старых адресов остаются на поддомене. **`SEO_PRIMARY_HOST` на поддомен не менять.**
 
+**Почему не SSH.** SSH подписки — `/bin/bash (chrooted)`, пользователь его не меняет; внутри chroot только PHP 7.2. Поэтому выкладку делает **Laravel Toolkit** Plesk (Git + Composer + artisan + планировщик на PHP 8.3 сайта), а Node на сервере нет — фронтенд собирает CI.
+
+**Как едет код:** push в `prod` → `deploy.yml` (job `tests`, затем `deploy-plesk`) собирает фронтенд и публикует ветку **`plesk-build`** = дерево `prod` + `public/build` (коммит с родителями «прошлый plesk-build» и «проверенный SHA prod», ветка только движется вперёд) → вебхук `PLESK_DEPLOY_WEBHOOK` (секрет репозитория) запускает развёртывание в Plesk. Без секрета — кнопка развёртывания в Plesk вручную. В `plesk-build` руками не коммитить.
+
 **Панель Plesk (поддомен `new.otfk.od.ua`):**
-- «Хостинг та DNS → Налаштування хостингу»: корневой каталог — `new.otfk.od.ua/public`; SSL Let's Encrypt + перенаправление HTTP → HTTPS в панели.
-- «Налаштування PHP»: версия 8.3 (штатный PHP Plesk, `/opt/plesk/php/8.3`), «FPM-застосунок обслуговується Apache» (не nginx — нужен `.htaccess`), `upload_max_filesize` 25M, `post_max_size` 32M (админка принимает файлы до 20 МБ). CloudLinux PHP Selector не нужен.
+- «Сертифікати SSL/TLS»: Let's Encrypt; в «Хостинг та DNS» — перенаправление HTTP → HTTPS.
+- Корень документов — `new.otfk.od.ua/public` (Toolkit требует: `artisan` в родительском каталоге).
+- «PHP»: 8.3, «FPM-застосунок обслуговується Apache» (не nginx — нужен `.htaccess`), `upload_max_filesize` 25M, `post_max_size` 32M (админка принимает файлы до 20 МБ).
 - «Налаштування Apache і nginx»: выключить «Обслуговувати статичні файли напряму через nginx» — иначе файлы `/storage/` уходят мимо `storage/app/public/.htaccess` (CSP `sandbox` для HTML/SVG).
-- Отдельная база MySQL и пользователь; старую БД сайта не трогать.
-- «Доступ до веб-хостингу»: shell `/bin/bash` (не chroot — нужны git и composer).
+- «Бази даних»: отдельная база и пользователь; старую БД сайта не трогать.
+- Квота подписки — 10 ГБ на старый и новый сайт вместе (учитывать `storage/mirror` и бэкапы).
 
-**SSH: PHP 8.3 и Composer.** Системный `php` в SSH — 7.2. Для ручной работы добавить строку в **начало** `~/.bashrc` (ниже стандартной проверки на интерактивность она в неинтерактивном SSH не выполнится):
+**Первичная установка:**
+1. Каталог `new.otfk.od.ua` очистить от заглушек Plesk (`index.html` и т. п.).
+2. Laravel Toolkit → «Установлення програми» → из Git: `https://github.com/gotthejuicee/otfk.git`, ветка **`plesk-build`**, путь `new.otfk.od.ua`.
+3. Окружение (вкладка env Toolkit или `.env` в «Файли»): по `.env.production.example` — `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://new.otfk.od.ua`, `DB_*`, `ADMIN_PASSWORD`; `SEO_PRIMARY_HOST` не трогать. При переносе БД — **`APP_KEY` исходного сервера** (иначе не расшифруются секреты 2FA).
+4. Данные: дамп БД тестового хостинга импортировать в новую базу («Бази даних» → импорт), **не** `db:seed`. Файлы: архив `otfk:storage-export` загрузить через «Файли» и выполнить `otfk:storage-import` во вкладке Artisan Toolkit.
+5. Сценарий развёртывания Toolkit: `composer install --no-dev --optimize-autoloader`, `migrate --force`, `optimize:clear`, `config:cache`/`route:cache`/`view:cache`; npm-шаги выключить (сборка уже в ветке). Очередь (queue worker) не включать — в проекте `afterResponse()`.
+6. Artisan: `storage:link`.
+7. Планировщик: включить `schedule:run` в Toolkit (или «Заплановані завдання» → PHP-скрипт `artisan`, аргумент `schedule:run`, PHP 8.3, щоминуты). `otfk:backup` требует `mysqldump`; если его нет в окружении задачи — полагаться на «Резервна копія та відновлення» Plesk.
+8. Включить автоматическое развёртывание репозитория и скопировать его URL вебхука в секрет GitHub `PLESK_DEPLOY_WEBHOOK`.
 
-```bash
-sed -i '1i export PATH=/opt/plesk/php/8.3/bin:$HOME/bin:$PATH' ~/.bashrc
-```
+`mirror-files.yml` работает только по SSH тестового хостинга; на Plesk очередь `file_mirrors` обрабатывает планировщик (или команда `otfk:mirror-files` во вкладке Artisan).
 
-Workflow от `.bashrc` не зависит — он берёт каталог PHP из переменной `REMOTE_PHP_BIN`. Composer, если его нет: `mkdir -p ~/bin && curl -sS https://getcomposer.org/installer | /opt/plesk/php/8.3/bin/php -- --install-dir=$HOME/bin --filename=composer`.
-
-**Первичная установка (один раз, по SSH):**
-
-```bash
-cd /var/www/vhosts/otfk.od.ua/new.otfk.od.ua   # каталог поддомена; если Plesk положил туда заглушки — очистить
-git clone https://github.com/gotthejuicee/otfk.git .
-git checkout prod
-composer install --no-dev --optimize-autoloader
-cp .env.production.example .env   # APP_URL=https://new.otfk.od.ua, DB_*, ADMIN_PASSWORD; SEO_PRIMARY_HOST не трогать
-php artisan key:generate           # при переносе БД с другого сервера — APP_KEY исходного (секреты 2FA)
-php artisan storage:link
-```
-
-Контент — перенос с тестового хостинга (`otfk:backup` + `otfk:storage-export` → `otfk:storage-import`, раздел «Файли старого сайту і переїзд»), **не** `db:seed`. Затем `php artisan migrate --force`.
-
-**Cron** («Заплановані завдання», щохвилини) — с полным путём к PHP, `.bashrc` на cron не действует:
-
-```bash
-cd /var/www/vhosts/otfk.od.ua/new.otfk.od.ua && /opt/plesk/php/8.3/bin/php artisan schedule:run >> /dev/null 2>&1
-```
-
-**GitHub → Settings → Environments → `plesk`:**
-- секреты `REMOTE_KEY`, `REMOTE_HOST`, `REMOTE_USER`, `REMOTE_PATH` (`/var/www/vhosts/otfk.od.ua/new.otfk.od.ua`), опционально `REMOTE_PORT`; публичную часть ключа — в `~/.ssh/authorized_keys` пользователя подписки;
-- переменные `DEPLOY_TARGET=plesk` (без неё деплой `prod` останавливается: недостающие секреты окружения GitHub молча берёт из репозитория, то есть с тестового хостинга), `REMOTE_PHP_BIN=/opt/plesk/php/8.3/bin`, `SEO_SMOKE_BASE_URL=https://new.otfk.od.ua`, `SEO_SMOKE_EXPECT=closed` (иначе smoke-проверка унаследует адрес тестового хостинга из переменных репозитория).
-
-Окружение `test` (для `master`) GitHub создаёт сам при первом запуске; оно пустое и использует секреты репозитория. `mirror-files.yml` выбирает сервер так же — запуск из ветки `prod` идёт на Plesk.
-
-**Проверка:** `curl -sI https://new.otfk.od.ua/` — есть `X-Robots-Tag: noindex, nofollow`; `/`, `/en`, `/admin` (вход с 2FA) открываются; проба `storage/app/public/_probe.php` → 403 (раздел 6 `docs/security-audit.md`).
+**Проверка:** `curl -sI https://new.otfk.od.ua/` — есть `X-Robots-Tag: noindex, nofollow`; `/`, `/en`, `/admin` (вход с 2FA) открываются; проба `storage/app/public/_probe.php` → 403 (раздел 6 `docs/security-audit.md`); вручную `php artisan otfk:seo-smoke --base=https://new.otfk.od.ua --expect=closed` (в CI для Plesk не запускается — развёртывание асинхронное).
 
 ## Чек-лист «не забыть»
 
@@ -234,7 +217,7 @@ CSV збирає `php artisan otfk:legacy-map --out=storage/app/private/legacy-m
 - Точний час сервера (NTP): TOTP-коди живуть 30 с, розбіжність понад хвилину = «невірний код» у всіх. Перевірка: `date -u`.
 - Document root = `public/`; повторити пробу `storage/app/public/_probe.php` → 403 (розділ 6 `docs/security-audit.md`). Якщо новий хостинг на nginx без Apache, `.htaccess` не діє — заборону скриптів у `/storage/` прописати в конфігу nginx (`location ~* ^/storage/.*\.php$ { return 403; }`); білий список завантажень у застосунку працює незалежно.
 - `storage/logs/security-*.log` і `storage/app/private/sanitize-backup-*.json` у `storage-export` не входять — за потреби скопіювати вручну.
-- Секрети GitHub Actions (`REMOTE_HOST`, `REMOTE_USER`, `REMOTE_KEY`, `REMOTE_PATH`, `REMOTE_PORT`) перевести на новий сервер — у середовищі `plesk` для гілки `prod`, у секретах репозиторію для `master` — інакше автодеплой і далі йтиме на старий.
+- Секрети GitHub Actions (`REMOTE_HOST`, `REMOTE_USER`, `REMOTE_KEY`, `REMOTE_PATH`, `REMOTE_PORT`) перевести на новий сервер (для `master`; Plesk-гілка `prod` розгортається через Laravel Toolkit і SSH-секретів не використовує) — інакше автодеплой і далі йтиме на старий.
 
 ## Моніторинг доступності (без коду)
 

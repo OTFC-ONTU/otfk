@@ -1,7 +1,8 @@
 name: Deploy to production
 
-# prod → Plesk (new.otfk.od.ua, середовище plesk з власними секретами),
-# master та ручний запуск інших гілок → тестовий хостинг (секрети репозиторію).
+# prod → Plesk (new.otfk.od.ua): job deploy-plesk збирає фронтенд і публікує гілку
+# plesk-build, яку забирає Laravel Toolkit у Plesk (SSH там chroot без PHP 8.3).
+# master та ручний запуск інших гілок → тестовий хостинг по SSH (job deploy).
 on:
   push:
     branches: [master, prod]
@@ -32,21 +33,62 @@ jobs:
           php artisan key:generate
           php artisan test
 
-  deploy:
+  deploy-plesk:
+    if: ${{ github.ref_name == 'prod' }}
     runs-on: ubuntu-latest
     needs: tests
-    environment: ${{ github.ref_name == 'prod' && 'plesk' || 'test' }}
+    permissions:
+      contents: write
 
     steps:
-      # Секрети середовища підміняють однойменні секрети репозиторію, а відсутні GitHub
-      # мовчки бере з репозиторію — тобто незаповнене середовище plesk виклало б prod
-      # на тестовий хостинг. Змінна DEPLOY_TARGET задається лише в самому середовищі.
-      - name: Check deploy target
-        if: ${{ github.ref_name == 'prod' && vars.DEPLOY_TARGET != 'plesk' }}
-        run: |
-          echo "::error title=Deploy::Середовище plesk не налаштоване: потрібні змінна DEPLOY_TARGET=plesk і секрети REMOTE_* (DEPLOY.md)."
-          exit 1
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      # plesk-build = дерево prod + public/build (у prod він у .gitignore). Коміт має
+      # батьками попередній plesk-build і перевірений SHA prod — гілка лише рухається
+      # вперед, тож Git у Plesk тягне її без force. Push через GITHUB_TOKEN не запускає
+      # інших workflow.
+      - name: Publish plesk-build
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f public/build
+          tree=$(git write-tree)
+          parents="-p ${{ github.sha }}"
+          if git fetch --quiet origin plesk-build; then
+            parents="-p $(git rev-parse FETCH_HEAD) $parents"
+          fi
+          commit=$(git commit-tree "$tree" $parents -m "build: prod ${{ github.sha }}")
+          git push origin "$commit:refs/heads/plesk-build"
+          echo "::notice title=plesk-build::$commit (prod ${{ github.sha }})"
+
+      # Розгортання у Plesk запускає вебхук Git-репозиторію Laravel Toolkit
+      # (секрет PLESK_DEPLOY_WEBHOOK). Без нього — «Розгорнути» вручну в Plesk.
+      - name: Trigger Plesk deployment
+        env:
+          WEBHOOK: ${{ secrets.PLESK_DEPLOY_WEBHOOK }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "::notice title=Plesk::Секрет PLESK_DEPLOY_WEBHOOK не заданий — розгорніть plesk-build у Plesk вручну."
+            exit 0
+          fi
+          curl -fsS -X POST --retry 3 "$WEBHOOK" > /dev/null
+
+  deploy:
+    if: ${{ github.ref_name != 'prod' }}
+    runs-on: ubuntu-latest
+    needs: tests
+
+    steps:
       - uses: actions/checkout@v4
 
       # На хостингу немає node, тому фронтенд збираємо тут
@@ -73,9 +115,6 @@ jobs:
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.REMOTE_PORT || 22 }} ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} '
             set -e
             cd ${{ secrets.REMOTE_PATH }}
-            # Plesk: у SSH типово системний PHP 7.2 — REMOTE_PHP_BIN (каталог PHP 8.3) стає першим у PATH
-            if [ -n "${{ vars.REMOTE_PHP_BIN }}" ]; then export PATH="${{ vars.REMOTE_PHP_BIN }}:$HOME/bin:$PATH"; fi
-            php -v | head -n 1
             git fetch origin ${{ github.sha }}
             git reset --hard ${{ github.sha }}
             composer install --no-dev --optimize-autoloader --no-interaction
@@ -93,9 +132,6 @@ jobs:
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.REMOTE_PORT || 22 }} ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} '
             set -e
             cd ${{ secrets.REMOTE_PATH }}
-            # Plesk: у SSH типово системний PHP 7.2 — REMOTE_PHP_BIN (каталог PHP 8.3) стає першим у PATH
-            if [ -n "${{ vars.REMOTE_PHP_BIN }}" ]; then export PATH="${{ vars.REMOTE_PHP_BIN }}:$HOME/bin:$PATH"; fi
-            php -v | head -n 1
             php artisan migrate --force
             php artisan optimize:clear
             php artisan config:cache

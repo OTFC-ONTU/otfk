@@ -19,21 +19,13 @@ on:
         default: false
 
 concurrency:
-  group: mirror-files-${{ github.ref_name == 'prod' && 'plesk' || 'test' }}
+  group: mirror-files
   cancel-in-progress: false
 
 jobs:
   mirror:
     runs-on: ubuntu-latest
-    # Сервер обирається гілкою запуску, як у deploy.yml: prod → Plesk, інші → тестовий хостинг.
-    environment: ${{ github.ref_name == 'prod' && 'plesk' || 'test' }}
     steps:
-      - name: Check target
-        if: ${{ github.ref_name == 'prod' && vars.DEPLOY_TARGET != 'plesk' }}
-        run: |
-          echo "::error title=Mirror::Середовище plesk не налаштоване (DEPLOY_TARGET=plesk, секрети REMOTE_*)."
-          exit 1
-
       - name: Build command
         id: cmd
         env:
@@ -59,6 +51,5 @@ jobs:
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.REMOTE_PORT || 22 }} ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "
             set -e
             cd ${{ secrets.REMOTE_PATH }}
-            if [ -n \"${{ vars.REMOTE_PHP_BIN }}\" ]; then export PATH=\"${{ vars.REMOTE_PHP_BIN }}:\$HOME/bin:\$PATH\"; fi
             php artisan otfk:mirror-files ${{ steps.cmd.outputs.args }} -v
           "
