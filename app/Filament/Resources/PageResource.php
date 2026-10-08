@@ -13,6 +13,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class PageResource extends Resource
 {
@@ -39,7 +40,12 @@ class PageResource extends Resource
                     ->prefix(url('/') . '/')
                     ->helperText('Залиште порожнім - згенерується автоматично.'),
                 Forms\Components\Select::make('parent_id')->label('Батьківський розділ')
-                    ->relationship('parent', 'title')->searchable()->preload()
+                    ->relationship('parent', 'title', fn (Builder $query, ?Page $record) => $query
+                        ->with('parent.parent.parent')
+                        ->when($record?->exists, fn (Builder $q) => $q->whereNotIn('id', $record->selfAndDescendantIds()))
+                        ->orderBy('title'))
+                    ->getOptionLabelFromRecordUsing(fn (Page $page): string => $page->adminPathLabel())
+                    ->searchable(['title', 'slug'])->preload()
                     ->helperText('Якщо обрати — сторінка стане підсторінкою і зʼявиться плиткою на сторінці розділу.'),
                 Forms\Components\Textarea::make('excerpt')->label('Короткий опис')->rows(2)->columnSpanFull()
                     ->helperText('Показується у плитці сторінки на сторінці батьківського розділу та в результатах пошуку по сайту.'),
@@ -93,7 +99,9 @@ class PageResource extends Resource
             ->defaultSort('title')
             ->filters([
                 Tables\Filters\SelectFilter::make('parent_id')->label('Розділ')
-                    ->relationship('parent', 'title')->searchable()->preload(),
+                    ->relationship('parent', 'title', fn (Builder $query) => $query->with('parent.parent.parent')->whereHas('children'))
+                    ->getOptionLabelFromRecordUsing(fn (Page $page): string => $page->adminPathLabel())
+                    ->searchable()->preload(),
                 Tables\Filters\TernaryFilter::make('is_published')->label('Публікація')
                     ->trueLabel('Опубліковані')->falseLabel('Лише чернетки')->placeholder('Всі'),
             ])

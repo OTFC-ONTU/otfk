@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Filament\Pages\BrokenLinks;
 use App\Filament\Resources\NewsResource\Pages\ListNews;
+use App\Filament\Resources\PageResource\Pages\EditPage;
 use App\Filament\Resources\PageResource\Pages\ListPages;
 use App\Filament\Widgets\Drafts;
 use App\Models\Department;
@@ -152,5 +153,24 @@ class AdminEditingToolsTest extends TestCase
         $this->assertContains('Чернетка новини', $titles);
         $this->assertContains('Чернетка спеціальності', $titles);
         $this->assertContains('Чернетка підрозділу', $titles);
+    }
+
+    public function test_parent_select_shows_full_path_and_excludes_page_and_descendants(): void
+    {
+        $student = Page::create(['title' => 'Студенту тест', 'slug' => 'studentu-test', 'is_published' => true]);
+        $hub = Page::create(['title' => 'Цифрові видання', 'slug' => 'tsyfrovi-test', 'parent_id' => $student->id, 'is_published' => true]);
+        $it = Page::create(['title' => 'IT', 'slug' => 'vydannya-it-test', 'parent_id' => $hub->id, 'is_published' => true]);
+        $list = Page::create(['title' => 'IT', 'slug' => 'spysok-it-test', 'parent_id' => $it->id, 'is_published' => true]);
+
+        $this->assertSame('Студенту тест › Цифрові видання › IT · /vydannya-it-test', $it->adminPathLabel());
+
+        $options = Livewire::test(EditPage::class, ['record' => $hub->getRouteKey()])
+            ->instance()->form->getComponent('data.parent_id')->getOptions();
+
+        $this->assertArrayHasKey($student->id, $options);
+        $this->assertArrayNotHasKey($hub->id, $options);
+        $this->assertArrayNotHasKey($it->id, $options);
+        $this->assertArrayNotHasKey($list->id, $options);
+        $this->assertSame('Студенту тест · /studentu-test', $options[$student->id]);
     }
 }
