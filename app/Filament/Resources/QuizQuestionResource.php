@@ -43,8 +43,6 @@ class QuizQuestionResource extends Resource
     {
         return $schema->components([
             TextInput::make('question')->label('Питання')->required()->maxLength(255)->columnSpanFull(),
-            TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
-                ->helperText('Номер питання у квізі: менше число — раніше.'),
             Toggle::make('is_active')->label('Активне')->default(true)
                 ->helperText('Вимкнено — питання не ставиться у квізі, але лишається в адмінці.'),
 
@@ -75,12 +73,13 @@ class QuizQuestionResource extends Resource
             ->columns([
                 TextColumn::make('translation_status')->label('Переклад питання EN')
                     ->state(fn (QuizQuestion $record) => $record->translationStatus())->badge(),
-                TextColumn::make('sort_order')->label('№')->sortable(),
+                TextColumn::make('sort_order')->label('№')->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('question')->label('Питання')->searchable()->weight('bold')->limit(70),
                 TextColumn::make('options_count')->counts('options')->label('Варіантів'),
                 IconColumn::make('is_active')->label('Активне')->boolean(),
             ])
             ->defaultSort('sort_order')
+            ->reorderable('sort_order')
             ->emptyStateHeading('Питань квізу ще немає')
             ->emptyStateDescription('Квіз на сторінці /kviz допомагає вступнику обрати спеціальність: кожен варіант відповіді додає бали одній зі спеціальностей.')
             ->recordActions([EditAction::make()])

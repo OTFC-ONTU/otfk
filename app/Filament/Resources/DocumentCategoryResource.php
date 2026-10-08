@@ -48,8 +48,6 @@ class DocumentCategoryResource extends Resource
             Select::make('page_id')->label('Сторінка розділу (повний текст замість списку документів)')
                 ->relationship('page', 'title')->searchable()->preload()
                 ->helperText('Якщо обрано опубліковану сторінку, розділ показує її вміст: текст, таблиці, зображення та файли.'),
-            TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
-                ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
         ]);
     }
 
@@ -61,7 +59,7 @@ class DocumentCategoryResource extends Resource
                     ->state(fn (DocumentCategory $record) => $record->translationStatus())->badge(),
                 TextColumn::make('title')->label('Назва')->searchable()->weight('bold'),
                 TextColumn::make('documents_count')->label('Документів')->counts('documents')->badge(),
-                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
+                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('sort_order')
             ->reorderable('sort_order')

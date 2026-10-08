@@ -69,8 +69,6 @@ class DocumentResource extends Resource
                 ->helperText('Короткий підпис під назвою документа. Необовʼязково.'),
             DatePicker::make('published_at')->label('Дата документа')->default(now())
                 ->helperText('Показується поруч із документом у списку.'),
-            TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
-                ->helperText('Порядок усередині категорії: менше число — вище.'),
             Toggle::make('is_published')->label('Опубліковано')->default(true)
                 ->helperText('Вимкнено — документ зникає зі сторінки «Публічна інформація», але лишається в адмінці.'),
         ]);
@@ -90,6 +88,7 @@ class DocumentResource extends Resource
                 ToggleColumn::make('is_published')->label('Опубл.'),
             ])
             ->defaultSort('sort_order')
+            ->reorderable('sort_order')
             ->filters([
                 SelectFilter::make('document_category_id')->label('Категорія')
                     ->relationship('category', 'title')->preload(),

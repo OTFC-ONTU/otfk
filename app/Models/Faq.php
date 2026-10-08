@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSortOrder;
 use App\Models\Concerns\HasEnglishTranslation;
 use Illuminate\Database\Eloquent\Model;
 
 class Faq extends Model
 {
+    use HasSortOrder;
     use HasEnglishTranslation;
 
     protected $fillable = ['question', 'answer', 'sort_order', 'is_active', 'question_en', 'answer_en', 'translation_published'];

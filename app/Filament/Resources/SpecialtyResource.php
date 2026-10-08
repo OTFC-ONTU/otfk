@@ -64,8 +64,6 @@ class SpecialtyResource extends Resource
                 TextInput::make('degree')->label('Освітній ступінь')->maxLength(255)->placeholder('Фаховий молодший бакалавр'),
                 TextInput::make('study_form')->label('Форма навчання')->maxLength(255)->placeholder('Денна / Заочна'),
                 TextInput::make('duration')->label('Термін навчання')->maxLength(255)->placeholder('3 роки 10 місяців'),
-                TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
-                    ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
                 Toggle::make('is_published')->label('Опубліковано')->default(true),
             ])->columns(2),
             EnglishTranslation::academicSection(true),

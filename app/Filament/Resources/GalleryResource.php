@@ -97,6 +97,7 @@ class GalleryResource extends Resource
                 IconColumn::make('is_archive')->label('Архів')->boolean()->toggleable(),
             ])
             ->defaultSort('sort_order')
+            ->reorderable('sort_order')
             ->emptyStateHeading('Фотогалерей ще немає')
             ->emptyStateDescription('Альбоми з фото показуються на сторінці «Галерея». Створіть альбом і додайте в нього фотографії з підписами.')
             ->recordActions([

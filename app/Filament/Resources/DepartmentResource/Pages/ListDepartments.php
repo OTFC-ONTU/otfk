@@ -5,10 +5,13 @@ namespace App\Filament\Resources\DepartmentResource\Pages;
 use Filament\Actions\CreateAction;
 use App\Filament\Resources\DepartmentResource;
 use Filament\Actions;
+use App\Filament\Support\ReordersBySwappingPositions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListDepartments extends ListRecords
 {
+    use ReordersBySwappingPositions;
+
     protected static string $resource = DepartmentResource::class;
 
     protected function getHeaderActions(): array

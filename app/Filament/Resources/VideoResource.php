@@ -52,8 +52,6 @@ class VideoResource extends Resource
                 ->helperText('Показується підписом під відео на сторінці «Відео».'),
             Textarea::make('description')->label('Опис')->rows(3)->columnSpanFull()
                 ->helperText('Кілька речень під назвою відео. Необовʼязково.'),
-            TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
-                ->helperText('Менше число — вище у списку; перше відео стає головним (великим).'),
             Toggle::make('is_published')->label('Опубліковано')->default(true)
                 ->helperText('Вимкнено — відео зникає зі сторінки «Відео», але лишається в адмінці.'),
         ]);
@@ -87,9 +85,10 @@ class VideoResource extends Resource
                 TextColumn::make('title')->label('Назва')->searchable()->weight('bold'),
                 TextColumn::make('published_at')->label('Дата')->date('d.m.Y')->sortable(),
                 IconColumn::make('is_published')->label('Опубл.')->boolean(),
-                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(),
+                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('sort_order')
+            ->reorderable('sort_order')
             ->emptyStateHeading('Відео ще немає')
             ->emptyStateDescription('Відео з YouTube показуються на сторінці «Відео». Просто вставте посилання на ролик - обкладинка підтягнеться автоматично.')
             ->recordActions([EditAction::make()])

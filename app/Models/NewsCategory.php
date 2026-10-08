@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSortOrder;
 use App\Models\Concerns\HasEnglishTranslation;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,6 +10,7 @@ use Illuminate\Support\Str;
 
 class NewsCategory extends Model
 {
+    use HasSortOrder;
     use HasEnglishTranslation;
 
     protected $fillable = ['title', 'slug', 'sort_order', 'is_heritage', 'title_en', 'translation_published'];

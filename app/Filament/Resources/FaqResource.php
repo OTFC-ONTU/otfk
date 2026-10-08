@@ -44,8 +44,6 @@ class FaqResource extends Resource
             TextInput::make('question')->label('Питання')->required()->maxLength(255)->columnSpanFull(),
             Textarea::make('answer')->label('Відповідь')->rows(5)->required()->columnSpanFull()
                 ->helperText('Звичайний текст; перенесення рядків зберігаються.'),
-            TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
-                ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
             Toggle::make('is_active')->label('Показувати')->default(true)
                 ->helperText('Вимкнено — питання зникає зі сторінки «Питання та відповіді», але лишається в адмінці.'),
 
@@ -60,7 +58,7 @@ class FaqResource extends Resource
                 TextColumn::make('translation_status')->label('Переклад EN')
                     ->state(fn (Faq $record) => $record->translationStatus())->badge(),
                 TextColumn::make('question')->label('Питання')->searchable()->weight('bold')->limit(70),
-                TextColumn::make('sort_order')->label('Порядок')->sortable(),
+                TextColumn::make('sort_order')->label('Порядок')->sortable()->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_active')->label('Активне')->boolean(),
             ])
             ->defaultSort('sort_order')

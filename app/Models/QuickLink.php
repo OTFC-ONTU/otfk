@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSortOrder;
 use App\Models\Concerns\HasEnglishTranslation;
 use Illuminate\Database\Eloquent\Model;
 
 class QuickLink extends Model
 {
+    use HasSortOrder;
     use HasEnglishTranslation;
 
     protected $fillable = ['title_en', 'description_en', 'translation_published',

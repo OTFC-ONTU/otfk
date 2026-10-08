@@ -52,8 +52,6 @@ class DepartmentResource extends Resource
                 ->helperText('Залиште порожнім - згенерується автоматично.'),
             HtmlRichEditor::make('description')->label('Опис')->columnSpanFull()
                 ->helperText('Основний текст на сторінці підрозділу; перші речення видно в його картці на сторінці «Структура».'),
-            TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
-                ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
             Toggle::make('is_published')->label('Опубліковано')->default(true)
                 ->helperText('Вимкнено — підрозділ і його сторінка не видні на сайті, але лишаються в адмінці.'),
 
@@ -72,7 +70,7 @@ class DepartmentResource extends Resource
                     ->formatStateUsing(fn ($state) => Department::TYPES[$state] ?? $state),
                 TextColumn::make('staff_count')->label('Працівників')->counts('staff')->badge(),
                 IconColumn::make('is_published')->label('Опубл.')->boolean(),
-                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(),
+                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('sort_order')
             ->reorderable('sort_order')

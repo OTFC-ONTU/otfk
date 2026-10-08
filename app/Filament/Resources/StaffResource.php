@@ -84,8 +84,6 @@ class StaffResource extends Resource
             TextInput::make('phone')->label('Телефон')->maxLength(255),
             Textarea::make('bio')->label('Біографія')->rows(3)->columnSpanFull()
                 ->helperText('Кілька речень на персональній сторінці працівника. Необовʼязково.'),
-            TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
-                ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
             Toggle::make('is_published')->label('Опубліковано')->default(true),
             EnglishTranslation::section(contentFields: [
                 'position' => ['label' => 'Посада англійською'],

@@ -43,8 +43,6 @@ class NewsCategoryResource extends Resource
             TextInput::make('title')->label('Назва')->required()->maxLength(255),
             TextInput::make('slug')->label('URL (slug)')->maxLength(255)
                 ->helperText('Залиште порожнім - згенерується автоматично.'),
-            TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
-                ->helperText('Порядок категорії у фільтрі на сторінці «Новини»: менше число — раніше.'),
             Toggle::make('is_heritage')
                 ->label('Heritage-стиль для всіх новин категорії')
                 ->helperText('Урочисте листоподібне оформлення для архіву, історії, ювілеїв. Можна вимкнути окремо в новині.')
@@ -63,9 +61,10 @@ class NewsCategoryResource extends Resource
                 TextColumn::make('slug')->label('URL')->color('gray'),
                 TextColumn::make('news_count')->label('Новин')->counts('news')->badge(),
                 IconColumn::make('is_heritage')->label('Heritage')->boolean()->toggleable(),
-                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
+                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('sort_order')
+            ->reorderable('sort_order')
             ->emptyStateHeading('Категорій новин ще немає')
             ->emptyStateDescription('Категорії групують новини за темами: «Оголошення», «Події», «Вступ» тощо. За категоріями працює фільтр на сторінці новин.')
             ->recordActions([EditAction::make()])

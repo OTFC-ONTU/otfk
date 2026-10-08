@@ -58,8 +58,6 @@ class BannerResource extends Resource
             DatePicker::make('starts_at')->label('Показувати з')
                 ->helperText('Порожні дати — банер показується постійно.'),
             DatePicker::make('ends_at')->label('Показувати до'),
-            TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
-                ->helperText('Порядок слайдів у каруселі: менше число — раніше.'),
             Toggle::make('is_published')->label('Активний')->default(true)
                 ->helperText('Вимкнено — банер прибирається з головної, але лишається в адмінці.'),
         ]);
@@ -74,9 +72,10 @@ class BannerResource extends Resource
                 ImageColumn::make('image')->label('')->square(),
                 TextColumn::make('title')->label('Заголовок')->searchable()->weight('bold'),
                 IconColumn::make('is_published')->label('Активний')->boolean(),
-                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
+                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('sort_order')
+            ->reorderable('sort_order')
             ->emptyStateHeading('Банерів ще немає')
             ->emptyStateDescription('Банери - великі слайди у верхній частині головної сторінки. Без жодного активного банера показується стандартна синя заставка.')
             ->recordActions([EditAction::make()])

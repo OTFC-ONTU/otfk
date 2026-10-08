@@ -9,6 +9,7 @@ use App\Filament\Support\ViewOnSite;
 use App\Models\Setting;
 use Filament\Actions;
 use Filament\Forms\Components\Select;
+use App\Filament\Support\ReordersBySwappingPositions;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\EmbeddedSchema;
 use Filament\Schemas\Components\EmbeddedTable;
@@ -18,6 +19,8 @@ use Filament\View\PanelsRenderHook;
 
 class ListBanners extends ListRecords
 {
+    use ReordersBySwappingPositions;
+
     protected static string $resource = BannerResource::class;
 
     public ?array $overlay = [];

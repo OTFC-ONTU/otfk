@@ -63,8 +63,6 @@ class MenuItemResource extends Resource
                 ->helperText('Для типу «Сторінка».'),
             TextInput::make('url')->label('Посилання / назва маршруту')->maxLength(255)->rule(new SafeUrl)
                 ->helperText('Для типів «Зовнішнє посилання» (URL) або «Системний маршрут» (напр. home, news.index).'),
-            TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
-                ->helperText('Простіше змінити перетягуванням рядків у вкладці свого рівня (кнопка «Змінити порядок»).'),
             Toggle::make('open_new_tab')->label('Відкривати в новій вкладці'),
             Toggle::make('is_visible')->label('Видимий')->default(true),
         ]);
@@ -81,7 +79,7 @@ class MenuItemResource extends Resource
                 TextColumn::make('link_type')->label('Тип')->badge()
                     ->formatStateUsing(fn ($state) => ['page' => 'Сторінка', 'url' => 'Посилання', 'route' => 'Маршрут'][$state] ?? $state),
                 ToggleColumn::make('is_visible')->label('Видимий'),
-                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
+                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('sort_order')
             ->reorderable('sort_order')

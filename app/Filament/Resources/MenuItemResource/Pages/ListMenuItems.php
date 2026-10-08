@@ -8,6 +8,7 @@ use App\Filament\Resources\MenuItemResource;
 use App\Filament\Support\ViewOnSite;
 use App\Models\MenuItem;
 use Filament\Actions;
+use App\Filament\Support\ReordersBySwappingPositions;
 use Filament\Resources\Pages\ListRecords;
 
 /**
@@ -18,6 +19,8 @@ use Filament\Resources\Pages\ListRecords;
  */
 class ListMenuItems extends ListRecords
 {
+    use ReordersBySwappingPositions;
+
     protected static string $resource = MenuItemResource::class;
 
     protected function getHeaderActions(): array

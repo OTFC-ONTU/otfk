@@ -103,8 +103,6 @@ class QuickLinkResource extends Resource
                 ->default('brand'),
 
             Toggle::make('open_new_tab')->label('Відкривати у новій вкладці')->default(false),
-            TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
-                ->helperText('Простіше змінити перетягуванням рядків у списку (кнопка «Змінити порядок»).'),
             Toggle::make('is_visible')->label('Показувати')->default(true),
         ]);
     }
@@ -121,7 +119,7 @@ class QuickLinkResource extends Resource
                 TextColumn::make('title')->label('Заголовок')->searchable()->weight('bold'),
                 TextColumn::make('url')->label('Посилання')->color('gray')->limit(30),
                 IconColumn::make('is_visible')->label('Показ')->boolean(),
-                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
+                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('sort_order')
             ->reorderable('sort_order')

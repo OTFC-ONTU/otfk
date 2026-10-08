@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSortOrder;
 use App\Models\Concerns\HasEnglishTranslation;
 use Illuminate\Database\Eloquent\Model;
 
 class StatItem extends Model
 {
+    use HasSortOrder;
     use HasEnglishTranslation;
 
     protected $fillable = ['label_en', 'translation_published', 'label', 'value', 'icon', 'sort_order', 'is_active'];

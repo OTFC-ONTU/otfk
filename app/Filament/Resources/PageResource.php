@@ -87,8 +87,6 @@ class PageResource extends Resource
             Section::make('Налаштування')->schema([
                 Toggle::make('is_published')->label('Опубліковано')->default(true)
                     ->helperText('Вимкнено — чернетка: відвідувачам сторінка не видна (404), адміну відкривається з плашкою «Чернетка».'),
-                TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
-                    ->helperText('Порядок плитки серед сусідніх сторінок розділу: менше число — вище.'),
                 TextInput::make('section')->label('Розділ (службове поле)')->maxLength(255)
                     ->helperText('Технічна позначка з імпорту старого сайту — заповнювати не потрібно.'),
                 TextInput::make('meta_title')->label('SEO-заголовок')->maxLength(255)
@@ -111,9 +109,11 @@ class PageResource extends Resource
                 IconColumn::make('is_published')->label('Опубл.')->boolean(),
                 IconColumn::make('is_heritage')->label('Heritage')->boolean()->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_featured')->label('Ключова')->boolean()->toggleable(),
-                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(),
+                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('title')
+            // Порядок плиток серед сусідніх сторінок розділу — перетягуванням (краще з фільтром «Розділ»)
+            ->reorderable('sort_order')
             ->filters([
                 SelectFilter::make('parent_id')->label('Розділ')
                     ->relationship('parent', 'title', fn (Builder $query) => $query->with('parent.parent.parent')->whereHas('children'))

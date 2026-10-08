@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSortOrder;
 use App\Casts\SafeHtml;
 use App\Models\Concerns\FlushesSitemap;
 use App\Models\Concerns\HasEnglishTranslation;
@@ -14,6 +15,7 @@ use Illuminate\Support\Str;
 
 class Page extends Model
 {
+    use HasSortOrder;
     use FlushesSitemap;
     use HasEnglishTranslation;
     use OptimizesUploadedImages;

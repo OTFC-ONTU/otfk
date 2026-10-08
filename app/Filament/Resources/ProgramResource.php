@@ -53,8 +53,6 @@ class ProgramResource extends Resource
                 ->helperText('Якщо програма розміщена на іншому сайті — замість файла.'),
             Textarea::make('description')->label('Опис')->rows(2)->columnSpanFull()
                 ->helperText('Короткий підпис під назвою програми на сторінці спеціальності. Необовʼязково.'),
-            TextInput::make('sort_order')->label('Порядок')->numeric()->default(0)
-                ->helperText('Порядок у списку програм спеціальності: менше число — вище.'),
 
             EnglishTranslation::academicSection(false, false),
         ]);
@@ -70,9 +68,10 @@ class ProgramResource extends Resource
                 TextColumn::make('specialty.title')->label('Спеціальність')->badge()->sortable(),
                 IconColumn::make('file_path')->label('Файл')->boolean()
                     ->getStateUsing(fn ($record) => filled($record->file_path) || filled($record->external_url)),
-                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable(),
+                TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('sort_order')
+            ->reorderable('sort_order')
             ->emptyStateHeading('Освітніх програм ще немає')
             ->emptyStateDescription('Освітні програми (файли або посилання) показуються на сторінці своєї спеціальності. Спершу оберіть спеціальність, потім додайте програму.')
             ->recordActions([EditAction::make()])
