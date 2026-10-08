@@ -43,12 +43,13 @@
     RewriteCond %{HTTP:X-Forwarded-SSL} !^on$ [NC]
     RewriteRule ^ https://otfk.od.ua%{REQUEST_URI} [L,R=301]
 
-    # /index.php → / (дубль головної). Перевіряємо саме вихідний запит
-    # (THE_REQUEST), а не шлях після внутрішнього переписування на index.php
-    # нижче, — тож циклу немає. Лише корінь: старі адреси /x/index.php
-    # обробляє Laravel (legacy_redirects). Query Apache дописує сам.
-    RewriteCond %{THE_REQUEST} ^[A-Z]+\s/index\.php(?:\?\S*)?\s
-    RewriteRule ^index\.php$ / [L,R=301]
+    # /index.php і /index.php/<шлях> → / і /<шлях> (Apache віддає будь-яку сторінку й
+    # через префікс фронт-контролера — дублі з власним canonical). Перевіряємо саме
+    # вихідний запит (THE_REQUEST), а не шлях після внутрішнього переписування на
+    # index.php нижче, — тож циклу немає. Старі адреси /x/index.php обробляє Laravel
+    # (legacy_redirects). Шлях уже закодований клієнтом — NE, query Apache дописує сам.
+    RewriteCond %{THE_REQUEST} ^[A-Z]+\s/index\.php(?:/([^\s?]*))?[\s?]
+    RewriteRule ^ /%1 [L,R=301,NE]
 
     # Redirect Trailing Slashes If Not A Folder... (крім розділів старого сайту — див. вище)
     RewriteCond %{ENV:OTFK_LEGACY} !=1

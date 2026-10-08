@@ -109,7 +109,7 @@ SEO smoke-проверка выполняется в `deploy.yml` автомат
 После переключения домена дополнительно:
 
 - [ ] Настройка панели хостинга «принудительный HTTPS» на vhost otfk.od.ua: если панель редиректит на https раньше `.htaccess` (так на just-test.shop), старые ссылки `http://otfk.od.ua/news/…/` проходят 2 перехода (панель → https, затем Laravel → новая адрес). Для одного 301 — выключить её и оставить HTTPS-правило `public/.htaccess` (проверить отсутствие цикла).
-- [ ] `curl -I https://otfk.od.ua/index.php` — один 301 на `/` (правило `public/.htaccess`).
+- [ ] `curl -I https://otfk.od.ua/index.php` и `curl -I https://otfk.od.ua/index.php/spetsialnosti` — один 301 на `/` и `/spetsialnosti` (правило `public/.htaccess`).
 - [ ] Убрать тестовый GA4 ID `G-TEST000000` (`php storage/app/private/privacy-2026-10-08/set_test_ga_id.php --remove` на копии с тестовой БД или очистить поле в «SEO → Розмітка та аналітика») и только потом вписать настоящий ID.
 
 1. `https://домен/` — сайт, плитки, новости

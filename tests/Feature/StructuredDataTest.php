@@ -183,10 +183,10 @@ class StructuredDataTest extends TestCase
         $this->assertSame('WebPage', $article['mainEntityOfPage']['@type']);
         $this->assertStringEndsWith('/novyny/'.$news->slug, $article['mainEntityOfPage']['@id']);
         $this->assertMatchesRegularExpression('~^https?://~', $article['mainEntityOfPage']['@id']);
-        $this->assertSame('Organization', $article['publisher']['@type']);
+        $this->assertSame('EducationalOrganization', $article['publisher']['@type']);
         $this->assertNotEmpty($article['publisher']['name']);
         $this->assertMatchesRegularExpression('~^https?://~', $article['publisher']['logo']['url']);
-        $this->assertSame('Organization', $article['author']['@type']);
+        $this->assertSame('EducationalOrganization', $article['author']['@type']);
 
         // Обкладинка — головне зображення: без lazy, з пріоритетом і природними розмірами
         $this->assertMatchesRegularExpression('~<img src="[^"]*news/cover\.jpg"[^>]*width="800" height="450"[^>]*fetchpriority="high"~', $html);

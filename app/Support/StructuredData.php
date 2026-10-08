@@ -71,26 +71,12 @@ class StructuredData
         ], fn ($value) => $value !== null);
     }
 
-    /** Коротке посилання на організацію для publisher/author/organizer. */
-    public static function publisher(?array $settings = null): array
-    {
-        $settings ??= Setting::publicMap();
-
-        return [
-            '@type' => 'Organization',
-            '@id' => static::organizationId(),
-            'name' => static::siteName($settings),
-            'url' => url('/'),
-            'logo' => ['@type' => 'ImageObject', 'url' => static::logoUrl($settings)],
-        ];
-    }
-
     /**
-     * Посилання на той самий вузол організації для Course.provider: тип збігається
+     * Посилання на той самий вузол організації (provider/author тощо): тип збігається
      * з organization() (EducationalOrganization), name/url — на випадок, якщо
      * валідатор не зводить вузли за @id.
      */
-    public static function provider(?array $settings = null): array
+    public static function reference(?array $settings = null): array
     {
         $settings ??= Setting::publicMap();
 
@@ -99,6 +85,16 @@ class StructuredData
             '@id' => static::organizationId(),
             'name' => static::siteName($settings),
             'url' => url('/'),
+        ];
+    }
+
+    /** Видавець/організатор: те саме посилання на організацію плюс логотип. */
+    public static function publisher(?array $settings = null): array
+    {
+        $settings ??= Setting::publicMap();
+
+        return static::reference($settings) + [
+            'logo' => ['@type' => 'ImageObject', 'url' => static::logoUrl($settings)],
         ];
     }
 

@@ -31,7 +31,7 @@
             'image' => $ldImage ? [$ldImage] : null,
             'url' => $articleUrl,
             'mainEntityOfPage' => ['@type' => 'WebPage', '@id' => $articleUrl],
-            'author' => ['@type' => 'Organization', 'name' => $ld::siteName(), 'url' => url('/')],
+            'author' => $ld::reference(),
             'publisher' => $ld::publisher(),
         ]);
     @endphp
