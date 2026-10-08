@@ -1,0 +1,6 @@
+/* Тема адмінки Filament 4: базова тема + утиліти Tailwind із власних шаблонів і класів панелі
+   (Filament 4 не постачає утиліти для чужих view). Збирається Vite разом із сайтом. */
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';

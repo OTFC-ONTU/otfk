@@ -1,4 +1,4 @@
-{{-- Trix + режим «чистого» HTML на тому самому стані (App\Filament\Forms\Components\HtmlRichEditor) --}}
+{{-- TipTap (RichEditor Filament 4) + режим «чистого» HTML на тому самому стані (App\Filament\Forms\Components\HtmlRichEditor) --}}
 @php
     use App\Filament\Forms\Components\HtmlRichEditor;
 
@@ -6,32 +6,79 @@
 @endphp
 
 @if ($isDisabled())
-    @include('filament-forms::components.rich-editor')
+    {!! $field->toEmbeddedHtml() !!}
 @else
     <div
         x-data="{
             mode: 'visual',
+            {{-- HTML-рядок як у БД; документ TipTap (об'єкт) з'являється лише після правки у візуальному режимі --}}
             html: $wire.$entangle(@js($statePath), false),
-            {{-- Зміни Trix пишуться в стан лише після дії користувача у візуальному редакторі --}}
+            source: '',
+            markers: [],
+            {{-- Зміни TipTap приймаються в стан лише після дії користувача у візуальному редакторі --}}
             touched: false,
             get lossy() {
-                const html = (this.html ?? '').replace(new RegExp(@js(HtmlRichEditor::TRIX_ATTACHMENT), 'gi'), '')
-                return new RegExp(@js(HtmlRichEditor::TRIX_LOSSY), 'i').test(html)
+                return new RegExp(@js(HtmlRichEditor::LOSSY), 'i').test(this.source ?? '')
             },
             {{-- CodeMirror (resources/js/admin/html-editor.js); без нього лишається звичайний textarea --}}
             codeReady: false,
             pending: null,
             timer: null,
+            init() {
+                this.remember(this.html)
+                this.$watch('html', (value) => {
+                    if (typeof value === 'string' || value === null) {
+                        this.remember(value)
+                        return
+                    }
+                    {{-- TipTap сам змінив документ (нормалізація, службовий вузол) — повертаємо незмінений HTML --}}
+                    if (this.mode !== 'visual' || ! this.touched) this.write(this.source)
+                })
+            },
+            remember(value) {
+                if (typeof value !== 'string' && value !== null) return
+                this.source = value ?? ''
+                const found = this.source.match(/<!--imported-from:[^>]*-->/g) ?? []
+                this.markers = [...new Set([...this.markers, ...found])]
+            },
+            {{-- Компонент RichEditor усередині поля (Alpine-дані richEditorFormComponent) --}}
+            rich() {
+                const el = this.$root.querySelector('[x-data^=richEditorFormComponent]')
+                return el && window.Alpine ? window.Alpine.$data(el) : null
+            },
+            {{-- Запис рядка в стан без повторного завантаження в TipTap (інакше він одразу поверне нормалізований документ) --}}
+            write(value) {
+                const rich = this.rich()
+                if (rich) rich.shouldUpdateState = false
+                this.html = value
+                this.source = value ?? ''
+                setTimeout(() => { if (rich) rich.shouldUpdateState = true })
+            },
+            {{-- Поточний вміст як HTML: після правки у візуальному режимі — з TipTap, з маркерами імпорту --}}
+            currentHtml() {
+                if (typeof this.html === 'string' || this.html === null) return this.html ?? ''
+                const editorHtml = this.rich()?.getEditor()?.getHTML()
+                let html = editorHtml ? (window.otfkHtmlEditor?.cleanEditorHtml(editorHtml) ?? editorHtml) : this.source
+                for (const marker of this.markers) if (! html.includes(marker)) html += '\n' + marker
+                return html
+            },
             setMode(mode) {
                 this.flush()
-                this.mode = mode
+                if (mode === this.mode) return
+                if (mode === 'html') {
+                    if (typeof this.html !== 'string' && this.html !== null) this.write(this.currentHtml())
+                    this.mode = 'html'
+                    this.$nextTick(() => this.showCode())
+                } else {
+                    this.mode = 'visual'
+                    this.rich()?.getEditor()?.commands.setContent(this.source, { emitUpdate: false })
+                }
                 this.touched = false
-                if (mode === 'html') this.$nextTick(() => this.showCode())
             },
             async showCode() {
                 const tools = window.otfkHtmlEditor
                 if (! tools) return
-                const text = tools.formatHtml(this.html ?? '')
+                const text = tools.formatHtml(this.source)
                 const holder = this.$refs.code
                 if (holder._otfkEditor) {
                     holder._otfkEditor.setDoc(text)
@@ -65,7 +112,7 @@
                 if (! confirm(@js('Перетворити розділи на розгортні блоки:') + ' ' + count + '? ' + @js('Заголовки стануть підписами блоків, вміст до наступного такого ж заголовка — їхнім текстом. Скасувати можна через Ctrl/Cmd+Z.'))) return
                 editor.replaceDoc(tools.formatHtml(html))
             },
-            {{-- Стан оновлюється з паузою (кожне оновлення перезавантажує Trix) і одразу — при виході з поля --}}
+            {{-- Стан оновлюється з паузою і одразу — при виході з поля --}}
             queue(value) {
                 this.pending = value
                 clearTimeout(this.timer)
@@ -74,7 +121,7 @@
             flush() {
                 clearTimeout(this.timer)
                 if (this.pending === null) return
-                this.html = this.pending
+                this.write(this.pending)
                 this.pending = null
             },
             {{-- Навігація та копіювання текст не змінюють --}}
@@ -86,7 +133,7 @@
             },
             touch(event) {
                 if (this.mode !== 'visual' || this.touched) return
-                if (this.lossy && ! confirm(@js('Візуальний редактор спростить таблиці, розгортні блоки, вбудовані фрейми та оформлення цього тексту. Редагувати тут усе одно? «Скасувати» — перейти до режиму HTML.'))) {
+                if (this.lossy && ! confirm(@js('Візуальний редактор спростить вбудовані фрейми, оформлення (class/style), ширини таблиць і службові коментарі цього тексту. Редагувати тут усе одно? «Скасувати» — перейти до режиму HTML.'))) {
                     event.preventDefault()
                     event.stopImmediatePropagation()
                     this.setMode('html')
@@ -95,20 +142,21 @@
                 this.touched = true
             },
         }"
-        x-on:trix-change.capture="if (mode === 'html' || ! touched) $event.stopImmediatePropagation()"
-        x-on:keydown.capture="if ($event.target.closest('trix-editor')) keyTouch($event)"
-        x-on:paste.capture="if ($event.target.closest('trix-editor')) touch($event)"
-        x-on:drop.capture="if ($event.target.closest('trix-editor')) touch($event)"
-        x-on:cut.capture="if ($event.target.closest('trix-editor')) touch($event)"
-        x-on:mousedown.capture="if ($event.target.closest('trix-toolbar button, trix-toolbar input')) touch($event)"
+        x-on:keydown.capture="if ($event.target.closest('.fi-fo-rich-editor-content')) keyTouch($event)"
+        x-on:beforeinput.capture="if ($event.target.closest('.fi-fo-rich-editor-content')) touch($event)"
+        x-on:paste.capture="if ($event.target.closest('.fi-fo-rich-editor-content')) touch($event)"
+        x-on:drop.capture="if ($event.target.closest('.fi-fo-rich-editor-content')) touch($event)"
+        x-on:cut.capture="if ($event.target.closest('.fi-fo-rich-editor-content')) touch($event)"
+        x-on:mousedown.capture="if ($event.target.closest('.fi-fo-rich-editor-toolbar button, .fi-fo-rich-editor-floating-toolbar button, .fi-fo-rich-editor-panels button')) touch($event)"
+        x-on:click.capture="if ($event.target.closest('.fi-fo-rich-editor-toolbar button, .fi-fo-rich-editor-floating-toolbar button, .fi-fo-rich-editor-panels button')) touch($event)"
         x-bind:class="{ 'otfk-html-mode': mode === 'html' }"
         class="otfk-html-rich-editor"
     >
-        @include('filament-forms::components.rich-editor')
+        {!! $field->toEmbeddedHtml() !!}
 
         <p x-show="mode === 'visual' && lossy" x-cloak class="otfk-lossy-note">
-            Текст містить таблиці, розгортні блоки або імпортоване оформлення, яких візуальний редактор не підтримує:
-            правки тут їх спростять. Для таких текстів користуйтеся режимом HTML.
+            Текст містить вбудовані фрейми, імпортоване оформлення (class/style), ширини таблиць або службові коментарі,
+            яких візуальний редактор не зберігає: правки тут їх спростять. Для таких текстів користуйтеся режимом HTML.
         </p>
 
         <div x-show="mode === 'html'" x-cloak wire:ignore class="otfk-html-source" x-on:focusout="flush()">
@@ -118,7 +166,8 @@
             </div>
             <div x-ref="code"></div>
             <textarea x-show="! codeReady"
-                x-model.lazy="html"
+                x-bind:value="source"
+                x-on:change="write($event.target.value)"
                 rows="20"
                 spellcheck="false"
                 aria-label="{{ $getLabel() }} (HTML)"
@@ -150,13 +199,13 @@
                 font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
                 box-shadow: 0 0 0 1px rgb(3 7 18 / .1), 0 1px 2px rgb(0 0 0 / .05);
             }
-            .otfk-html-source textarea:focus { outline: none; box-shadow: 0 0 0 2px rgb(var(--primary-600)); }
+            .otfk-html-source textarea:focus { outline: none; box-shadow: 0 0 0 2px var(--primary-600); }
             .dark .otfk-html-source textarea { background: rgb(255 255 255 / .05); color: #fff; box-shadow: 0 0 0 1px rgb(255 255 255 / .2); }
             .otfk-mode-toggle { display: inline-flex; gap: 2px; padding: 2px; border-radius: .5rem; box-shadow: 0 0 0 1px rgb(3 7 18 / .1); }
             .dark .otfk-mode-toggle { box-shadow: 0 0 0 1px rgb(255 255 255 / .2); }
             .otfk-mode-toggle button { padding: 1px .5rem; border-radius: .375rem; font-size: .75rem; font-weight: 600; color: rgb(75 85 99); }
             .dark .otfk-mode-toggle button { color: rgb(209 213 219); }
-            .otfk-mode-toggle button[aria-pressed="true"] { background: rgb(var(--primary-600)); color: #fff; }
+            .otfk-mode-toggle button[aria-pressed="true"] { background: var(--primary-600); color: #fff; }
             .otfk-mode-toggle__html { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
         </style>
     @endonce

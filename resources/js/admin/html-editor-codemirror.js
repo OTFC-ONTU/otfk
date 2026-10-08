@@ -21,7 +21,7 @@ const base = EditorView.theme({
         minHeight: '20rem',
         maxHeight: '70vh',
     },
-    '&.cm-focused': { outline: '2px solid rgb(var(--primary-600))' },
+    '&.cm-focused': { outline: '2px solid var(--primary-600)' },
 })
 
 // Контрастні палітри (на основі GitHub light/dark): теги, атрибути й значення чітко різняться від тексту

@@ -43,6 +43,7 @@ class AdminPanelProvider extends PanelProvider
             ->profile()
             ->brandName('ОТФК - Адмінпанель')
             ->font('Inter')
+            ->viteTheme('resources/css/filament/admin/theme.css')
             ->sidebarCollapsibleOnDesktop()
             ->colors([
                 'primary' => Color::Blue,

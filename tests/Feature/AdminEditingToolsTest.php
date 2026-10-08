@@ -165,7 +165,7 @@ class AdminEditingToolsTest extends TestCase
         $this->assertSame('IT (Студенту тест › Цифрові видання)', $it->adminOptionLabel());
 
         $options = Livewire::test(EditPage::class, ['record' => $hub->getRouteKey()])
-            ->instance()->form->getComponent('data.parent_id')->getOptions();
+            ->instance()->form->getComponent('parent_id')->getOptions();
 
         $this->assertArrayHasKey($student->id, $options);
         $this->assertArrayNotHasKey($hub->id, $options);
