@@ -159,18 +159,25 @@
     }
     .file-card__download-label { display: inline; }
     .file-card__view-label { display: none; }
-    .prose-site .content-accordion { @apply my-4 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200; }
-    .prose-site .content-accordion > summary { @apply flex cursor-pointer items-center justify-between gap-4 px-5 py-4 text-base font-semibold leading-snug text-brand-950 transition hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-brand-600; }
-    .prose-site .content-accordion > summary::after {
+    /* Єдиний вигляд розкривних блоків у текстах: і відновлені панелі ліцензування (.content-accordion),
+       і будь-які native <details> із CMS (конференції тощо) — без змін HTML у БД */
+    .prose-site details { @apply my-4 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200; }
+    .prose-site details > summary { @apply flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-base font-semibold leading-snug text-brand-950 transition hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-brand-600; }
+    .prose-site details > summary::-webkit-details-marker { display: none; }
+    .prose-site details > summary::after {
         content: '';
         width: 1rem;
         height: 1rem;
         flex: none;
         background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23284aaa' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
     }
-    .prose-site .content-accordion[open] > summary { @apply border-b border-brand-100 bg-brand-50; }
-    .prose-site .content-accordion[open] > summary::after { transform: rotate(180deg); }
+    .prose-site details[open] > summary { @apply border-b border-brand-100 bg-brand-50; }
+    .prose-site details[open] > summary::after { transform: rotate(180deg); }
     .prose-site .content-accordion__body { @apply px-4 pb-4 pt-1 sm:px-5; }
+    /* Native <details> без обгортки тіла: відступи для прямих дочірніх елементів */
+    .prose-site details:not(.content-accordion) > :not(summary) { @apply mx-4 sm:mx-5; }
+    .prose-site details:not(.content-accordion)[open] > :last-child { @apply mb-4; }
+    .prose-site details:not(.content-accordion)[open] > summary + * { @apply mt-4; }
     .file-card__actions { @apply flex shrink-0 items-center gap-2 self-end; }
     .file-card__description { @apply mt-2 text-sm leading-relaxed text-slate-500; }
     .prose-site :where(.file-card-list, li:has(> .file-card-container)) { margin: 0; padding: 0; list-style: none; }
