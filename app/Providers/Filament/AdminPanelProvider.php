@@ -15,12 +15,14 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -58,6 +60,8 @@ class AdminPanelProvider extends PanelProvider
                 TwoFactorChallenge::class,
                 TwoFactorSetup::class,
             ])
+            // Редактор режиму «HTML» (HtmlRichEditor): форматування + лінивий чанк CodeMirror
+            ->renderHook(PanelsRenderHook::SCRIPTS_AFTER, fn (): string => Blade::render("@vite('resources/js/admin/html-editor.js')"))
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
