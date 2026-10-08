@@ -56,19 +56,21 @@ class Page extends Model
     }
 
     /**
-     * Підпис сторінки у списках вибору адмінки: повний шлях розділів і адреса —
-     * назви на кшталт «IT» чи «Легка промисловість» повторюються в різних розділах.
+     * Підпис сторінки у списках вибору адмінки: назва, а в дужках — шлях її розділів,
+     * бо назви на кшталт «IT» чи «Легка промисловість» повторюються в різних розділах.
+     * Назва — на початку: Choices.js у браузері ще раз фільтрує результати нечітким
+     * пошуком, який не знаходить збіг у кінці довгого рядка.
      */
-    public function adminPathLabel(): string
+    public function adminOptionLabel(): string
     {
-        $titles = [$this->title];
+        $parents = [];
         $seen = [$this->getKey() => true];
-        for ($page = $this->parent; $page && ! isset($seen[$page->getKey()]) && count($titles) < 6; $page = $page->parent) {
+        for ($page = $this->parent; $page && ! isset($seen[$page->getKey()]) && count($parents) < 5; $page = $page->parent) {
             $seen[$page->getKey()] = true;
-            array_unshift($titles, $page->title);
+            array_unshift($parents, $page->title);
         }
 
-        return implode(' › ', $titles).' · /'.$this->slug;
+        return $parents === [] ? $this->title : $this->title.' ('.implode(' › ', $parents).')';
     }
 
     /**
