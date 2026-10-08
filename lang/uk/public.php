@@ -175,6 +175,7 @@ return [
     'search_specialty' => 'Спеціальність',
     'search_document' => 'Документ',
     'search_event' => 'Подія',
+    'search_groups' => ['news' => 'Новини', 'pages' => 'Сторінки', 'specialties' => 'Спеціальності', 'documents' => 'Документи', 'events' => 'Події'],
     'search_empty' => 'За запитом «:query» нічого не знайдено.',
     'specialty_code' => 'Код спеціальності: :code',
     'specialty_description' => 'Спеціальність «:title» — :college',

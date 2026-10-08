@@ -169,4 +169,23 @@ class SearchPageTest extends TestCase
         }
         $this->get('/poshuk?q=тест')->assertStatus(429);
     }
+
+    public function test_type_chips_are_translated_and_capitalized_in_both_locales(): void
+    {
+        $this->makeNews('Кошторис новина');
+        Page::create(['title' => 'Кошторис сторінка', 'body' => '<p>т</p>', 'is_published' => true]);
+        Specialty::create(['title' => 'Кошторис спеціальність', 'code' => '999', 'is_published' => true]);
+        $category = DocumentCategory::create(['title' => 'Фінанси']);
+        Document::create(['title' => 'Кошторис 2026', 'document_category_id' => $category->id, 'is_published' => true]);
+
+        $uk = $this->get('/poshuk?q='.urlencode('кошторис'))->assertOk();
+        foreach (['Новини', 'Сторінки', 'Спеціальності', 'Документи'] as $chip) {
+            $uk->assertSee($chip);
+        }
+        $uk->assertDontSee('public.')->assertDontSee('feature.')->assertDontSee('>сторінки', false);
+
+        $this->get('/en/poshuk?q='.urlencode('Кошторис'))->assertOk()
+            ->assertSee('Pages')->assertSee('Documents')->assertSee('Specialties')
+            ->assertDontSee('public.')->assertDontSee('feature.');
+    }
 }

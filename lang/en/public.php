@@ -175,6 +175,7 @@ return [
     'search_specialty' => 'Specialty',
     'search_document' => 'Document',
     'search_event' => 'Event',
+    'search_groups' => ['news' => 'News', 'pages' => 'Pages', 'specialties' => 'Specialties', 'documents' => 'Documents', 'events' => 'Events'],
     'search_empty' => 'No results found for “:query”.',
     'specialty_code' => 'Specialty code: :code',
     'specialty_description' => 'Specialty “:title” — :college',
