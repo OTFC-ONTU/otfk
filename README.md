@@ -1,6 +1,6 @@
 # Сайт Одеського технічного фахового коледжу ОНТУ
 
-[![Тести](https://github.com/gotthejuicee/otfk/actions/workflows/tests.yml/badge.svg)](https://github.com/gotthejuicee/otfk/actions/workflows/tests.yml)
+[![Тести](https://github.com/OTFC-ONTU/otfk/actions/workflows/tests.yml/badge.svg)](https://github.com/OTFC-ONTU/otfk/actions/workflows/tests.yml)
 
 Сучасний сайт коледжу: швидка публічна частина + повноцінна адмінпанель українською. Усе наповнення редагується без жодного рядка коду.
 
