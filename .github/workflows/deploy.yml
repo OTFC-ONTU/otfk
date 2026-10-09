@@ -1,15 +1,15 @@
 name: Deploy to production
 
-# prod → Plesk (new.otfk.od.ua): job deploy-plesk збирає фронтенд і публікує гілку
+# master → Plesk (new.otfk.od.ua): job deploy-plesk збирає фронтенд і публікує гілку
 # plesk-build, яку забирає Laravel Toolkit у Plesk (SSH там chroot без PHP 8.3).
-# master та ручний запуск інших гілок → тестовий хостинг по SSH (job deploy).
+# test та ручний запуск інших гілок → тестовий хостинг по SSH (job deploy).
 on:
   push:
-    branches: [master, prod]
+    branches: [master, test]
   workflow_dispatch:
 
 concurrency:
-  group: deploy-${{ github.ref_name == 'prod' && 'plesk' || 'test' }}
+  group: deploy-${{ github.ref_name == 'master' && 'plesk' || 'test' }}
   cancel-in-progress: false
 
 jobs:
@@ -34,7 +34,7 @@ jobs:
           php artisan test
 
   deploy-plesk:
-    if: ${{ github.ref_name == 'prod' }}
+    if: ${{ github.ref_name == 'master' }}
     runs-on: ubuntu-latest
     needs: tests
     permissions:
@@ -61,8 +61,8 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      # plesk-build = дерево prod + public/build (у prod він у .gitignore). Коміт має
-      # батьками попередній plesk-build і перевірений SHA prod — гілка лише рухається
+      # plesk-build = дерево master + public/build (у git він у .gitignore). Коміт має
+      # батьками попередній plesk-build і перевірений SHA master — гілка лише рухається
       # вперед, тож Git у Plesk тягне її без force. Push через GITHUB_TOKEN не запускає
       # інших workflow.
       - name: Publish plesk-build
@@ -75,9 +75,9 @@ jobs:
           if git fetch --quiet origin plesk-build; then
             parents="-p $(git rev-parse FETCH_HEAD) $parents"
           fi
-          commit=$(git commit-tree "$tree" $parents -m "build: prod ${{ github.sha }}")
+          commit=$(git commit-tree "$tree" $parents -m "build: master ${{ github.sha }}")
           git push origin "$commit:refs/heads/plesk-build"
-          echo "::notice title=plesk-build::$commit (prod ${{ github.sha }})"
+          echo "::notice title=plesk-build::$commit (master ${{ github.sha }})"
 
       # Розгортання у Plesk запускає вебхук Git-репозиторію Laravel Toolkit
       # (секрет PLESK_DEPLOY_WEBHOOK). Без нього — «Розгорнути» вручну в Plesk.
@@ -92,7 +92,7 @@ jobs:
           curl -fsS -X POST --retry 3 "$WEBHOOK" > /dev/null
 
   deploy:
-    if: ${{ github.ref_name != 'prod' }}
+    if: ${{ github.ref_name != 'master' }}
     runs-on: ubuntu-latest
     needs: tests
 
@@ -125,7 +125,7 @@ jobs:
 
       # Репозиторій публічний — сервер тягне код по https без deploy key.
       # Встановлюється саме той SHA, для якого пройшли тести і зібрано фронтенд
-      # (не «поточний master», який міг піти далі за час збірки).
+      # (не «поточний test», який міг піти далі за час збірки).
       - name: Pull code and install dependencies
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.REMOTE_PORT || 22 }} ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} '
