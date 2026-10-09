@@ -18,6 +18,14 @@ class FrontendPolishTest extends TestCase
             ->assertSee('id="main-content"', escape: false);
     }
 
+    public function test_footer_copyright_ends_with_current_kyiv_year(): void
+    {
+        // 31 грудня 23:30 UTC у Києві вже новий рік
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-12-31 23:30:00', 'UTC'));
+
+        $this->get('/')->assertOk()->assertSee('© 2014-2027');
+    }
+
     public function test_home_uses_plain_summary_card(): void
     {
         // Без обкладинки сторінки — звичайна (не велика) Twitter-картка.
