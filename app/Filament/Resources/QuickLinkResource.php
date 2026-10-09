@@ -10,8 +10,6 @@ use Filament\Forms\Components\Toggle;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Actions\EditAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use App\Filament\Resources\QuickLinkResource\Pages\ListQuickLinks;
 use App\Filament\Resources\QuickLinkResource\Pages\CreateQuickLink;
 use App\Filament\Resources\QuickLinkResource\Pages\EditQuickLink;
@@ -36,9 +34,9 @@ class QuickLinkResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-squares-2x2';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Контент';
+    protected static string | \UnitEnum | null $navigationGroup = 'Головна сторінка';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $navigationLabel = 'Плитки на головній';
 
@@ -125,8 +123,7 @@ class QuickLinkResource extends Resource
             ->reorderable('sort_order')
             ->emptyStateHeading('Плиток ще немає')
             ->emptyStateDescription('Плитки - 4 кольорові картки під банером на головній. Посилання-партнери підвалу редагуються в «Налаштування → Підвал і вигляд».')
-            ->recordActions([EditAction::make()])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ->recordActions([EditAction::make()]);
     }
 
     public static function getRelations(): array

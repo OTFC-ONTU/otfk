@@ -11,8 +11,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Actions\EditAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use App\Filament\Resources\VideoResource\Pages\ListVideos;
 use App\Filament\Resources\VideoResource\Pages\CreateVideo;
 use App\Filament\Resources\VideoResource\Pages\EditVideo;
@@ -30,9 +28,9 @@ class VideoResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-play-circle';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Контент';
+    protected static string | \UnitEnum | null $navigationGroup = 'Новини та події';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 5;
 
     protected static ?string $navigationLabel = 'Відео';
 
@@ -91,8 +89,7 @@ class VideoResource extends Resource
             ->reorderable('sort_order')
             ->emptyStateHeading('Відео ще немає')
             ->emptyStateDescription('Відео з YouTube показуються на сторінці «Відео». Просто вставте посилання на ролик - обкладинка підтягнеться автоматично.')
-            ->recordActions([EditAction::make()])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ->recordActions([EditAction::make()]);
     }
 
     public static function getRelations(): array

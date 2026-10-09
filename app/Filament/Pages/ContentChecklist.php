@@ -26,9 +26,9 @@ class ContentChecklist extends FilamentPage
 
     protected static ?string $title = 'Що ще наповнити';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Структура сайту';
+    protected static string | \UnitEnum | null $navigationGroup = 'Сторінки та меню';
 
-    protected static ?int $navigationSort = -1;
+    protected static ?int $navigationSort = 3;
 
     protected string $view = 'filament.pages.content-checklist';
 

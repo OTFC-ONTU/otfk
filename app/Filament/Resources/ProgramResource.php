@@ -10,8 +10,6 @@ use Filament\Forms\Components\Textarea;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Actions\EditAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use App\Filament\Resources\ProgramResource\Pages\ListPrograms;
 use App\Filament\Resources\ProgramResource\Pages\CreateProgram;
 use App\Filament\Resources\ProgramResource\Pages\EditProgram;
@@ -29,7 +27,7 @@ class ProgramResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Абітурієнту';
+    protected static string | \UnitEnum | null $navigationGroup = 'Вступ і навчання';
 
     protected static ?int $navigationSort = 2;
 
@@ -74,8 +72,7 @@ class ProgramResource extends Resource
             ->reorderable('sort_order')
             ->emptyStateHeading('Освітніх програм ще немає')
             ->emptyStateDescription('Освітні програми (файли або посилання) показуються на сторінці своєї спеціальності. Спершу оберіть спеціальність, потім додайте програму.')
-            ->recordActions([EditAction::make()])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ->recordActions([EditAction::make()]);
     }
 
     public static function getRelations(): array

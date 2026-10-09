@@ -38,7 +38,7 @@ class PageResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Структура сайту';
+    protected static string | \UnitEnum | null $navigationGroup = 'Сторінки та меню';
 
     protected static ?int $navigationSort = 1;
 
