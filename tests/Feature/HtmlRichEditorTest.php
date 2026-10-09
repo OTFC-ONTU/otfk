@@ -88,6 +88,20 @@ class HtmlRichEditorTest extends TestCase
         $this->assertStringContainsString('<td>2</td>', $page->fresh()->body);
     }
 
+    public function test_details_and_heading_buttons_use_editor_helpers(): void
+    {
+        $this->actingAs(User::firstOrFail());
+        $page = Page::create(['title' => 'Блоки', 'slug' => 'bloky', 'body' => '<h3>Розділ</h3><p>Текст</p>', 'is_published' => true]);
+
+        // Заголовок на початку виділення стає підписом блоку; H2–H4 у підписі розгортають блок назад
+        $test = Livewire::test(EditPage::class, ['record' => $page->getRouteKey()])
+            ->assertSeeHtml('otfkHtmlEditor.wrapInDetails(')
+            ->assertSeeHtml('otfkHtmlEditor.heading($getEditor(), 2)')
+            ->assertSeeHtml('otfkHtmlEditor.heading($getEditor(), 3)')
+            ->assertSeeHtml('otfkHtmlEditor.heading($getEditor(), 4)');
+        $this->assertDoesNotMatchRegularExpression('/otfkHtmlEditor\.(?:heading|wrapInDetails)[^>]*&quot;/', $test->html());
+    }
+
     public function test_tiptap_document_is_saved_as_html_with_import_markers(): void
     {
         $this->actingAs(User::firstOrFail());

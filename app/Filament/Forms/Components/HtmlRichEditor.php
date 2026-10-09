@@ -91,6 +91,21 @@ class HtmlRichEditor extends RichEditor
         ];
     }
 
+    /**
+     * «Розгортний блок» бере заголовок на початку виділення в підпис, а H2–H4 у підписі блоку
+     * розгортають його назад (html-editor.js wrapInDetails()/heading(); без скрипта — як у Filament).
+     */
+    public function getTools(): array
+    {
+        $tools = parent::getTools();
+        ($tools['details'] ?? null)?->jsHandler('window.otfkHtmlEditor ? window.otfkHtmlEditor.wrapInDetails($getEditor()) : $getEditor()?.chain().focus().setDetails().run()');
+        foreach ([2, 3, 4] as $level) {
+            ($tools["h{$level}"] ?? null)?->jsHandler("window.otfkHtmlEditor ? window.otfkHtmlEditor.heading(\$getEditor(), {$level}) : \$getEditor()?.chain().focus().toggleHeading({ level: {$level} }).run()");
+        }
+
+        return $tools;
+    }
+
     /** @return array<StateCast> */
     public function getDefaultStateCasts(): array
     {
