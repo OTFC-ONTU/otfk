@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Filament\Resources\BannerResource\Pages\ListBanners;
 use App\Filament\Resources\MenuItemResource\Pages\ListMenuItems;
+use App\Filament\Resources\NewsResource\Pages\ListNews;
 use App\Filament\Resources\StaffResource;
 use App\Models\Banner;
 use App\Models\Gallery;
@@ -22,6 +23,20 @@ use Tests\TestCase;
 class DragReorderTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_reorder_button_has_text_and_short_lists_have_no_selection(): void
+    {
+        $this->actingAs(User::firstOrFail());
+
+        // Перестановка — окремим режимом (без випадкових зсувів), але кнопка з підписом; «Готово» завершує режим
+        $list = Livewire::test(ListBanners::class)->assertSee('Змінити порядок');
+        // Короткі впорядковані списки без масових дій — без квадратиків вибору рядків
+        $this->assertFalse($list->instance()->getTable()->isSelectionEnabled());
+        $list->call('toggleTableReordering')->assertSee('Готово');
+
+        $this->assertFalse(Livewire::test(ListMenuItems::class)->instance()->getTable()->isSelectionEnabled());
+        $this->assertTrue(Livewire::test(ListNews::class)->instance()->getTable()->isSelectionEnabled());
+    }
 
     public function test_reorder_swaps_existing_positions_of_shown_records_only(): void
     {

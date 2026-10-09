@@ -12,8 +12,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Actions\EditAction;
-use Filament\Actions\BulkActionGroup;
-use App\Filament\Support\SafeDeleteAction;
 use App\Filament\Resources\SpecialtyResource\Pages\ListSpecialties;
 use App\Filament\Resources\SpecialtyResource\Pages\CreateSpecialty;
 use App\Filament\Resources\SpecialtyResource\Pages\EditSpecialty;
@@ -33,7 +31,7 @@ class SpecialtyResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-academic-cap';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Абітурієнту';
+    protected static string | \UnitEnum | null $navigationGroup = 'Вступ і навчання';
 
     protected static ?int $navigationSort = 1;
 
@@ -90,8 +88,7 @@ class SpecialtyResource extends Resource
             ->recordActions([
                 EditAction::make(),
                 ViewOnSite::table(fn (Specialty $record) => route('specialties.show', $record)),
-            ])
-            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk(static::class)])]);
+            ]);
     }
 
     public static function getRelations(): array

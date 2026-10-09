@@ -8,8 +8,6 @@ use Filament\Forms\Components\Toggle;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Actions\EditAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use App\Filament\Resources\StatItemResource\Pages\ListStatItems;
 use App\Filament\Resources\StatItemResource\Pages\CreateStatItem;
 use App\Filament\Resources\StatItemResource\Pages\EditStatItem;
@@ -27,9 +25,9 @@ class StatItemResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-chart-bar';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Контент';
+    protected static string | \UnitEnum | null $navigationGroup = 'Головна сторінка';
 
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $navigationLabel = 'Коледж у цифрах';
 
@@ -68,8 +66,7 @@ class StatItemResource extends Resource
             ->reorderable('sort_order')
             ->emptyStateHeading('Цифр ще немає')
             ->emptyStateDescription('Блок «Коледж у цифрах» на головній сторінці: кількість студентів, викладачів, років історії. Додайте перший показник.')
-            ->recordActions([EditAction::make()])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ->recordActions([EditAction::make()]);
     }
 
     public static function getRelations(): array
