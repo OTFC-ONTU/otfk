@@ -1,118 +1,115 @@
-# Деплой ОТФК на Хостинг Україна (ukraine.com.ua)
+# Deploying OTFK to Hosting Ukraine (ukraine.com.ua)
 
-Тариф «Кращий»: есть **SSH**, **Composer 2** (уже установлен), выбор **версии PHP** — значит деплой идёт по стандартному пути.
+Plan "Best" (Кращий): **SSH** is available, **Composer 2** (already installed), and a **PHP version** selector — so deployment follows the standard path.
 
-> ✅ Перед прод-деплоем уже сделано в коде: `User::canAccessPanel()` (иначе Filament отдаёт 403 на проде) и шаблон `.env.production.example`.
+> ✅ Before the production deployment, the following is already done in code: `User::canAccessPanel()` (otherwise Filament returns 403 in production) and the `.env.production.example` template.
 
-> 🧭 **Два окружения (с 2026-10-09):** `master` — продакшен-ветка: push в неё выкладывает на Plesk-поддомен `new.otfk.od.ua` через ветку `plesk-build` и Laravel Toolkit (раздел «Plesk: new.otfk.od.ua» ниже); `test` — тестовая: push в неё выкладывает по SSH на тестовый хостинг just-test.shop (секреты репозитория). Задачи сначала сливаются в `test` и проверяются на just-test.shop, выпуск — перенос `test` в `master`. Ветка `prod` (2026-10-08…09) упразднена. Старый сайт на otfk.od.ua в это время работает как был.
+> 🧭 **Two environments (since 2026-10-09):** `master` is the production branch: a push to it publishes to the Plesk subdomain `new.otfk.od.ua` via the `plesk-build` branch and Laravel Toolkit (see section "Plesk: new.otfk.od.ua" below); `test` is the test branch: a push to it deploys over SSH to the test hosting just-test.shop (repository secrets). Tasks are first merged into `test` and verified on just-test.shop; a release means moving `test` into `master`. The `prod` branch (2026-10-08…09) has been retired. The old site on otfk.od.ua keeps working as before in the meantime.
 >
-> 🚀 **Автодеплой (тестовый хостинг):** после первичной настройки по этому документу обновления едут сами — workflow `.github/workflows/deploy.yml` на каждый push в `test` (или вручную через Run workflow из другой ветки, кроме `master`): после успешных тестов и аудита того же workflow собирает фронтенд в CI, по SSH делает `git reset --hard ${{ github.sha }}` + `composer install`, заливает `public/build/` rsync-ом и выполняет `migrate --force` + пересборку кэшей. Нужны секреты репозитория `REMOTE_KEY` (приватный SSH-ключ), `REMOTE_HOST`, `REMOTE_USER`, `REMOTE_PATH` (каталог сайта), опционально `REMOTE_PORT`. Раздел «Обновление сайта потом» ниже — ручной запасной путь.
-> Переревью безопасности 06.10.2026: в `deploy.yml` реализован собственный job `tests`, `deploy` зависит от него и устанавливает тот же SHA. Ручной запуск вне `test` требует отдельной проверки получения выбранного SHA. Атомарность проверки и записи `otfk:sanitize-content --apply` реализована условным UPDATE (разделы 16–17 аудита). Приёмка на хостинге остаётся обязательной; локальный тест команды требует изоляции storage, чтобы не удалять рабочие бэкапы.
+> 🚀 **Autodeploy (test hosting):** after the initial setup described in this document, updates are deployed automatically — the workflow `.github/workflows/deploy.yml` runs on every push to `test` (or manually via Run workflow from a branch other than `master`): after the tests and the audit in the same workflow succeed, it builds the frontend in CI, runs `git reset --hard ${{ github.sha }}` + `composer install` over SSH, uploads `public/build/` with rsync, and runs `migrate --force` + rebuilds the caches. Required repository secrets: `REMOTE_KEY` (private SSH key), `REMOTE_HOST`, `REMOTE_USER`, `REMOTE_PATH` (site directory), optionally `REMOTE_PORT`. The section "Updating the site later" below is the manual fallback path.
+> Security re-review of 06.10.2026: `deploy.yml` implements its own `tests` job; `deploy` depends on it and installs the same SHA. A manual run outside `test` requires a separate check of how the selected SHA is obtained. The atomicity of the check and the write in `otfk:sanitize-content --apply` is implemented with a conditional UPDATE (sections 16–17 of the audit). Acceptance on the hosting remains mandatory; a local test of the command requires storage isolation so that it does not delete working backups.
 >
-> ⚠️ `public/build/` больше **не** коммитится в git — сборка живёт только в CI/деплое; локально `npm run build` или `npm run dev`. Тема админки импортирует CSS из `vendor/filament`, поэтому перед сборкой нужен `composer install` (в `deploy.yml` — `composer install --no-dev --no-scripts`).
+> ⚠️ `public/build/` is **no longer** committed to git — the build lives only in CI/deploy; locally use `npm run build` or `npm run dev`. The admin theme imports CSS from `vendor/filament`, so `composer install` is required before the build (in `deploy.yml` — `composer install --no-dev --no-scripts`).
 
 ---
 
-## 0. Подготовка локально (один раз)
+## 0. Local preparation (one time)
 
 ```bash
-# 1) собрать фронтенд (создаёт public/build — на хостинге нет npm, поэтому собираем тут; нужен vendor/ — composer install)
+# 1) build the frontend (creates public/build — the hosting has no npm, so we build here; vendor/ is required — composer install)
 npm run build
 
-# 2) узнать свой APP_KEY (понадобится для .env на сервере)
-#    он уже есть в локальном .env, строка APP_KEY=base64:...
+# 2) find out your APP_KEY (needed for .env on the server)
+#    it is already in your local .env, the line APP_KEY=base64:...
 ```
 
-Версия PHP: **8.3** (в `composer.json` зафиксировано `platform.php = 8.3.0`, CI тестирует на 8.3; `composer.lock` собирается под эту версию).
+PHP version: **8.3** (`platform.php = 8.3.0` is fixed in `composer.json`, CI tests on 8.3; `composer.lock` is built for this version).
 
 ---
 
-## Вариант А — через Git + SSH (рекомендую: удобно обновлять)
+## Option A — via Git + SSH (recommended: convenient for updates)
 
-На сервере нет `vendor/` и `public/build` (они в `.gitignore`): `vendor` ставим Composer'ом на сервере, а `public/build` при первом деплое собираем локально (`npm run build`) и заливаем в `~/ВАШ-ДОМЕН/www/public/build` (scp/sftp); дальше его обновляет автодеплой.
+The server has no `vendor/` and no `public/build` (both are in `.gitignore`): install `vendor` with Composer on the server, and build `public/build` locally (`npm run build`) during the first deployment and upload it to `~/YOUR-DOMAIN/www/public/build` (scp/sftp); after that, autodeploy updates it.
 
-### 1. Залить код
+### 1. Upload the code
 ```bash
-# выбрать в панели версию PHP 8.3 для сайта (Сайти → Налаштування → Версія PHP)
-# подключиться по SSH, перейти в каталог сайта:
-cd ~/ВАШ-ДОМЕН/www
+# in the panel, select PHP version 8.3 for the site (Сайти → Налаштування → Версія PHP)
+# connect over SSH and go to the site directory:
+cd ~/YOUR-DOMAIN/www
 
-# клонировать репозиторий (или загрузить файлы файловым менеджером)
-git clone https://github.com/ВАШ_РЕПОЗИТОРИЙ.git .
+# clone the repository (or upload the files with the file manager)
+git clone https://github.com/YOUR_REPOSITORY.git .
 ```
 
-### 2. Зависимости + .env
+### 2. Dependencies + .env
 ```bash
-# Composer уже есть. Если php в PATH не та версия — указать явный путь, напр. /usr/local/php83/bin/php
+# Composer is already installed. If `php` in PATH is not the right version, specify the explicit path, e.g. /usr/local/php83/bin/php
 composer install --no-dev --optimize-autoloader
 
 cp .env.production.example .env
-# отредактировать .env: APP_URL, APP_KEY, DB_*
-# при переносе существующей БД сохранить APP_KEY исходного сервера (секреты 2FA)
+# edit .env: APP_URL, APP_KEY, DB_*
+# when migrating an existing database, keep the APP_KEY of the source server (2FA secrets)
 nano .env
 ```
 
-### 3. База данных
-В панели хостинга: **MySQL → создать базу + пользователя**, дать пользователю права на базу. Подставить их в `.env` (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_HOST=localhost`).
+### 3. Database
+In the hosting panel: **MySQL → create a database + user**, and grant the user rights on the database. Put them into `.env` (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_HOST=localhost`).
 
-> ⚠️ В `.env` задайте свои `ADMIN_EMAIL` и `ADMIN_PASSWORD` **до** этой команды: вне окружений `local`/`testing`
-> сидер без `ADMIN_PASSWORD` останавливается с ошибкой (дефолтного пароля на сервере нет). Пароль — минимум 12 символов,
-> буквы и цифры. Делайте seed **до** `php artisan optimize` (кэш конфига ломает чтение env в сидере).
+> ⚠️ Set your own `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` **before** this command: outside the `local`/`testing` environments, the seeder stops with an error without `ADMIN_PASSWORD` (there is no default password on the server). The password must be at least 12 characters long, with letters and digits. Run the seed **before** `php artisan optimize` (the config cache breaks reading env values in the seeder).
 
 ```bash
-# создаст все таблицы И наполнит сайт (меню, страницы, демо-контент) + админа из ADMIN_EMAIL/ADMIN_PASSWORD
+# creates all tables AND populates the site (menu, pages, demo content) + an admin from ADMIN_EMAIL/ADMIN_PASSWORD
 php artisan migrate --seed --force
 ```
 
-### 4. Ассеты, симлинк, кеш
+### 4. Assets, symlink, cache
 ```bash
-php artisan filament:assets      # опубликовать CSS/JS админки в public (иначе админка без стилей)
-php artisan storage:link         # симлинк public/storage → storage/app/public (для загруженных фото)
-php artisan optimize             # кеш конфигов/роутов/вью (быстрее). При проблемах: php artisan optimize:clear
+php artisan filament:assets      # publish the admin CSS/JS to public (otherwise the admin has no styles)
+php artisan storage:link         # symlink public/storage → storage/app/public (for uploaded photos)
+php artisan optimize             # cache configs/routes/views (faster). If there are problems: php artisan optimize:clear
 ```
-`public/build` в git **не** зберігається: при автодеплої його збирає CI і заливає rsync-ом; при першому ручному деплої зберіть локально (`npm run build`) і завантажте каталог самі.
+`public/build` is **not** stored in git: with autodeploy, CI builds it and uploads it via rsync; for the first manual deployment, build it locally (`npm run build`) and upload the directory yourself.
 
-### 5. Корень сайта → public
-В панели: **Сайти → Налаштування → Кореневий каталог** → указать `public`
-(альтернатива — `.htaccess`-редирект на `public`, но смена корня в панели чище).
-
----
-
-## Вариант Б — архивом (проще для первого раза, без Git)
-
-1. **Локально:** `composer install --no-dev --optimize-autoloader` + `npm run build`.
-2. Заархивировать проект в `.zip` **без** `node_modules`, `.git`, `.env` (но **с** `vendor/` и `public/build/`).
-3. В файловом менеджере хостинга: загрузить zip в каталог сайта и распаковать.
-4. Создать БД в панели; залить `.env` (из `.env.production.example`).
-5. **База:** либо `php artisan migrate --seed --force` по SSH, либо экспортировать локальную базу
-   `mysqldump -u root otfk > otfk.sql` и импортировать `otfk.sql` через **phpMyAdmin** в панели.
-6. По SSH (один раз): `php artisan filament:assets && php artisan storage:link && php artisan optimize`.
-7. Корень сайта → `public` (как в Варианте А, шаг 5).
+### 5. Site root → public
+In the panel: **Сайти → Налаштування → Кореневий каталог** (Sites → Settings → Document root) → set it to `public` (an alternative is a `.htaccess` redirect to `public`, but changing the root in the panel is cleaner).
 
 ---
 
-## Plesk: new.otfk.od.ua (ветка `master`)
+## Option B — archive (simpler for the first time, no Git)
 
-Новый сайт живёт на поддомене подписки otfk.od.ua рядом со старым. Всё, что зависит от домена, привязано к `SEO_PRIMARY_HOST=otfk.od.ua`, поэтому поддомен автоматически `noindex`, без GA4 и без правил www/HTTPS из `public/.htaccess`; редиректы старых адресов остаются на поддомене. **`SEO_PRIMARY_HOST` на поддомен не менять.**
+1. **Locally:** `composer install --no-dev --optimize-autoloader` + `npm run build`.
+2. Archive the project into a `.zip` **without** `node_modules`, `.git`, `.env` (but **with** `vendor/` and `public/build/`).
+3. In the hosting file manager: upload the zip into the site directory and extract it.
+4. Create the database in the panel; upload `.env` (from `.env.production.example`).
+5. **Database:** either `php artisan migrate --seed --force` over SSH, or export the local database
+   `mysqldump -u root otfk > otfk.sql` and import `otfk.sql` through **phpMyAdmin** in the panel.
+6. Over SSH (once): `php artisan filament:assets && php artisan storage:link && php artisan optimize`.
+7. Site root → `public` (as in Option A, step 5).
 
-**Почему не SSH.** SSH подписки — `/bin/bash (chrooted)`, пользователь его не меняет; внутри chroot только PHP 7.2. Поэтому выкладку делает **Laravel Toolkit** Plesk (Git + Composer + artisan + планировщик на PHP 8.3 сайта), а Node на сервере нет — фронтенд собирает CI.
+---
 
-**Как едет код:** push в `master` → `deploy.yml` (job `tests`, затем `deploy-plesk`) собирает фронтенд и публикует ветку **`plesk-build`** = дерево `master` + `public/build` (коммит с родителями «прошлый plesk-build» и «проверенный SHA master», ветка только движется вперёд) → вебхук `PLESK_DEPLOY_WEBHOOK` (секрет репозитория) запускает развёртывание в Plesk. Без секрета — кнопка развёртывания в Plesk вручную. В `plesk-build` руками не коммитить.
+## Plesk: new.otfk.od.ua (branch `master`)
 
-**Панель Plesk (поддомен `new.otfk.od.ua`):**
-- «Сертифікати SSL/TLS»: Let's Encrypt; в «Хостинг та DNS» — перенаправление HTTP → HTTPS.
-- Корень документов: Toolkit ставит приложение в текущий корень и сам переводит корень на его `public` (`artisan` — в родительском каталоге). Для новой установки оставить корень `new.otfk.od.ua`; у нынешней установки корень заранее был `…/public`, поэтому приложение в `new.otfk.od.ua/public`, веб-корень `new.otfk.od.ua/public/public`.
-- «PHP»: 8.3, «FPM-застосунок обслуговується Apache» (не nginx — нужен `.htaccess`), `upload_max_filesize` 25M, `post_max_size` 32M (админка принимает файлы до 20 МБ).
-- «Налаштування Apache і nginx»: выключить «Обслуговувати статичні файли напряму через nginx» — иначе файлы `/storage/` уходят мимо `storage/app/public/.htaccess` (CSP `sandbox` для HTML/SVG).
-- «Бази даних»: отдельная база и пользователь; старую БД сайта не трогать.
-- Квота подписки — 10 ГБ на старый и новый сайт вместе (учитывать `storage/mirror` и бэкапы).
+The new site lives on a subdomain of the otfk.od.ua subscription, next to the old one. Everything that depends on the domain is tied to `SEO_PRIMARY_HOST=otfk.od.ua`, so the subdomain is automatically `noindex`, without GA4 and without the www/HTTPS rules from `public/.htaccess`; the redirects of old addresses remain on the subdomain. **Do not change `SEO_PRIMARY_HOST` to the subdomain.**
 
-**Первичная установка (выполнена 2026-10-08):**
-1. Laravel Toolkit («Почніть роботу» → Laravel) → из Git `https://github.com/gotthejuicee/otfk.git`. Мастер ветку не спрашивает и берёт `master` — после установки ветку переключить на **`plesk-build`** в «Git» домена и развернуть заново. Toolkit кладёт приложение в **текущий корень документов** и переносит корень на его `public`: при корне `new.otfk.od.ua/public` приложение оказалось в **`new.otfk.od.ua/public`**, а веб-корень — **`new.otfk.od.ua/public/public`** (так и оставлено; `.env`/`composer.json` снаружи — 403).
-2. `.env` (Toolkit → «Змінні середовища»): Toolkit создаёт локальный шаблон (`APP_ENV=local`, `APP_DEBUG=true`, **SQLite**) — заменить целиком по `.env.production.example`: `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://new.otfk.od.ua`, `DB_CONNECTION=mysql` + `DB_*`, `SESSION_SECURE_COOKIE=true`; `SEO_PRIMARY_HOST=otfk.od.ua` не менять. При переносе БД — **`APP_KEY` исходного сервера** (иначе не расшифруются секреты 2FA). После любой правки `.env` — «Виконавець»: `optimize:clear`, `config:cache` (развёртывание кеширует конфиг; признак старого конфига — `<title>Laravel` и cookie `laravel-session`).
-3. Данные: дамп БД тестового хостинга («Бази даних» → «Імпортувати дамп», `.zip`), **не** `db:seed`; проверка — `db:show` в «Виконавець».
-4. Файлы `storage/app/public` (3,1 ГБ) заливались по FTP (`lftp mirror -R`, FTPS). **FTP пользователя подписки открывается в `httpdocs` старого сайта** — относительный путь `new.otfk.od.ua/...` создаёт папку внутри старого сайта. Правильное место — `/new.otfk.od.ua/public/storage/app/public/` (от корня подписки); переносить внутри сервера через «Файли» → «Перемістити». Не класть файлы в веб-корень `public/public/storage` — там должна быть **ссылка** `storage:link` (иначе нет защитного `.htaccess` и новые загрузки не видны).
-5. Сценарий развёртывания Toolkit («Розгортання»): этапы режим обслуживания + composer + «Запуск сценарію розгортання»; **package.json выключен** (Node 21 в Toolkit не подходит Vite 7, сборка уже в ветке). Сценарий запускается в chroot, где `php` — 7.2, поэтому **полный путь**:
+**Why not SSH.** The subscription's SSH is `/bin/bash (chrooted)`, the user cannot change it; inside the chroot only PHP 7.2 is available. Therefore, the deployment is done by the Plesk **Laravel Toolkit** (Git + Composer + artisan + scheduler on the site's PHP 8.3), and there is no Node on the server — the frontend is built by CI.
+
+**How the code travels:** a push to `master` → `deploy.yml` (job `tests`, then `deploy-plesk`) builds the frontend and publishes the **`plesk-build`** branch = the `master` tree + `public/build` (a commit with the parents "previous plesk-build" and "verified master SHA"; the branch only moves forward) → the webhook `PLESK_DEPLOY_WEBHOOK` (repository secret) starts the deployment in Plesk. Without the secret, the Plesk deploy button is pressed manually. Do not commit to `plesk-build` by hand.
+
+**Plesk panel (subdomain `new.otfk.od.ua`):**
+- "Сертифікати SSL/TLS" (SSL/TLS certificates): Let's Encrypt; in "Хостинг та DNS" (Hosting & DNS) — redirect HTTP → HTTPS.
+- Document root: Toolkit installs the application into the current root and moves the root to its `public` by itself (`artisan` — in the parent directory). For a new installation, keep the root `new.otfk.od.ua`; the current installation's root was previously `…/public`, so the application is in `new.otfk.od.ua/public`, and the web root is `new.otfk.od.ua/public/public`.
+- "PHP": 8.3, "FPM-застосунок обслуговується Apache" (FPM application served by Apache) (not nginx — `.htaccess` is needed), `upload_max_filesize` 25M, `post_max_size` 32M (the admin accepts files up to 20 MB).
+- "Налаштування Apache і nginx" (Apache and nginx settings): disable "Обслуговувати статичні файли напряму через nginx" (Serve static files directly through nginx) — otherwise the `/storage/` files bypass `storage/app/public/.htaccess` (CSP `sandbox` for HTML/SVG).
+- "Бази даних" (Databases): a separate database and user; do not touch the old site's database.
+- Subscription quota — 10 GB for the old and new sites together (account for `storage/mirror` and backups).
+
+**Initial installation (completed 2026-10-08):**
+1. Laravel Toolkit ("Почніть роботу" (Get started) → Laravel) → from Git `https://github.com/gotthejuicee/otfk.git`. The wizard does not ask for a branch and takes `master` — after installation, switch the branch to **`plesk-build`** in the domain's "Git" settings and deploy again. Toolkit puts the application into the **current document root** and moves the root to its `public`: with the root `new.otfk.od.ua/public`, the application ended up in **`new.otfk.od.ua/public`**, and the web root is **`new.otfk.od.ua/public/public`** (left as is; `.env`/`composer.json` outside — 403).
+2. `.env` ("Змінні середовища" (Environment variables) in Toolkit): Toolkit creates a local template (`APP_ENV=local`, `APP_DEBUG=true`, **SQLite**) — replace it entirely using `.env.production.example`: `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://new.otfk.od.ua`, `DB_CONNECTION=mysql` + `DB_*`, `SESSION_SECURE_COOKIE=true`; do not change `SEO_PRIMARY_HOST=otfk.od.ua`. When migrating the DB — **the `APP_KEY` of the source server** (otherwise the 2FA secrets cannot be decrypted). After any change to `.env` — in "Виконавець" (Executor): `optimize:clear`, `config:cache` (deployment caches the config; a sign of an old config is `<title>Laravel` and the `laravel-session` cookie).
+3. Data: a dump of the test hosting DB ("Бази даних" → "Імпортувати дамп" (Import dump), `.zip`), **not** `db:seed`; verification — `db:show` in "Виконавець".
+4. The `storage/app/public` files (3.1 GB) were uploaded over FTP (`lftp mirror -R`, FTPS). **The subscription user's FTP opens in the `httpdocs` of the old site** — a relative path `new.otfk.od.ua/...` creates a folder inside the old site. The correct location is `/new.otfk.od.ua/public/storage/app/public/` (from the subscription root); move files within the server using "Файли" (Files) → "Перемістити" (Move). Do not put the files into the web root `public/public/storage` — there must be a **link** created by `storage:link` (otherwise there is no protective `.htaccess` and new uploads are not visible).
+5. Toolkit's deployment script ("Розгортання" (Deployment)): stages maintenance mode + composer + "Запуск сценарію розгортання" (Run deployment script); **package.json is disabled** (Node 21 in Toolkit does not suit Vite 7; the build is already in the branch). The script runs in a chroot where `php` is 7.2, so use the **full path**:
    ```
    /opt/plesk/php/8.3/bin/php artisan migrate --force
    /opt/plesk/php/8.3/bin/php artisan optimize:clear
@@ -120,149 +117,149 @@ php artisan optimize             # кеш конфигов/роутов/вью (
    /opt/plesk/php/8.3/bin/php artisan route:cache
    /opt/plesk/php/8.3/bin/php artisan view:cache
    ```
-   Очередь (queue worker) не включать — в проекте `afterResponse()`.
-6. «Виконавець»: `storage:link`.
-7. Планировщик: «Заплановані завдання» на панели Toolkit включить (`schedule:run`). `otfk:backup` требует `mysqldump`; если его нет в окружении задачи — полагаться на «Резервна копія та відновлення» Plesk.
-8. Автоматическое развёртывание: «Розгортання» → режим **«Автоматичний»**; URL вебхука (`https://hosting9.tenet.ua:8443/modules/git/public/web-hook.php?uuid=…`) — в секрет GitHub `PLESK_DEPLOY_WEBHOOK`. В ручном режиме вебхук только подтягивает код, не разворачивая.
+   Do not enable the queue worker — the project uses `afterResponse()`.
+6. "Виконавець" (Executor): `storage:link`.
+7. Scheduler: enable "Заплановані завдання" (Scheduled tasks) in the Toolkit panel (`schedule:run`). `otfk:backup` requires `mysqldump`; if it is not in the task's environment, rely on Plesk's "Резервна копія та відновлення" (Backup and restore).
+8. Automatic deployment: "Розгортання" (Deployment) → mode **"Автоматичний"** (Automatic); the webhook URL (`https://hosting9.tenet.ua:8443/modules/git/public/web-hook.php?uuid=…`) goes into the GitHub secret `PLESK_DEPLOY_WEBHOOK`. In manual mode, the webhook only pulls the code without deploying it.
 
-`mirror-files.yml` работает только по SSH тестового хостинга; на Plesk очередь `file_mirrors` обрабатывает планировщик (или команда `otfk:mirror-files` во вкладке Artisan).
+`mirror-files.yml` works only over SSH of the test hosting; on Plesk, the `file_mirrors` queue is processed by the scheduler (or by the command `otfk:mirror-files` in the Artisan tab).
 
-**Проверка:** `curl -sI https://new.otfk.od.ua/` — есть `X-Robots-Tag: noindex, nofollow`; `/`, `/en`, `/admin` (вход с 2FA) открываются; проба `storage/app/public/_probe.php` → 403 (раздел 6 `docs/security-audit.md`); вручную `php artisan otfk:seo-smoke --base=https://new.otfk.od.ua --expect=closed` (в CI для Plesk не запускается — развёртывание асинхронное).
+**Check:** `curl -sI https://new.otfk.od.ua/` — the response has `X-Robots-Tag: noindex, nofollow`; `/`, `/en`, `/admin` (login with 2FA) open; the probe `storage/app/public/_probe.php` → 403 (section 6 of `docs/security-audit.md`); manually `php artisan otfk:seo-smoke --base=https://new.otfk.od.ua --expect=closed` (not run in CI for Plesk — the deployment is asynchronous).
 
-## Чек-лист «не забыть»
+## Checklist — don't forget
 
-- [ ] PHP **8.3** выбран для сайта и CLI (версия CI и platform.php)
-- [ ] PHP-расширение **GD с поддержкой WebP** (для авто-оптимизации картинок). Если нет — сайт работает, но изображения не сжимаются в WebP (молча пропускается). Проверка: `php -r "var_dump(function_exists('imagewebp'));"`
-- [ ] Корень сайта = **`public`**
-- [ ] `.env`: `APP_ENV=production`, `APP_DEBUG=false`, `APP_KEY` заполнен, `APP_URL=https://домен`, `DB_*`, `SESSION_SECURE_COOKIE=true`, `ADMIN_EMAIL`/`ADMIN_PASSWORD`
-- [ ] Индексация: `SEO_INDEXING=auto` (по умолчанию) открывает индекс только на `SEO_PRIMARY_HOST=otfk.od.ua`; тестовый хостинг получает `X-Robots-Tag: noindex, nofollow` автоматически. После запуска на основном домене проверить: `curl -sI https://otfk.od.ua/` без `X-Robots-Tag`, `/robots.txt` без `Disallow: /`
-- [ ] Для переноса существующего сайта: импорт актуального дампа БД и `php artisan migrate --force`; **без seed**. `migrate --seed --force` — только для пустого демо-окружения, затем требуется замена демо-контента
-- [ ] `php artisan storage:link` (фото из админки)
-- [ ] `php artisan filament:assets` (стили админки)
-- [ ] `public/build` залитий на сервер (автодеплоєм або вручну після `npm run build`)
-- [ ] права на запись: `chmod -R 775 storage bootstrap/cache` (если будут ошибки 500)
+- [ ] PHP **8.3** selected for the site and CLI (the CI version and `platform.php`)
+- [ ] PHP extension **GD with WebP support** (for automatic image optimization). If it is missing, the site works, but images are not compressed to WebP (silently skipped). Check: `php -r "var_dump(function_exists('imagewebp'));"`
+- [ ] Site root = **`public`**
+- [ ] `.env`: `APP_ENV=production`, `APP_DEBUG=false`, `APP_KEY` filled in, `APP_URL=https://DOMAIN`, `DB_*`, `SESSION_SECURE_COOKIE=true`, `ADMIN_EMAIL`/`ADMIN_PASSWORD`
+- [ ] Indexing: `SEO_INDEXING=auto` (default) opens the index only on `SEO_PRIMARY_HOST=otfk.od.ua`; the test hosting automatically gets `X-Robots-Tag: noindex, nofollow`. After launch on the main domain, verify: `curl -sI https://otfk.od.ua/` without `X-Robots-Tag`, and `/robots.txt` without `Disallow: /`
+- [ ] To migrate an existing site: import the current DB dump and run `php artisan migrate --force`; **without seed**. `migrate --seed --force` is only for an empty demo environment, after which the demo content must be replaced
+- [ ] `php artisan storage:link` (photos from the admin)
+- [ ] `php artisan filament:assets` (admin styles)
+- [ ] `public/build` uploaded to the server (by autodeploy or manually after `npm run build`)
+- [ ] write permissions: `chmod -R 775 storage bootstrap/cache` (if 500 errors occur)
 
-## Проверить после деплоя
+## Verify after deployment
 
-SEO smoke-проверка выполняется в `deploy.yml` автоматически, если заданы переменные репозитория (Settings → Secrets and variables → Actions → Variables): `SEO_SMOKE_BASE_URL` (например `https://just-test.shop`) и `SEO_SMOKE_EXPECT` (`closed` для тестового хостинга, `indexable` для otfk.od.ua — переключить в том же окне, когда снимается барьер). Вручную: `php artisan otfk:seo-smoke --base=https://otfk.od.ua --expect=indexable --check-redirects --sitemap-sample=10`; до переключения DNS — добавить `--resolve=otfk.od.ua:443:<IP нового сервера>`. Сразу после переключения: `curl -I http://otfk.od.ua/` и `https://www.otfk.od.ua/` — один 301 на `https://otfk.od.ua/` без цикла; при цикле включить «редирект на HTTPS» в панели хостинга и убрать HTTPS-правило из `public/.htaccess`.
+The SEO smoke check runs automatically in `deploy.yml` if the repository variables are set (Settings → Secrets and variables → Actions → Variables): `SEO_SMOKE_BASE_URL` (for example `https://just-test.shop`) and `SEO_SMOKE_EXPECT` (`closed` for the test hosting, `indexable` for otfk.od.ua — switch it in the same window when the barrier is lifted). Manually: `php artisan otfk:seo-smoke --base=https://otfk.od.ua --expect=indexable --check-redirects --sitemap-sample=10`; before the DNS switch, add `--resolve=otfk.od.ua:443:<IP of the new server>`. Right after the switch: `curl -I http://otfk.od.ua/` and `https://www.otfk.od.ua/` — a single 301 to `https://otfk.od.ua/` without a loop; if there is a loop, enable "redirect to HTTPS" in the hosting panel and remove the HTTPS rule from `public/.htaccess`.
 
-После переключения домена дополнительно:
+After switching the domain, additionally:
 
-- [ ] Настройка панели хостинга «принудительный HTTPS» на vhost otfk.od.ua: если панель редиректит на https раньше `.htaccess` (так на just-test.shop), старые ссылки `http://otfk.od.ua/news/…/` проходят 2 перехода (панель → https, затем Laravel → новая адрес). Для одного 301 — выключить её и оставить HTTPS-правило `public/.htaccess` (проверить отсутствие цикла).
-- [ ] `curl -I https://otfk.od.ua/index.php` и `curl -I https://otfk.od.ua/index.php/spetsialnosti` — один 301 на `/` и `/spetsialnosti` (правило `public/.htaccess`).
-- [ ] Убрать тестовый GA4 ID `G-TEST000000` (`php storage/app/private/privacy-2026-10-08/set_test_ga_id.php --remove` на копии с тестовой БД или очистить поле в «SEO → Розмітка та аналітика») и только потом вписать настоящий ID.
+- [ ] Hosting panel "forced HTTPS" setting on the otfk.od.ua vhost: if the panel redirects to https before `.htaccess` does (as on just-test.shop), old links such as `http://otfk.od.ua/news/…/` go through 2 hops (panel → https, then Laravel → new address). For a single 301 — disable it and keep the HTTPS rule in `public/.htaccess` (verify there is no loop).
+- [ ] `curl -I https://otfk.od.ua/index.php` and `curl -I https://otfk.od.ua/index.php/spetsialnosti` — a single 301 to `/` and `/spetsialnosti` (the `public/.htaccess` rule).
+- [ ] Remove the test GA4 ID `G-TEST000000` (`php storage/app/private/privacy-2026-10-08/set_test_ga_id.php --remove` on a copy with the test DB, or clear the field in "SEO → Розмітка та аналітика" (Markup and analytics)) and only then enter the real ID.
 
-1. `https://домен/` — сайт, плитки, новости
-2. `https://домен/admin` — вход под `ADMIN_EMAIL` / `ADMIN_PASSWORD` из `.env` → сменить пароль в профиле, создать личные учётки сотрудников с ролью «Редактор» (`Налаштування → Користувачі`)
-4. Чек-лист безопасности после деплоя — раздел 6 [`docs/security-audit.md`](docs/security-audit.md): заголовки на `/admin/login`, проба `storage/app/public/_probe.php` → 403, журнал `storage/logs/security-*.log`; затем `php artisan otfk:sanitize-content` (отчёт) и `php artisan otfk:sanitize-content --apply` (очистка старого HTML с бэкапом)
-3. Загрузить логотип, баннер, пару новостей — проверить, что фото отображаются (нужен `storage:link`)
+1. `https://DOMAIN/` — the site, tiles, news
+2. `https://DOMAIN/admin` — log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env` → change the password in the profile, create personal accounts for staff with the "Редактор" (Editor) role (`Налаштування → Користувачі` (Settings → Users))
+4. Post-deployment security checklist — section 6 of [`docs/security-audit.md`](docs/security-audit.md): headers on `/admin/login`, probe `storage/app/public/_probe.php` → 403, log `storage/logs/security-*.log`; then `php artisan otfk:sanitize-content` (report) and `php artisan otfk:sanitize-content --apply` (cleaning of old HTML with a backup)
+3. Upload the logo, a banner, a couple of news items — check that the photos display (requires `storage:link`)
 
-## Двофакторний захист і відновлення доступу
+## Two-factor protection and access recovery
 
-Усі користувачі адмінки підключають застосунок-автентифікатор (Google Authenticator, Aegis) при першому вході після деплою; у кожного є 10 одноразових кодів відновлення. Три рівні відновлення, щоб адмінка ніколи не «замкнулася»:
+All admin users connect an authenticator app (Google Authenticator, Aegis) on their first login after deployment; each has 10 one-time recovery codes. Three recovery levels, so the admin never gets "locked out":
 
-1. **Користувач втратив телефон** — вводить код відновлення, потім у «Двофакторний захист» (`/admin/two-factor-setup`) перепідключає застосунок.
-2. **Втрачено і телефон, і коди** — адміністратор у «Налаштування → Користувачі» натискає «Скинути 2FA» (тільки після перевірки особи); користувач підключає застосунок заново при вході.
-3. **Жоден адміністратор не може увійти** — по SSH на хостингу:
-
-```bash
-php artisan otfk:two-factor --status            # хто підключений, скільки кодів лишилось
-php artisan otfk:two-factor admin@домен --reset # скинути фактор конкретного користувача
-```
-
-   Якщо й SSH-доступу до команди немає — тимчасово `TWO_FACTOR_ENFORCE=false` у `.env` (+ `php artisan config:cache`), увійти, скинути/перепідключити, повернути `true`. Усі події (`2fa.enabled/passed/failed/recovery_used/reset/lockout`) — у `storage/logs/security-*.log`.
-
-## Cron на хостингу (бекапи + розклад Laravel)
-
-У коді вже налаштовано:
-- **щонеділі о 03:30** — `php artisan otfk:backup` (дамп БД у `storage/app/backups`);
-- **щонеділі о 04:00** — очищення старої статистики відвідувань.
-- **щохвилини** — `php artisan otfk:mirror-files --limit=30` (черга `file_mirrors`: сервер сам завантажує файли старого сайту otfk.od.ua у `storage/app/public/mirror/`; без записів у черзі лише перевіряє її).
-
-Щоб це працювало, у панелі хостинга додайте **один** cron (щохвилини):
+1. **A user lost their phone** — enters a recovery code, then reconnects the app in "Двофакторний захист" (Two-factor protection) (`/admin/two-factor-setup`).
+2. **Both the phone and the codes are lost** — an administrator presses "Скинути 2FA" (Reset 2FA) in "Налаштування → Користувачі" (Settings → Users) (only after verifying the person's identity); the user reconnects the app on the next login.
+3. **No administrator can log in** — over SSH on the hosting:
 
 ```bash
-* * * * * cd /home/ЛОГІН/ВАШ-ДОМЕН/www && php artisan schedule:run >> /dev/null 2>&1
+php artisan otfk:two-factor --status            # who is connected, how many codes are left
+php artisan otfk:two-factor admin@DOMAIN --reset # reset the factor of a specific user
 ```
 
-Шлях `cd` замініть на свій каталог сайту. Перевірка вручну:
+   If there is no SSH access to the command either — temporarily set `TWO_FACTOR_ENFORCE=false` in `.env` (+ `php artisan config:cache`), log in, reset/reconnect, then set it back to `true`. All events (`2fa.enabled/passed/failed/recovery_used/reset/lockout`) are written to `storage/logs/security-*.log`.
+
+## Cron on the hosting (backups + Laravel schedule)
+
+Already configured in the code:
+- **every Sunday at 03:30** — `php artisan otfk:backup` (database dump into `storage/app/backups`);
+- **every Sunday at 04:00** — cleanup of old visit statistics.
+- **every minute** — `php artisan otfk:mirror-files --limit=30` (the `file_mirrors` queue: the server itself downloads the files of the old otfk.od.ua site into `storage/app/public/mirror/`; with no entries in the queue, it only checks the queue).
+
+For this to work, add **one** cron job in the hosting panel (every minute):
+
+```bash
+* * * * * cd /home/LOGIN/YOUR-DOMAIN/www && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Replace the `cd` path with your site directory. Manual check:
 
 ```bash
 php artisan schedule:list
 php artisan otfk:backup
 ```
 
-## Карта старих адрес і журнал 404
+## Old-address map and 404 log
 
-Старі адреси, що змінилися, переносяться таблицею `legacy_redirects`: редирект 301/308 на нову сторінку чи файл або 410 для свідомо видаленого. Масово — з CSV (колонки `source,target,code,note`; `target` — лише відносний шлях `/...`):
+Old addresses that have changed are transferred via the `legacy_redirects` table: a 301/308 redirect to a new page or file, or 410 for a deliberately deleted item. In bulk — from a CSV (columns `source,target,code,note`; `target` — only a relative path `/...`):
 
 ```bash
 php artisan otfk:legacy-redirects storage/app/private/redirects.csv
 php artisan otfk:legacy-redirects storage/app/private/redirects.csv --apply
 ```
 
-Перший запуск лише показує нові/змінені записи й конфлікти (жива адреса, відсутнє чи зовнішнє призначення, дублі, ланцюжки); `--apply` записує без конфліктних рядків і зберігає копію CSV та звіт у `storage/app/private/legacy-redirects/`. Повторний запуск ідемпотентний.
+The first run only shows new/changed records and conflicts (a live address, a missing or external target, duplicates, chains); `--apply` writes the rows without conflicts and saves a copy of the CSV and a report into `storage/app/private/legacy-redirects/`. Repeated runs are idempotent.
 
-CSV збирає `php artisan otfk:legacy-map --out=storage/app/private/legacy-map/map.csv --sitemap=https://otfk.od.ua/sitemap.xml --urls=gsc-pages.csv --scan-dir=<збережені сторінки старого сайту> --verify` (лише читання; запускати на хостингу, де лежать файли `storage`). Редактор розбирає `map.csv.unmapped.csv` (матеріал / 410 за затвердженим списком / 404) і `map.csv.conflicts.csv`, доповнює CSV, далі — dry-run і `--apply` командою вище. Точкові правки — «SEO → Редиректи старих адрес» в адмінці; адреси, за якими відвідувачі отримують 404, — «SEO → Журнал 404» (там же «Створити редирект»). Записи журналу без звернень понад 90 днів видаляє `model:prune` (через cron `schedule:run`). Файли, що фізично лежать у `public/`, Apache віддає без Laravel — для них редирект не спрацює.
+The CSV is built by `php artisan otfk:legacy-map --out=storage/app/private/legacy-map/map.csv --sitemap=https://otfk.od.ua/sitemap.xml --urls=gsc-pages.csv --scan-dir=<saved pages of the old site> --verify` (read-only; run it on the hosting where the `storage` files are). The editor works through `map.csv.unmapped.csv` (material / 410 according to the approved list / 404) and `map.csv.conflicts.csv`, extends the CSV, and then does a dry-run and `--apply` with the command above. Point edits — "SEO → Редиректи старих адрес" (SEO → Old address redirects) in the admin; addresses where visitors get a 404 — "SEO → Журнал 404" (SEO → 404 log) (where "Створити редирект" (Create redirect) is also available). Log entries without visits for more than 90 days are removed by `model:prune` (via cron `schedule:run`). Files that physically live in `public/` are served by Apache without Laravel — for them, a redirect will not work.
 
-## Файли старого сайту і переїзд на постійний хостинг
+## Files of the old site and migration to permanent hosting
 
-**Дзеркалювання.** Файли старого сайту не заливаються вручну: URL ставиться в таблицю `file_mirrors` (`App\Models\FileMirror::enqueue($url)` або INSERT з `source_hash = SHA2(source_url, 256)` і `status = 'pending'`), cron `schedule:run` щохвилини запускає `otfk:mirror-files`, файл з'являється за `FileMirror::publicUrl()` (`/storage/mirror/otfk.od.ua/...`). У контент вставляються лише **відносні** шляхи `/storage/...` — тоді зміна домену посилань не ламає. Дозволені хости — `FILE_MIRROR_HOSTS` (типово `otfk.od.ua,www.otfk.od.ua`), ліміт — `FILE_MIRROR_MAX_MB` (100). Стан: `SELECT status, COUNT(*) FROM file_mirrors GROUP BY status`; помилки — колонка `error`; повтор невдалих — `php artisan otfk:mirror-files --retry-failed`. Потрібні cron і вихідний HTTPS з хостингу. Без cron чергу можна обробити вручну: GitHub → Actions → «Mirror legacy files» → Run workflow (або `gh workflow run mirror-files.yml -f limit=500`) — ті самі SSH-секрети, що й у деплою.
+**Mirroring.** The files of the old site are not uploaded manually: the URL is put into the `file_mirrors` table (`App\Models\FileMirror::enqueue($url)` or an INSERT with `source_hash = SHA2(source_url, 256)` and `status = 'pending'`); the cron `schedule:run` runs `otfk:mirror-files` every minute; the file appears at `FileMirror::publicUrl()` (`/storage/mirror/otfk.od.ua/...`). Only **relative** paths `/storage/...` are inserted into content — so a domain change does not break the links. Allowed hosts — `FILE_MIRROR_HOSTS` (default `otfk.od.ua,www.otfk.od.ua`), size limit — `FILE_MIRROR_MAX_MB` (100). Status: `SELECT status, COUNT(*) FROM file_mirrors GROUP BY status`; errors — the `error` column; retry of failed ones — `php artisan otfk:mirror-files --retry-failed`. Requires cron and outbound HTTPS from the hosting. Without cron, the queue can be processed manually: GitHub → Actions → "Mirror legacy files" → Run workflow (or `gh workflow run mirror-files.yml -f limit=500`) — the same SSH secrets as for the deployment.
 
-**Переїзд з тимчасового хостингу на постійний** (нічого не видаляє на старому сервері):
+**Migration from temporary hosting to permanent hosting** (deletes nothing on the old server):
 
-1. На старому сервері: `php artisan otfk:backup` (дамп БД у `storage/app/backups/otfk_*.sql.gz`) і `php artisan otfk:storage-export` (архів `storage/app/backups/storage_*.zip`: увесь диск `public` — завантаження адмінки, імпортовані фото, `mirror/` — з маніфестом sha256).
-2. Перенести обидва файли на новий сервер (scp/rsync або файловий менеджер панелі; у Git їх не класти — `storage/` ігнорується).
-3. На новому сервері: розгорнути код за «Вариант А», імпортувати дамп у нову БД, `php artisan migrate --force`, `php artisan storage:link`.
-4. Відновити файли: `php artisan otfk:storage-import /шлях/storage_….zip` — пише відсутні файли й перевіряє sha256; наявні файли з іншим вмістом лише показує як конфлікти (замінити — `--overwrite`).
-5. Добрати дзеркальні файли, яких немає або які пошкоджені: `php artisan otfk:mirror-files --verify --limit=1000` (із джерела otfk.od.ua). Якщо оригінал уже недоступний, а старий хостинг ще працює: `php artisan otfk:mirror-files --verify --from=https://СТАРИЙ-ДОМЕН --limit=1000` — файл береться з `/storage/...` старого хостингу і приймається лише за збігу записаного sha256. Повторювати, доки в черзі нічого не лишиться.
-6. Додати cron `schedule:run` на новому хостингу, оновити `APP_URL`, `php artisan optimize`. Перевірити `/`, `/en`, `/admin` і кілька сторінок з файлами.
+1. On the old server: `php artisan otfk:backup` (database dump into `storage/app/backups/otfk_*.sql.gz`) and `php artisan otfk:storage-export` (archive `storage/app/backups/storage_*.zip`: the whole `public` disk — admin uploads, imported photos, `mirror/` — with a sha256 manifest).
+2. Transfer both files to the new server (scp/rsync or the panel's file manager; do not put them into Git — `storage/` is ignored).
+3. On the new server: deploy the code per "Option A", import the dump into the new DB, run `php artisan migrate --force`, `php artisan storage:link`.
+4. Restore the files: `php artisan otfk:storage-import /path/to/storage_….zip` — writes the missing files and verifies sha256; existing files with different content are only shown as conflicts (to replace them — `--overwrite`).
+5. Fetch the mirror files that are missing or damaged: `php artisan otfk:mirror-files --verify --limit=1000` (from the otfk.od.ua source). If the original is already unavailable but the old hosting still works: `php artisan otfk:mirror-files --verify --from=https://OLD-DOMAIN --limit=1000` — the file is taken from `/storage/...` on the old hosting and accepted only if it matches the recorded sha256. Repeat until nothing is left in the queue.
+6. Add the cron `schedule:run` on the new hosting, update `APP_URL`, run `php artisan optimize`. Check `/`, `/en`, `/admin`, and a few pages with files.
 
-**Безпека при переїзді (інакше адмінка не впустить нікого):**
+**Security during the migration (otherwise the admin will not let anyone in):**
 
-- **`APP_KEY` — той самий, що на старому сервері.** Ним зашифровані секрети й коди відновлення 2FA в БД (а також cookie/сесії). Новий `key:generate` зламає вхід усім користувачам; якщо це вже сталося — `TWO_FACTOR_ENFORCE=false`, увійти, `php artisan otfk:two-factor <пошта> --reset` кожному, повернути `true`.
-- `.env`: `TWO_FACTOR_ENFORCE=true`, `SESSION_SECURE_COOKIE=true`, `APP_DEBUG=false`, `APP_URL` з новим доменом (шаблон — `.env.production.example`).
-- Точний час сервера (NTP): TOTP-коди живуть 30 с, розбіжність понад хвилину = «невірний код» у всіх. Перевірка: `date -u`.
-- Document root = `public/`; повторити пробу `storage/app/public/_probe.php` → 403 (розділ 6 `docs/security-audit.md`). Якщо новий хостинг на nginx без Apache, `.htaccess` не діє — заборону скриптів у `/storage/` прописати в конфігу nginx (`location ~* ^/storage/.*\.php$ { return 403; }`); білий список завантажень у застосунку працює незалежно.
-- `storage/logs/security-*.log` і `storage/app/private/sanitize-backup-*.json` у `storage-export` не входять — за потреби скопіювати вручну.
-- Секрети GitHub Actions (`REMOTE_HOST`, `REMOTE_USER`, `REMOTE_KEY`, `REMOTE_PATH`, `REMOTE_PORT`) перевести на новий сервер (для `test`; Plesk-гілка `master` розгортається через Laravel Toolkit і SSH-секретів не використовує) — інакше автодеплой і далі йтиме на старий.
+- **`APP_KEY` — the same one as on the old server.** It encrypts the secrets and the 2FA recovery codes in the DB (and the cookies/sessions). A new `key:generate` breaks login for all users; if this has already happened — `TWO_FACTOR_ENFORCE=false`, log in, run `php artisan otfk:two-factor <email> --reset` for each user, then set it back to `true`.
+- `.env`: `TWO_FACTOR_ENFORCE=true`, `SESSION_SECURE_COOKIE=true`, `APP_DEBUG=false`, `APP_URL` with the new domain (template — `.env.production.example`).
+- Exact server time (NTP): TOTP codes live for 30 s; a discrepancy of more than a minute = "invalid code" for everyone. Check: `date -u`.
+- Document root = `public/`; repeat the probe `storage/app/public/_probe.php` → 403 (section 6 of `docs/security-audit.md`). If the new hosting runs nginx without Apache, `.htaccess` does not work — write the ban on scripts in `/storage/` into the nginx config (`location ~* ^/storage/.*\.php$ { return 403; }`); the application's upload allowlist works independently.
+- `storage/logs/security-*.log` and `storage/app/private/sanitize-backup-*.json` are not included in `storage-export` — copy them manually if needed.
+- GitHub Actions secrets (`REMOTE_HOST`, `REMOTE_USER`, `REMOTE_KEY`, `REMOTE_PATH`, `REMOTE_PORT`) must be moved to the new server (for `test`; the Plesk branch `master` is deployed via Laravel Toolkit and does not use the SSH secrets) — otherwise autodeploy will keep going to the old server.
 
-## Моніторинг доступності (без коду)
+## Availability monitoring (no code)
 
-Безкоштовно: [UptimeRobot](https://uptimerobot.com) або Better Stack — пінг `https://ваш-домен/` кожні 5 хв. Сповіщення на email/Telegram, якщо сайт лежить.
+Free options: [UptimeRobot](https://uptimerobot.com) or Better Stack — ping `https://your-domain/` every 5 minutes. Notifications by email/Telegram if the site goes down.
 
-## Фоновые задачи (Telegram)
+## Background tasks (Telegram)
 
-Автопостинг новостей в Telegram отправляется
-**после** отдачи страницы — через `dispatch(...)->afterResponse()`. Это
-терминирующий колбэк: Laravel выполняет его в том же процессе на этапе
-`terminate()`, уже после ответа браузеру. Поэтому:
+Automatic posting of news to Telegram is sent
+**after** the page is returned — via `dispatch(...)->afterResponse()`. This is
+a terminating callback: Laravel executes it in the same process at the
+`terminate()` stage, already after the response has been sent to the browser. Therefore:
 
-- **queue-воркер не нужен** (на шаред-хостинге его и нет) — `QUEUE_CONNECTION`
-  для этих задач не задействуется, таблица `jobs` не накапливается;
-- посетитель/админ не ждёт ответа Telegram;
-- **не переводите эти задачи в `ShouldQueue`** без запущенного `queue:work` —
-  тогда они улетят в очередь и без воркера не выполнятся никогда.
+- **a queue worker is not needed** (there is none on shared hosting) — `QUEUE_CONNECTION`
+  is not used for these tasks, and the `jobs` table does not accumulate;
+- the visitor/admin does not wait for the Telegram response;
+- **do not convert these tasks to `ShouldQueue`** without a running `queue:work` —
+  otherwise they go into the queue and will never run without a worker.
 
-Если Telegram-пост не ушёл (API недоступен) — новость всё равно помечается
-как опубликованная (защита от дублей), а ошибка пишется в лог (`Log::warning`).
-Повторить вручную: очистить `telegram_posted_at` у новости и пересохранить её.
+If the Telegram post was not sent (the API is unavailable), the news item is still marked
+as published (duplicate protection), and the error is written to the log (`Log::warning`).
+To retry manually: clear `telegram_posted_at` for the news item and save it again.
 
-## Обновление сайта потом (Вариант А)
+## Updating the site later (Option A)
 
-Обычно ничего делать не надо — push в `master` (Plesk) или `test` (тестовый хостинг) запускает автодеплой (`deploy.yml`). Ручной путь на случай, если CI недоступен (фронтенд тогда собрать локально и залить `public/build` самому):
+Usually nothing needs to be done — a push to `master` (Plesk) or `test` (test hosting) triggers autodeploy (`deploy.yml`). The manual path is for the case when CI is unavailable (then build the frontend locally and upload `public/build` yourself):
 
-Если в БД остался результат старой миграции `2026_08_28_180000_drop_applicant_feedback_testimonials`, обычный `migrate --force` восстановит отсутствующие таблицы через `2026_10_04_175000_restore_missing_content_tables` перед переводом блоков главной (`180000`). Восстановление не запускает сидер и не меняет существующие записи. Последняя миграция перевода допускает повтор после частичного выполнения MySQL DDL: добавляются только отсутствующие поля. Не удаляйте записи из `migrations` и не откатывайте старые контент-миграции для восстановления схемы. Встроенные формы контактов/заявки и отзывы сняты с интерфейса, таблицы остаются архивными; августовская drop-миграция в объединённом коде ничего не удаляет. Перед восстановлением сохраните исходные записи и проверьте фактические таблицы/поля; после него проверьте успешность шага пересборки кешей и ответы `/`, `/en`, `/admin`.
+If the database still contains the result of the old migration `2026_08_28_180000_drop_applicant_feedback_testimonials`, a regular `migrate --force` restores the missing tables via `2026_10_04_175000_restore_missing_content_tables` before the homepage block translation (`180000`). The restoration does not run the seeder and does not change existing records. The latest translation migration allows a repeat after a partially executed MySQL DDL: only the missing fields are added. Do not delete records from `migrations` and do not roll back old content migrations to restore the schema. The built-in contact/application forms and the reviews have been removed from the interface; the tables remain as archives; the August drop migration in the merged code deletes nothing. Before the restoration, save the original records and verify the actual tables/fields; after it, check that the cache rebuild step succeeded and that `/`, `/en`, `/admin` respond.
 
 ```bash
-cd ~/ВАШ-ДОМЕН/www
+cd ~/YOUR-DOMAIN/www
 git pull
 composer install --no-dev --optimize-autoloader
 php artisan migrate --force
 php artisan optimize:clear && php artisan optimize
 ```
 
-Якщо в PR були нові міграції або зображення на сервері ще без WebP:
+If the PR contained new migrations or the server still has images without WebP:
 
 ```bash
 php artisan migrate --force
