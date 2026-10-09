@@ -125,8 +125,8 @@ Direct connection parameters for the just-test.shop test hosting MySQL are in a 
 
 ## Last completed task
 
-- **2026-10-09 (direct push to `master` at the user's request, a test of the Plesk auto-deploy):** the footer copyright end year is now the current Kyiv year (`now('Europe/Kyiv')->year` in `resources/views/components/layouts/app.blade.php`) instead of the hard-coded "2014-2025"; test `FrontendPolishTest::test_footer_copyright_ends_with_current_kyiv_year` (23:30 UTC on 31 December is already the next year in Kyiv). Before that PR #30 (`test` → `master`: details/heading editor buttons, admin menu grouped by site location, UA/EN-only docs) was reviewed and merged.
-- Checks: `php artisan test --filter=FrontendPolishTest` locally (PHP 8.4; the full suite runs in the `deploy.yml` `tests` job). The deploy result on new.otfk.od.ua is to be confirmed visually by the user.
+- **2026-10-09 (direct pushes to `master` at the user's request, tests of the Plesk auto-deploy):** the footer copyright end year is the current Kyiv year (`now('Europe/Kyiv')->year`, test `FrontendPolishTest::test_footer_copyright_ends_with_current_kyiv_year`); `deploy-plesk` writes the `master` SHA to `public/build/commit.txt`, so `https://new.otfk.od.ua/build/commit.txt` shows the deployed version (DEPLOY.md). The first push failed at the webhook step with 404 — the Plesk repository had been recreated; the user put the new webhook URL into `PLESK_DEPLOY_WEBHOOK`, the rerun deployed (footer «© 2014-2026» confirmed by curl). Before that PR #30 (`test` → `master`) was reviewed and merged.
+- Checks: `php artisan test --filter=FrontendPolishTest` locally (PHP 8.4; the full suite runs in the `deploy.yml` `tests` job); deployment verified by curl against new.otfk.od.ua.
 
 ## Other
 
