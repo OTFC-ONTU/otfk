@@ -20,9 +20,9 @@ class BrokenLinks extends FilamentPage
 
     protected static ?string $title = 'Биті внутрішні посилання';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Структура сайту';
+    protected static string | \UnitEnum | null $navigationGroup = 'Сторінки та меню';
 
-    protected static ?int $navigationSort = 0;
+    protected static ?int $navigationSort = 4;
 
     protected string $view = 'filament.pages.broken-links';
 

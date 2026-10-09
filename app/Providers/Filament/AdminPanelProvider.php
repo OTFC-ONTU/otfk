@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use Filament\Actions\Action;
 use Filament\Pages\Dashboard;
 use Filament\Widgets\AccountWidget;
 use App\Filament\Auth\Login;
@@ -48,12 +49,13 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Blue,
             ])
-            // Порядок груп меню: щоденна робота зверху, налаштування — внизу
-            // (без цього Filament ставить групи в порядку виявлення класів).
+            // Групи меню — за тим, де матеріал видно на сайті; щоденна робота зверху, налаштування —
+            // внизу (без цього Filament ставить групи в порядку виявлення класів).
             ->navigationGroups([
-                'Контент',
-                'Структура сайту',
-                'Абітурієнту',
+                'Новини та події',
+                'Головна сторінка',
+                'Сторінки та меню',
+                'Вступ і навчання',
                 'Структура та персонал',
                 'Публічна інформація',
                 'SEO',
@@ -103,7 +105,13 @@ class AdminPanelProvider extends PanelProvider
     public function boot(): void
     {
         // Без автоматичного «order by id»: на MySQL (ONLY_FULL_GROUP_BY) він ламає таблиці з GROUP BY (віджет «Топ сторінок»)
-        Table::configureUsing(fn (Table $table) => $table->deferFilters(false)->defaultKeySort(false));
+        // Перестановка рядків — окремим режимом (щоб не зсунути запис випадково), але кнопка з підписом:
+        // типова кнопка-іконка без тексту непомітна
+        Table::configureUsing(fn (Table $table) => $table->deferFilters(false)->defaultKeySort(false)
+            ->reorderRecordsTriggerAction(fn (Action $action, bool $isReordering): Action => $action
+                ->button()
+                ->label($isReordering ? 'Готово' : 'Змінити порядок')
+                ->color($isReordering ? 'primary' : 'gray')));
         Section::configureUsing(fn (Section $section) => $section->columnSpanFull());
         Grid::configureUsing(fn (Grid $grid) => $grid->columnSpanFull());
         Fieldset::configureUsing(fn (Fieldset $fieldset) => $fieldset->columnSpanFull());

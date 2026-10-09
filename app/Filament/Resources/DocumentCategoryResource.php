@@ -7,8 +7,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Actions\EditAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use App\Filament\Resources\DocumentCategoryResource\Pages\ListDocumentCategories;
 use App\Filament\Resources\DocumentCategoryResource\Pages\CreateDocumentCategory;
 use App\Filament\Resources\DocumentCategoryResource\Pages\EditDocumentCategory;
@@ -68,8 +66,7 @@ class DocumentCategoryResource extends Resource
             ->recordActions([
                 EditAction::make(),
                 ViewOnSite::table(fn (DocumentCategory $record) => route('documents.category', $record)),
-            ])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ]);
     }
 
     public static function getRelations(): array

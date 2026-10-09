@@ -14,8 +14,8 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Tests\TestCase;
 
 /**
- * Превʼю несохранённой форми (кнопка «Превʼю» у формах сторінок/новин):
- * слепок стану форми в кеші → /admin-preview/{token} рендерить публічний
+ * Превʼю незбереженої форми (кнопка «Превʼю» у формах сторінок/новин):
+ * знімок стану форми в кеші → /admin-preview/{token} рендерить публічний
  * шаблон без запису в БД. Лише для залогінених; чужий/протухлий токен — 404.
  */
 class FormPreviewTest extends TestCase
@@ -189,7 +189,7 @@ class FormPreviewTest extends TestCase
     {
         Storage::fake('public');
 
-        // Протухла копія від попереднього превʼю — має прибратися при новому слепку.
+        // Протухла копія від попереднього превʼю — має прибратися при новому знімку.
         Storage::disk('public')->put('admin-preview/stara-kopiya.jpg', 'old');
         touch(Storage::disk('public')->path('admin-preview/stara-kopiya.jpg'), now()->subHour()->getTimestamp());
 
@@ -228,7 +228,7 @@ class FormPreviewTest extends TestCase
             ]])
             ->instance();
 
-        // Той самий слепок, що робить кнопка «Превʼю» (PreviewFormAction)
+        // Той самий знімок, що робить кнопка «Превʼю» (PreviewFormAction)
         $token = AdminPreview::store('page', $page, \App\Filament\Forms\Components\HtmlRichEditor::rawStateWithHtml($livewire->form));
 
         $this->get('/admin-preview/'.$token)

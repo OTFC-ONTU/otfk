@@ -76,6 +76,82 @@ window.otfkHtmlEditor = {
     },
 
     /**
+     * Кнопка «Розгортний блок» візуального режиму: виділені блоки стають вмістом блоку, а
+     * заголовок на їх початку (або перший абзац, якщо виділено кілька блоків) — його підписом,
+     * як detailsSnippet() у режимі HTML. Інші випадки — стандартна команда TipTap setDetails().
+     */
+    wrapInDetails(editor) {
+        const state = editor?.state
+        const { details, detailsSummary, detailsContent, paragraph } = state?.schema.nodes ?? {}
+        const range = state?.selection.$from.blockRange(state.selection.$to)
+        if (! details || ! detailsSummary || ! detailsContent || ! range) return editor?.chain().focus().setDetails().run()
+
+        const blocks = []
+        for (let index = range.startIndex; index < range.endIndex; index++) blocks.push(range.parent.child(index))
+        if (! detailsContent.contentMatch.matchFragment(state.doc.slice(range.start, range.end).content)) {
+            return editor.chain().focus().setDetails().run()
+        }
+
+        const first = blocks[0]
+        const titled = first.type.name === 'heading' || (first.type.name === 'paragraph' && blocks.length > 1)
+        const summary = titled ? this.summaryText(first, detailsSummary) : null
+        // Порожні абзаци між підписом і вмістом не переносимо
+        const body = summary ? blocks.slice(1) : blocks
+        while (summary && body.length && body[0].type.name === 'paragraph' && body[0].content.size === 0) body.shift()
+        const node = details.create(null, [
+            detailsSummary.create(null, summary ?? []),
+            detailsContent.create(null, body.length ? body : [paragraph.create()]),
+        ])
+
+        const tr = state.tr.replaceWith(range.start, range.end, node)
+        const cursor = range.start + 2 + (summary ? node.firstChild.content.size : 0)
+        editor.view.dispatch(tr.setSelection(state.selection.constructor.near(tr.doc.resolve(cursor))).scrollIntoView())
+        editor.view.focus()
+
+        return true
+    },
+
+    /** Текст блоку для підпису (лише текст із дозволеними позначками; інші вкладені вузли — ні). */
+    summaryText(block, summaryType) {
+        const nodes = []
+        let plain = true
+        block.forEach((inline) => {
+            if (inline.isText) nodes.push(inline.mark(inline.marks.filter((mark) => summaryType.allowsMarkType(mark.type))))
+            else if (inline.type.name === 'hardBreak') nodes.push(block.type.schema.text(' '))
+            else plain = false
+        })
+
+        return plain && nodes.length ? nodes : null
+    },
+
+    /**
+     * Кнопки H2–H4: у підписі розгортного блоку (там лише текст) блок розгортається назад —
+     * підпис стає заголовком цього рівня, вміст блоку — абзацами під ним; інакше toggleHeading().
+     */
+    heading(editor, level) {
+        const state = editor?.state
+        const $from = state?.selection.$from
+        const heading = state?.schema.nodes.heading
+        if (! $from || ! heading || $from.parent.type.name !== 'detailsSummary' || $from.depth < 2) {
+            return editor?.chain().focus().toggleHeading({ level }).run()
+        }
+
+        const block = $from.node($from.depth - 1)
+        const pos = $from.before($from.depth - 1)
+        const nodes = [heading.create({ level }, $from.parent.content)]
+        block.forEach((child) => {
+            if (child.type.name === 'detailsContent') child.forEach((node) => nodes.push(node))
+        })
+
+        const tr = state.tr.replaceWith(pos, pos + block.nodeSize, nodes)
+        const cursor = pos + 1 + Math.min($from.parentOffset, nodes[0].content.size)
+        editor.view.dispatch(tr.setSelection(state.selection.constructor.near(tr.doc.resolve(cursor))).scrollIntoView())
+        editor.view.focus()
+
+        return true
+    },
+
+    /**
      * @param {HTMLElement} parent
      * @param {{ doc: string, label: string, onChange: (value: string) => void }} options
      */

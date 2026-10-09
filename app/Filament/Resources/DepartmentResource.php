@@ -9,8 +9,6 @@ use Filament\Forms\Components\Toggle;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Actions\EditAction;
-use Filament\Actions\BulkActionGroup;
-use App\Filament\Support\SafeDeleteAction;
 use App\Filament\Resources\DepartmentResource\Pages\ListDepartments;
 use App\Filament\Resources\DepartmentResource\Pages\CreateDepartment;
 use App\Filament\Resources\DepartmentResource\Pages\EditDepartment;
@@ -79,8 +77,7 @@ class DepartmentResource extends Resource
             ->recordActions([
                 EditAction::make(),
                 ViewOnSite::table(fn (Department $record) => route('structure.show', $record)),
-            ])
-            ->toolbarActions([BulkActionGroup::make([SafeDeleteAction::bulk(static::class)])]);
+            ]);
     }
 
     public static function getRelations(): array

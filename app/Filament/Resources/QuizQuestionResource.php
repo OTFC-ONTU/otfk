@@ -10,8 +10,6 @@ use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Actions\EditAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use App\Filament\Resources\QuizQuestionResource\Pages\ListQuizQuestions;
 use App\Filament\Resources\QuizQuestionResource\Pages\CreateQuizQuestion;
 use App\Filament\Resources\QuizQuestionResource\Pages\EditQuizQuestion;
@@ -29,9 +27,9 @@ class QuizQuestionResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-puzzle-piece';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Контент';
+    protected static string | \UnitEnum | null $navigationGroup = 'Вступ і навчання';
 
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $navigationLabel = 'Квіз для вступників';
 
@@ -82,8 +80,7 @@ class QuizQuestionResource extends Resource
             ->reorderable('sort_order')
             ->emptyStateHeading('Питань квізу ще немає')
             ->emptyStateDescription('Квіз на сторінці /kviz допомагає вступнику обрати спеціальність: кожен варіант відповіді додає бали одній зі спеціальностей.')
-            ->recordActions([EditAction::make()])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ->recordActions([EditAction::make()]);
     }
 
     public static function getRelations(): array
