@@ -8,8 +8,6 @@ use Filament\Forms\Components\Toggle;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Actions\EditAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use App\Filament\Resources\NewsCategoryResource\Pages\ListNewsCategories;
 use App\Filament\Resources\NewsCategoryResource\Pages\CreateNewsCategory;
 use App\Filament\Resources\NewsCategoryResource\Pages\EditNewsCategory;
@@ -27,7 +25,7 @@ class NewsCategoryResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-tag';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Контент';
+    protected static string | \UnitEnum | null $navigationGroup = 'Новини та події';
 
     protected static ?int $navigationSort = 2;
 
@@ -67,8 +65,7 @@ class NewsCategoryResource extends Resource
             ->reorderable('sort_order')
             ->emptyStateHeading('Категорій новин ще немає')
             ->emptyStateDescription('Категорії групують новини за темами: «Оголошення», «Події», «Вступ» тощо. За категоріями працює фільтр на сторінці новин.')
-            ->recordActions([EditAction::make()])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ->recordActions([EditAction::make()]);
     }
 
     public static function getRelations(): array

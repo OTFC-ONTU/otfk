@@ -9,8 +9,6 @@ use Filament\Forms\Components\Toggle;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Actions\EditAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use App\Filament\Resources\FaqResource\Pages\ListFaqs;
 use App\Filament\Resources\FaqResource\Pages\CreateFaq;
 use App\Filament\Resources\FaqResource\Pages\EditFaq;
@@ -28,9 +26,9 @@ class FaqResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-question-mark-circle';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Контент';
+    protected static string | \UnitEnum | null $navigationGroup = 'Вступ і навчання';
 
-    protected static ?int $navigationSort = 9;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $navigationLabel = 'Питання (FAQ)';
 
@@ -65,8 +63,7 @@ class FaqResource extends Resource
             ->reorderable('sort_order')
             ->emptyStateHeading('Питань ще немає')
             ->emptyStateDescription('Це розділ «Питання та відповіді» на сторінці /faq. Додайте типові питання вступників і батьків з короткими відповідями.')
-            ->recordActions([EditAction::make()])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ->recordActions([EditAction::make()]);
     }
 
     public static function getRelations(): array

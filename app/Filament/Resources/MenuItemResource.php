@@ -9,8 +9,6 @@ use Filament\Forms\Components\Toggle;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Actions\EditAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use App\Filament\Resources\MenuItemResource\Pages\ListMenuItems;
 use App\Filament\Resources\MenuItemResource\Pages\CreateMenuItem;
 use App\Filament\Resources\MenuItemResource\Pages\EditMenuItem;
@@ -35,7 +33,7 @@ class MenuItemResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-bars-3';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Структура сайту';
+    protected static string | \UnitEnum | null $navigationGroup = 'Сторінки та меню';
 
     protected static ?int $navigationSort = 2;
 
@@ -89,8 +87,7 @@ class MenuItemResource extends Resource
                 EditAction::make(),
                 ViewOnSite::table(fn (MenuItem $record) => $record->href)
                     ->visible(fn (MenuItem $record) => $record->href !== '#'),
-            ])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ]);
     }
 
     public static function getRelations(): array

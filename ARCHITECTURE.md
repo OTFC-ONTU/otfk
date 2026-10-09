@@ -130,6 +130,8 @@ flowchart LR
 
 Публичные адреса не теряются: смена slug или удаление опубликованной Page/News/Specialty/Department/Gallery/Staff пишет 301 в `legacy_redirects` (`KeepsPublicUrls` → `PublicUrlRedirects`, обе локали, без цепочек; при удалении — на раздел/список); удаление в админке — `SafeDeleteAction` (последствия в окне, «Зняти з публікації», блок для страниц из меню/разделов документов/`Page::PROTECTED_SLUGS`).
 
+Группы меню панели (`navigationGroups()`): «Новини та події», «Головна сторінка» (баннеры, плитки, статистика), «Сторінки та меню», «Вступ і навчання» (специальности, ОПП, квиз, FAQ, расписание звонков), «Структура та персонал», «Публічна інформація», «SEO», «Налаштування». Массовые действия (флажки) — только в длинных списках (News, Page, Document, Gallery, Event, Staff, LegacyRedirect, NotFoundLog); кнопка режима перестановки подписана «Змінити порядок»/«Готово» (`Table::configureUsing` в `AdminPanelProvider::boot()`).
+
 Порядок записей (поле `sort_order`) в 16 ресурсах меняется только перетягиванием в списке (`reorderable('sort_order')` + трейт страницы `App\Filament\Support\ReordersBySwappingPositions`: показанные записи обмениваются своими номерами и сохраняются через модель без `updated_at`, поэтому срабатывают сбросы кешей); в формах поля нет, новая запись получает max+1 (`App\Models\Concerns\HasSortOrder`); повторы номеров разово пронумерованы миграцией `2026_10_09_120000_normalize_sort_order_for_drag_reorder` в порядке сайта.
 
 ### API / webhooks
