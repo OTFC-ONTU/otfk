@@ -33,9 +33,9 @@ class BellSchedule extends FilamentPage implements HasForms
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-bell-alert';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Контент';
+    protected static string | \UnitEnum | null $navigationGroup = 'Вступ і навчання';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 5;
 
     protected static ?string $navigationLabel = 'Розклад дзвінків';
 

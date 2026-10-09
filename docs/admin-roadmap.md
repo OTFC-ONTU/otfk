@@ -1,89 +1,89 @@
-# План улучшения админ-панели (безопасность и эксплуатация)
+# Admin panel improvement plan (security and operations)
 
-Продолжение [аудита безопасности](security-audit.md). Принципы: хостинг без Node, очереди и подтверждённого cron — только синхронные решения и `afterResponse()`, периодика через GitHub-workflows; каждое изменение поведения — Feature-тест; каждый этап заканчивается деплоем и проверкой на тестовом хостинге. Оценки — чистое время разработчика.
+Continuation of the [security audit](security-audit.md). Principles: hosting without Node, without a queue and without a confirmed cron — only synchronous solutions and `afterResponse()`; periodic tasks run through GitHub workflows; every behaviour change gets a Feature test; every stage ends with a deployment and verification on the test hosting. Estimates are pure developer time.
 
-## Этап 0 — сделано 06.10.2026 (эта правка)
+## Stage 0 — done 06.10.2026 (this edit)
 
-- Роли `admin`/`editor` с политиками и запобежниками (последний админ, собственная учётка, неизвестная роль); разделы «Користувачі», «Налаштування» (все страницы и «Розширені налаштування»), «Меню навігації» — только администратору.
-- Все загрузки: белый список расширений и MIME содержимого, до 20 МБ; `.htaccess` против исполнения скриптов в `/storage/`; SVG больше не загружается.
-- Защитные заголовки на `/admin`, `frame-ancestors 'self'`, `noindex` для панели; публичная ссылка на админку убрана.
-- Санитайзер HTML редактора (`symfony/html-sanitizer`, DOM-парсер с белым списком; iframe только YouTube/Google Maps/Docs/Drive) при сохранении, включая биографии персонала; `JSON_HEX_TAG` в JSON-LD, правило `SafeUrl` для полей ссылок.
-- Политика паролей 12+ (production — проверка по базе утечек), журнал входов и блокировок `security-*.log` и «Останній вхід» в таблице пользователей, сидер без дефолтного пароля.
-- Независимая проверка (раздел 8 аудита): обходы первого санитайзера и прочие замечания исправлены.
-- Зависимости обновлены (0 advisories), `platform.php = 8.3.0`, `composer audit` в CI блокирующий; `deploy.yml` ждёт тесты и ставит на сервер тот же SHA.
-- Команда `otfk:sanitize-content` для инвентаризации/очистки старого HTML: DOM-классификатор с учётом значений `style`/`class`, бэкап до записи (уникальный, с хешами переводов и соединением, `--backup-dir=`), атомарный условный UPDATE против затирания параллельных правок (разделы 11–18 аудита); белый список CSS-свойств в `style` и классов в `class`. Dry-run на хостинге: опасного контента нет, 1 легитимная правка (опечатка `htth://`).
+- Roles `admin`/`editor` with policies and safeguards (last admin, own account, unknown role); the sections «Користувачі» (Users), «Налаштування» (Settings — all pages and «Розширені налаштування» (Advanced settings)), and «Меню навігації» (Navigation menu) are available to the administrator only.
+- All uploads: a whitelist of extensions and content MIME types, up to 20 MB; `.htaccess` against script execution in `/storage/`; SVG is no longer uploaded.
+- Protective headers on `/admin`, `frame-ancestors 'self'`, `noindex` for the panel; the public link to the admin is removed.
+- Sanitizer for the editor's HTML (`symfony/html-sanitizer`, DOM parser with a whitelist; iframes only for YouTube/Google Maps/Docs/Drive) on save, including staff biographies; `JSON_HEX_TAG` in JSON-LD, the `SafeUrl` rule for link fields.
+- Password policy 12+ (production — checked against breach databases), login and lockout journal `security-*.log` and «Останній вхід» (Last login) in the users table, a seeder without a default password.
+- Independent review (section 8 of the audit): bypasses of the first sanitizer and other remarks fixed.
+- Dependencies updated (0 advisories), `platform.php = 8.3.0`, `composer audit` blocking in CI; `deploy.yml` waits for the tests and deploys the same SHA to the server.
+- Command `otfk:sanitize-content` for inventory and cleanup of old HTML: a DOM classifier that takes the values of `style`/`class` into account, a backup before writing (unique, with translation hashes and the connection, `--backup-dir=`), an atomic conditional UPDATE against overwriting parallel edits (sections 11–18 of the audit); a CSS property whitelist in `style` and a class whitelist in `class`. Dry run on hosting: no dangerous content, 1 legitimate fix (the typo `htth://`).
 
-## Этап 1 — приёмка защиты и цепочки деплоя (владелец + разработчик; оценка после проверки хостинга)
+## Stage 1 — acceptance of the protection and the deployment chain (owner + developer; estimate after the hosting check)
 
-1. Пройти чек-лист раздела 6 аудита на хостинге: заголовки, проба `_probe.php` в `/storage/` (403, не «1»), миграция ролей, журнал входов; затем `php artisan otfk:sanitize-content` (отчёт) → `--apply` на реальном MySQL (приёмка условного UPDATE с `BINARY` на хостинге).
-2. `.env` хостинга: `SESSION_SECURE_COOKIE=true`, `ADMIN_PASSWORD` задан (нужен только для будущего сидирования пустой БД), `APP_DEBUG=false`.
-3. Учётки: каждому сотруднику — личная, роль «Редактор»; администраторов двое (основной + резервный); общая учётка `admin@…` переименована в личную или удалена после создания замены.
-4. GitHub: branch protection на `master` (PR-only, required check «PHP 8.3 · php artisan test», запрет force-push), обязательная 2FA у всех коллабораторов; ревизия секретов деплоя.
-5. Панель хостинга: удалённый доступ к MySQL ограничить по IP или выключить, когда прямые правки тестовой БД закончатся; сменить пароль БД после этого.
+1. Go through the checklist of section 6 of the audit on the hosting: headers, the probe `_probe.php` in `/storage/` (403, not «1»), the role migration, the login journal; then `php artisan otfk:sanitize-content` (report) → `--apply` on the real MySQL (acceptance of the conditional UPDATE with `BINARY` on the hosting).
+2. Hosting `.env`: `SESSION_SECURE_COOKIE=true`, `ADMIN_PASSWORD` set (needed only for future seeding of an empty DB), `APP_DEBUG=false`.
+3. Accounts: each employee gets a personal one with the role «Редактор» (Editor); there are two administrators (primary + backup); the shared `admin@…` account is renamed to a personal one or deleted after the replacement is created.
+4. GitHub: branch protection on `master` (PR-only, required check «PHP 8.3 · php artisan test», no force-push); mandatory 2FA for all collaborators; review of the deployment secrets.
+5. Hosting control panel: restrict remote access to MySQL by IP or disable it once direct edits of the test DB are finished; change the DB password after that.
 
-6. Проверить реализованный шлюз `deploy.yml` на первом реальном прогоне: job `tests` красный → `deploy` не стартует; сервер получает именно `${{ github.sha }}` (теперь `git fetch origin <sha>`, так что ручной запуск с другой ветки тоже получает выбранную ревизию).
-7. После `--apply` на хостинге выборочно открыть очищенные материалы обеих локалей (UK/EN), проверить `/en`-ссылки, PDF-карточки и вложения Trix; бэкап сохранить вне хостинга.
+6. Verify the implemented gate of `deploy.yml` on the first real run: job `tests` red → `deploy` does not start; the server receives exactly `${{ github.sha }}` (now `git fetch origin <sha>`, so a manual run from another branch also gets the selected revision).
+7. After `--apply` on the hosting, selectively open the cleaned materials in both locales (UK/EN), check the `/en` links, PDF cards and Trix attachments; keep the backup outside the hosting.
 
-Критерий приёмки: чек-лист отмечен с фактическими HTTP-результатами, защита файлов проверена на сервере, старый контент проверен, неуспешный CI исключает деплой того же SHA; список учёток соответствует штату. До этого этап 0 означает реализацию в коде, а не завершённую приёмку хостинга.
+Acceptance criterion: the checklist is ticked with actual HTTP results, file protection is verified on the server, old content is verified, and a failed CI run excludes deployment of the same SHA; the list of accounts matches the staff. Until then, Stage 0 means implementation in code, not completed acceptance on the hosting.
 
-## Этап 2 — учётные записи (3–4 дня)
+## Stage 2 — accounts (3–4 days)
 
-1. ~~**2FA TOTP**~~ — **сделано 07.10.2026** (раздел 19 аудита): обязательный для всех ролей, собственная реализация на `pragmarx/google2fa`, коды восстановления, сброс администратором/консолью, `TWO_FACTOR_ENFORCE`. Исходная формулировка для истории: обязательный для `admin`, опциональный для `editor`: `jeffgreco13/filament-breezy ^2` (ветка для Filament 3; проверить совместимость с `AuthenticateSession` и rate limit) либо собственная реализация (`pragmarx/google2fa`, страница ввода кода в стеке `authMiddleware`, резервные коды). Тесты: не отключать принуждение через `runningUnitTests()`. В контентных тестах явно задавать подтверждённый фактор; отдельно проверить неподтверждённую сессию на прямых URL и Livewire, неверный/повторный код, rate limit, одноразовые recovery codes, сброс/отключение фактора и remember-сессию. Совместимость пакета и полный жизненный цикл фактора проверить до фиксации оценки. Для редакторов, способных публиковать на сайте и в Telegram, опциональность 2FA требует принятия риска владельцем.
-2. **Профиль**: собственная `EditProfile` с полем «Поточний пароль» для смены пароля и e-mail; флаг `must_change_password` при создании учётки администратором (middleware панели с белым списком маршрутов профиля/выхода).
-3. **«Запам'ятай мене»**: срок 30 дней вместо текущих 400 дней (`auth.guards.web.remember = 43200` до создания guard либо `setRememberDuration(43200)`); для `admin` — выключить флажок.
-4. **Уведомления** в Telegram владельцу: вход с нового IP, создание/удаление/смена роли пользователя, 5 блокировок за час (данные уже есть в `security`-журнале и `last_login_ip`).
-5. **Публикация новостей и Telegram**: решить, нужен ли редактору автопост (сейчас публикация новости редактором отправляет сообщение в канал); варианты — подтверждение администратором или отдельное право.
-6. Документация: `posibnyk-administratora.md` (раздел «Вхід», «Користувачі»), ARCHITECTURE «Авторизация и роли».
+1. ~~**2FA TOTP**~~ — **done 07.10.2026** (section 19 of the audit): mandatory for all roles, own implementation on `pragmarx/google2fa`, recovery codes, reset by an administrator or via console, `TWO_FACTOR_ENFORCE`. Original wording, kept for history: mandatory for `admin`, optional for `editor`: `jeffgreco13/filament-breezy ^2` (branch for Filament 3; check compatibility with `AuthenticateSession` and the rate limit) or an own implementation (`pragmarx/google2fa`, a code entry page in the `authMiddleware` stack, recovery codes). Tests: do not disable enforcement via `runningUnitTests()`. In content tests, explicitly set a confirmed factor; separately check an unconfirmed session on direct URLs and in Livewire, a wrong or repeated code, the rate limit, one-time recovery codes, reset/disabling of the factor and the remember-session. Check the package's compatibility and the full lifecycle of the factor before fixing the estimate. For editors who can publish on the site and to Telegram, making 2FA optional requires the owner to accept the risk.
+2. **Profile**: an own `EditProfile` with a «Поточний пароль» (Current password) field for changing the password and e-mail; a `must_change_password` flag set when an account is created by the administrator (panel middleware with a whitelist of profile and logout routes).
+3. **«Запам'ятай мене»** (Remember me): a 30-day duration instead of the current 400 days (`auth.guards.web.remember = 43200` before the guard is created, or `setRememberDuration(43200)`); for `admin` — disable the checkbox.
+4. **Notifications** to the owner in Telegram: a login from a new IP, creation/deletion/role change of a user, 5 lockouts per hour (the data already exists in the `security` journal and `last_login_ip`).
+5. **News publication and Telegram**: decide whether an editor needs auto-posting (currently, publishing a news item by an editor sends a message to the channel); the options are confirmation by an administrator or a separate right.
+6. Documentation: `posibnyk-administratora.md` (sections «Вхід» (Login), «Користувачі» (Users)), ARCHITECTURE «Авторизация и роли» (Authorization and roles).
 
-Критерий приёмки: вход администратора без TOTP невозможен (**выполнено**); смена пароля без текущего отклоняется; тесты зелёные.
+Acceptance criterion: administrator login without TOTP is impossible (**done**); a password change without the current password is rejected; tests are green.
 
-## Этап 3 — наблюдаемость и устойчивость (4–5 дней)
+## Stage 3 — observability and resilience (4–5 days)
 
-1. **Журнал изменений** контента: `spatie/laravel-activitylog ^4` на News/Page/Document/Specialty/Department/Staff/Setting/User (кто, когда, какие поля); ресурс «Журнал змін» только для `admin`; очистка по расписанию через workflow.
-2. **Токен Telegram в `.env`** (`TELEGRAM_BOT_TOKEN`): `TelegramPoster` читает `config('services.telegram.token')`, страница «Telegram» показывает только статус «токен задано на сервері»; удалить ключ из `settings` миграцией; ротация токена у @BotFather.
-3. **Внешние резервные копии**: scheduled-workflow — ежедневно `otfk:backup` по SSH, скачивание свежего дампа, шифрование `gpg`, выгрузка во внешнее хранилище (S3-совместимое или Google Drive колледжа); копирование storage с частотой согласно допустимой потере файлов (RPO), а не автоматически раз в месяц. До реализации определить RPO/RTO, ретенцию, защиту копий от удаления с компрометированного хостинга, независимое хранение ключей и уведомления о сбоях/просрочке. Репетиция восстановления БД и файлов в изолированном окружении без Telegram с записью в DEPLOY.md.
-4. **`map_embed`**: allowlist origin (`google.com/maps`), остальное отклонять при сохранении.
-5. **Ретенция персональных данных**: IP в `security`-логе — 90 дней (уже), `sessions` — чистка по `SESSION_LIFETIME`; политика хранения `last_login_ip`.
+1. **Content change log**: `spatie/laravel-activitylog ^4` on News/Page/Document/Specialty/Department/Staff/Setting/User (who, when, which fields); the resource «Журнал змін» (Change log) only for `admin`; scheduled cleanup via a workflow.
+2. **Telegram token in `.env`** (`TELEGRAM_BOT_TOKEN`): `TelegramPoster` reads `config('services.telegram.token')`; the «Telegram» page shows only the status «токен задано на сервері» (token set on the server); the key is removed from `settings` by a migration; the token is rotated via @BotFather.
+3. **External backups**: a scheduled workflow — daily `otfk:backup` over SSH, download of the fresh dump, encryption with `gpg`, upload to external storage (S3-compatible or the college's Google Drive); a storage copy at a frequency matching the acceptable data loss (RPO), not automatically once a month. Before implementation, define RPO/RTO, retention, protection of the copies from deletion from a compromised hosting, independent storage of the keys, and notifications about failures or overdue copies. Rehearse the restore of the DB and files in an isolated environment without Telegram, with an entry in DEPLOY.md.
+4. **`map_embed`**: an allowlist of origins (`google.com/maps`); everything else is rejected on save.
+5. **Retention of personal data**: IP addresses in the `security` log — 90 days (already in place); `sessions` — cleanup by `SESSION_LIFETIME`; a retention policy for `last_login_ip`.
 
-Критерий приёмки: в журнале видно, кто изменил страницу; токена нет в БД; БД и файлы укладываются в согласованные RPO, просрочка копии вызывает уведомление; восстановление БД и файлов выполнено локально и измерено относительно RTO.
+Acceptance criterion: the journal shows who changed a page; there is no token in the DB; the DB and files fit the agreed RPO; an overdue copy triggers a notification; a restore of the DB and files has been performed locally and measured against the RTO.
 
-## Этап 4 — процесс (постоянно)
+## Stage 4 — process (ongoing)
 
-- Ежемесячно: `composer audit`, `composer outdated --direct`, `npm audit`; патч/минор-обновления под `platform.php`, деплой; просмотр `security-*.log` и списка учёток («Останній вхід» — уволенные и неактивные).
-- Ежеквартально: ревизия доступов (уволенные удалены в день ухода), репетиция восстановления, внешние пробы (`curl -I /admin/login`, `/.env`, `/.git/HEAD`, `/storage/_probe.php`), проверка, что scheduled-workflows не отключены GitHub за неактивность.
-- Ежегодно: план мажорных обновлений (PHP, Laravel, Filament 4/5), пересмотр аудита.
-- Правила разработки — раздел 7 аудита.
+- Monthly: `composer audit`, `composer outdated --direct`, `npm audit`; patch/minor updates within `platform.php`, deployment; review of `security-*.log` and of the account list («Останній вхід» — dismissed and inactive users).
+- Quarterly: access review (dismissed staff removed on their last day), a restore rehearsal, external probes (`curl -I /admin/login`, `/.env`, `/.git/HEAD`, `/storage/_probe.php`), a check that the scheduled workflows have not been disabled by GitHub for inactivity.
+- Yearly: a plan for major upgrades (PHP, Laravel, Filament 4/5), a review of the audit.
+- Development rules — section 7 of the audit.
 
-## Готовность к переносу на прод без SEO — оценка 07.10.2026
+## Readiness for the production transfer without SEO — assessment of 07.10.2026
 
-Основа приложения реализована: публичные разделы, переводы, роли, обязательный TOTP, защита загрузок и CI-шлюз деплоя. Готовность к переключению домена требует отдельной приёмки данных и целевого хостинга. Список PoC в ARCHITECTURE описывает источники демо-данных, а не доказанное текущее наполнение БД: часть контента уже импортирована. В этой оценке удалённое чтение тестовой БД не удалось; фактическое наличие заглушек и состояние очереди файлов не подтверждены.
+The application foundation is implemented: public sections, translations, roles, mandatory TOTP, upload protection and the CI deployment gate. Readiness for switching the domain requires a separate acceptance of the data and of the target hosting. The PoC list in ARCHITECTURE describes the sources of demo data, not the proven current content of the DB: part of the content has already been imported. In this assessment, remote reading of the test DB did not succeed; the actual presence of placeholders and the state of the file queue are not confirmed.
 
-До переключения домена:
+Before the domain is switched:
 
-- Принять актуальное наполнение: контакты, сотрудники, специальности/программы, документы, баннеры, видео, статистика, FAQ и звонки; убрать оставшиеся демо-записи и альфа-бейдж. Проверить «Що наповнити» в админке; короткий текст сам по себе не означает ошибку. Вычитать импорт и английские переводы либо согласовать объём английской версии. Решить публикацию квиза с методистами.
-- Проверить все вложения и старые ссылки: `otfk:check-links`, состояния `file_mirrors`, `otfk:mirror-files --verify`; повторить неудачные загрузки и выборочно открыть PDF/изображения. LinkChecker проверяет только исходные body Page/News, не английские поля и не весь контент других сущностей; полный обход обеих локалей остаётся отдельной проверкой.
-- Репетировать перенос актуального дампа и public storage на MySQL/PHP 8.3 с сохранением APP_KEY, без seed, с проверкой sha256 и 2FA. На время финальной копии остановить редакторские изменения, определить способ отката и проверить восстановление. Откат кода не откатывает автоматически БД и файлы.
-- Пройти этап 1 на целевом хостинге: HTTPS, public document root, закрытые `.env`/`.git`, запрет исполнения `/storage/`, cookie, вход/выход/2FA и журнал, допустимые/запрещённые загрузки, отчёт старого HTML. Настроить личные учётки и резервного администратора.
-- Проверить PHP сайта и CLI, расширения, storage:link, ассеты Filament/Vite, кеши, cron, mysqldump, права и объём диска; перенастроить секреты Actions на новый сервер. Проверить ручной деплой и страницы после него. Текущий deploy.yml меняет рабочий каталог по шагам, без атомарного переключения релиза; согласовать окно переноса.
-- Настроить регулярные копии БД **и файлов** вне хостинга и уведомление о сбое/просрочке, проверить восстановление. Сейчас автоматически запланирован только еженедельный дамп БД на том же сервере; storage-export выполняется отдельно. Настроить мониторинг доступности и ответственного за инциденты.
-- Принять сайт на телефоне и ПК: меню, поиск UK/EN, переключатель локали, документы, таблицы, галереи, календарь, персонал и редакторские сценарии. Успешная сборка и SQLite-тесты не заменяют браузерную приёмку и проверки на MySQL.
+- Accept the actual content: contacts, staff, specialties/programmes, documents, banners, videos, statistics, FAQ and the bell schedule; remove the remaining demo records and the alpha badge. Check «Що наповнити» (What to fill in) in the admin; a short text on its own is not an error. Proofread the import and the English translations, or agree the scope of the English version. Decide on publishing the quiz with the methodologists.
+- Check all attachments and old links: `otfk:check-links`, the states of `file_mirrors`, `otfk:mirror-files --verify`; retry failed downloads and selectively open PDFs and images. LinkChecker checks only the original bodies of Page/News, not the English fields and not all content of other entities; a full crawl of both locales remains a separate check.
+- Rehearse the transfer of a current dump and public storage to MySQL/PHP 8.3, keeping APP_KEY, without seed, with sha256 verification and 2FA. For the duration of the final copy, stop editorial changes, define the rollback method and verify the restore. A code rollback does not automatically roll back the DB and files.
+- Pass Stage 1 on the target hosting: HTTPS, the public document root, closed `.env`/`.git`, no execution in `/storage/`, cookies, login/logout/2FA and the journal, allowed and forbidden uploads, the report on old HTML. Set up personal accounts and a backup administrator.
+- Check the site's PHP and CLI, extensions, storage:link, Filament/Vite assets, caches, cron, mysqldump, permissions and disk volume; reconfigure the Actions secrets for the new server. Check the manual deployment and the pages after it. The current deploy.yml changes the working directory step by step, without atomic release switching; agree the transfer window.
+- Set up regular copies of the **DB and files** outside the hosting, and a notification of failure or overdue copies; verify the restore. Currently only a weekly DB dump on the same server is scheduled automatically; storage-export runs separately. Set up availability monitoring and a person responsible for incidents.
+- Accept the site on phone and PC: menu, search UK/EN, the locale switcher, documents, tables, galleries, calendar, staff and editorial scenarios. A successful build and SQLite tests do not replace browser acceptance and checks on MySQL.
 
-Усиления отдельными задачами: профиль с текущим паролем и сокращение remember-сессии, журнал изменений, ограничение origin map_embed. Если используется Telegram — перенос токена из settings в серверную конфигурацию, ротация и проверка отправки; сейчас telegram_posted_at ставится до HTTP-запроса и сбой требует ручного повтора. Если канал не нужен при запуске, автопостинг можно оставить выключенным. Глобальный редизайн, очистка неиспользуемых зависимостей и удаление импорт-команд не являются обязательными условиями переноса.
+Additional improvements as separate tasks: a profile with the current password and a shorter remember-session; the change log; restricting the map_embed origin. If Telegram is used — moving the token from settings to the server configuration, rotation and verification of sending; currently `telegram_posted_at` is set before the HTTP request, so a failure requires a manual retry. If the channel is not needed at launch, auto-posting can be left off. A global redesign, cleanup of unused dependencies and removal of the import commands are not mandatory conditions for the transfer.
 
-## Что не делать
+## What not to do
 
-- Не переводить джобы в `ShouldQueue` — воркера нет.
-- Не включать саморегистрацию и сброс пароля по e-mail, пока почта на проде `log`.
-- Не считать переименование `/admin` или IP-allowlist защитой: у сотрудников динамические IP, путь угадывается; допустимо лишь как дополнительный слой для `admin`.
-- Не вводить полный CSP с nonce без отдельной задачи.
-- Не запускать `db:seed`/`SiteSeeder` на окружении с контентом.
-- Не ослаблять белый список загрузок «потому что не грузится файл» — добавлять конкретное расширение и MIME осознанно, с тестом.
-- Не отключать блокирующий `composer audit` в CI.
+- Do not convert jobs to `ShouldQueue` — there is no worker.
+- Do not enable self-registration or e-mail password reset while the production mail is `log`.
+- Do not treat renaming `/admin` or an IP allowlist as protection: staff have dynamic IPs and the path can be guessed; this is acceptable only as an additional layer for `admin`.
+- Do not introduce a full CSP with nonces without a separate task.
+- Do not run `db:seed`/`SiteSeeder` on an environment that has content.
+- Do not weaken the upload whitelist «because a file does not upload» — add a specific extension and MIME type deliberately, with a test.
+- Do not disable the blocking `composer audit` in CI.
 
-## Открытые вопросы владельцу
+## Open questions for the owner
 
-1. Сколько сотрудников будут работать в админке и кто из них «Адміністратор»? (Определяет срочность 2FA.)
-2. Готовы ли сотрудники к TOTP-приложению на телефоне? Если нет — 2FA только для `admin`.
-3. Куда складывать внешние резервные копии?
-4. Нужен ли SVG-favicon? Сейчас загружаются только растровые форматы; альтернатива — положить SVG в `public/` руками.
-5. Оставить ли «Запам'ятай мене» для редакторов?
+1. How many staff will work in the admin, and which of them is «Адміністратор» (Administrator)? (This determines the urgency of 2FA.)
+2. Are staff ready for a TOTP app on their phone? If not — 2FA only for `admin`.
+3. Where should external backups be stored?
+4. Is an SVG favicon needed? Currently only raster formats are uploaded; the alternative is to place an SVG in `public/` manually.
+5. Should «Запам'ятай мене» (Remember me) be kept for editors?

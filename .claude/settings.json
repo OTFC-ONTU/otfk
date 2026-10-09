@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "fp=$(/usr/bin/python3 -c 'import json,sys;print(json.load(sys.stdin).get(\"tool_input\",{}).get(\"file_path\",\"\"))'); case \"$fp\" in *ARCHITECTURE.html) echo \"BLOCKED: $fp — сгенерированный build-артефакт. Правь ARCHITECTURE.md и запусти: node DocsHtml/generate.mjs\" >&2; exit 2;; esac"
+            "command": "fp=$(/usr/bin/python3 -c 'import json,sys;print(json.load(sys.stdin).get(\"tool_input\",{}).get(\"file_path\",\"\"))'); case \"$fp\" in *ARCHITECTURE.html) echo \"BLOCKED: $fp — згенерований build-артефакт. Редагуй ARCHITECTURE.md і запусти: node DocsHtml/generate.mjs\" >&2; exit 2;; esac"
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "fp=$(/usr/bin/python3 -c 'import json,sys;print(json.load(sys.stdin).get(\"tool_input\",{}).get(\"file_path\",\"\"))'); case \"$fp\" in *ARCHITECTURE.md) echo \"Напоминание: ARCHITECTURE.md изменён — перегенерируй HTML-твин в этой же правке: node DocsHtml/generate.mjs\" >&2; exit 2;; esac"
+            "command": "fp=$(/usr/bin/python3 -c 'import json,sys;print(json.load(sys.stdin).get(\"tool_input\",{}).get(\"file_path\",\"\"))'); case \"$fp\" in *ARCHITECTURE.md) echo \"Нагадування: ARCHITECTURE.md змінено — перегенеруй HTML-твін у цій самій правці: node DocsHtml/generate.mjs\" >&2; exit 2;; esac"
           }
         ]
       }

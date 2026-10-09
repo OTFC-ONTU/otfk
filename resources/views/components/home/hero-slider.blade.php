@@ -61,7 +61,7 @@
                    інакше самотня «скляна» плашка висить посеред кадру поверх облич */
                 $hasText = filled($banner->localized('title')) || filled($banner->localized('subtitle'));
                 $linkLabel = $banner->localized('link_label') ?: __('public.details');
-                /* Довга підпись у половині ширини телефона переноситься на два рядки — тоді кнопка на всю ширину */
+                /* Довгий підпис у половині ширини телефона переноситься на два рядки — тоді кнопка на всю ширину */
                 $wideLink = ! $hasText || mb_strlen($linkLabel) > 13;
             @endphp
             <div @if ($count > 1)
