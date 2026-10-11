@@ -7,6 +7,7 @@
         'done' => ['Готово', 'text-success-600 dark:text-success-400'],
         'failed' => ['Помилка', 'text-danger-600 dark:text-danger-400'],
         'skipped' => ['Пропущено', 'text-gray-500 dark:text-gray-400'],
+        'retried' => ['Повторено', 'text-gray-500 dark:text-gray-400'],
     ];
 @endphp
 
@@ -54,6 +55,12 @@
             </div>
         </div>
     </div>
+
+    @if ($stats['price_unknown'])
+        <p class="mt-4 text-sm font-medium text-warning-600 dark:text-warning-400">
+            Ціна вибраної моделі невідома (немає в config/auto_translate.php) — вартість не оцінюється@if ($stats['budget']), а з місячним лімітом переклад не запускається@endif.
+        </p>
+    @endif
 
     @if ($stats['budget_exceeded'])
         <p class="mt-4 text-sm font-medium text-danger-600 dark:text-danger-400">

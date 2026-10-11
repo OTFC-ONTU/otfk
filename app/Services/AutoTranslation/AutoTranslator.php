@@ -233,7 +233,7 @@ PROMPT;
 
     public static function monthCost(): float
     {
-        return (float) TranslationJob::query()->where('updated_at', '>=', static::monthStart())->sum('cost_usd');
+        return (float) TranslationJob::query()->where('billed_at', '>=', static::monthStart())->sum('cost_usd');
     }
 
     public static function budgetExceeded(): bool
@@ -244,6 +244,12 @@ PROMPT;
     }
 
     // ── Черга ────────────────────────────────────────────────────────────────
+
+    /** Чи йде зараз запис автоперекладу (saving-хук трейта тоді не перераховує хеш оригіналу). */
+    public static function isWriting(): bool
+    {
+        return self::$writing;
+    }
 
     /** saved-хук HasEnglishTranslation: помилка автоперекладу не ламає збереження матеріалу. */
     public static function queueAfterSave(Model $model): void
@@ -289,12 +295,20 @@ PROMPT;
             return [];
         }
 
-        $stale = $model->translation_source_hash !== $model->currentTranslationSourceHash();
-        if ($stale && static::overwritesStale()) {
+        if (static::isStale($model) && static::overwritesStale()) {
             return $filled;
         }
 
         return array_values(array_filter($filled, fn (string $field) => blank($model->getAttribute($field.'_en'))));
+    }
+
+    /**
+     * Переклад був актуальним, а оригінал змінився після нього. Порожній хеш (неповна ручна чернетка) —
+     * не «застарілий» переклад: доперекладаються лише порожні поля, введене вручну не перезаписується.
+     */
+    private static function isStale(Model $model): bool
+    {
+        return filled($model->translation_source_hash) && $model->translation_source_hash !== $model->currentTranslationSourceHash();
     }
 
     public static function enqueue(Model $model): TranslationJob
@@ -341,11 +355,23 @@ PROMPT;
         return $count;
     }
 
-    /** Невдалі записи — знову в чергу (після виправлення ключа, моделі чи ліміту). */
+    /**
+     * Невдалі записи — знову в чергу (після виправлення ключа, моделі чи ліміту): новий запис черги,
+     * а невдалий лишається в журналі зі статусом «повторено» — його витрати не переносяться в інший місяць.
+     */
     public static function retryFailed(): int
     {
-        return TranslationJob::query()->where('status', TranslationJob::FAILED)
-            ->update(['status' => TranslationJob::PENDING, 'attempts' => 0, 'error' => null, 'locked_at' => null, 'finished_at' => null]);
+        $count = 0;
+        TranslationJob::query()->where('status', TranslationJob::FAILED)->orderBy('id')
+            ->each(function (TranslationJob $failed) use (&$count): void {
+                $failed->update(['status' => TranslationJob::RETRIED]);
+                $model = $failed->translatable;
+                if ($model instanceof Model && static::pendingFields($model) !== []) {
+                    $count += static::enqueue($model)->wasRecentlyCreated ? 1 : 0;
+                }
+            });
+
+        return $count;
     }
 
     /** Переклад одразу після відповіді адміну — без воркера черги (afterResponse). */
@@ -366,7 +392,8 @@ PROMPT;
     /**
      * Обробляє до $limit записів черги; нові записи не беруться після $timeBudget секунд.
      *
-     * stopped: disabled | budget | auth (ключ не прийнято) | model (модель недоступна) | retry (тимчасова помилка API).
+     * stopped: disabled | budget | price (ліміт задано, а ціна моделі невідома) | auth (ключ не прийнято)
+     * | model (модель недоступна) | request (API відхилило запит, напр. закінчився кредит) | retry (тимчасова помилка API).
      *
      * @return array{done: int, failed: int, skipped: int, retried: int, stopped: ?string}
      */
@@ -375,6 +402,13 @@ PROMPT;
         $result = ['done' => 0, 'failed' => 0, 'skipped' => 0, 'retried' => 0, 'stopped' => null];
         if (! static::enabled()) {
             $result['stopped'] = 'disabled';
+
+            return $result;
+        }
+
+        // Без ціни моделі ліміт не спрацює — не витрачаємо гроші «наосліп».
+        if (static::monthlyBudget() !== null && Pricing::rates(static::model()) === null) {
+            $result['stopped'] = 'price';
 
             return $result;
         }
@@ -396,8 +430,8 @@ PROMPT;
             }
 
             $outcome = $this->processJob($job);
-            if (in_array($outcome, ['auth', 'model', 'retry'], true)) {
-                // Наступні записи впадуть так само (ключ, модель, перевантаження API) — зупиняємося.
+            if (in_array($outcome, ['auth', 'model', 'request', 'retry'], true)) {
+                // Наступні записи, найімовірніше, впадуть так само (ключ, модель, кредит, перевантаження API) — зупиняємося.
                 $result['stopped'] = $outcome;
                 $result[$outcome === 'retry' ? 'retried' : 'failed']++;
                 break;
@@ -408,18 +442,31 @@ PROMPT;
         return $result;
     }
 
+    /** Обробку обірвано (тайм-аут процесу): у чергу знову, а після max_attempts спроб — помилка, без нескінченних платних повторів. */
     private static function releaseStaleLocks(): void
     {
-        $limit = now()->subMinutes((int) config('auto_translate.stale_lock_minutes', 15));
-        TranslationJob::query()->where('status', TranslationJob::PROCESSING)->where('locked_at', '<', $limit)
-            ->update(['status' => TranslationJob::PENDING, 'locked_at' => null]);
+        $stale = TranslationJob::query()->where('status', TranslationJob::PROCESSING)
+            ->where('locked_at', '<', now()->subMinutes((int) config('auto_translate.stale_lock_minutes', 20)));
+        $maxAttempts = (int) config('auto_translate.max_attempts', 3);
+
+        (clone $stale)->where('attempts', '>=', $maxAttempts)->update([
+            'status' => TranslationJob::FAILED, 'locked_at' => null, 'finished_at' => now(),
+            'error' => 'Обробку перервано '.$maxAttempts.' рази (ймовірно, тайм-аут хостингу на довгому тексті).',
+        ]);
+        $stale->update(['status' => TranslationJob::PENDING, 'locked_at' => null]);
     }
 
     /** Атомарно бере найстаріший запис черги (паралельні обробники не беруть той самий). */
     private static function claimNext(): ?TranslationJob
     {
         for ($try = 0; $try < 5; $try++) {
-            $job = TranslationJob::query()->where('status', TranslationJob::PENDING)->orderBy('id')->first();
+            // Запис, який уже перекладається іншим обробником, чекає: інакше два однакові платні запити.
+            $job = TranslationJob::query()->where('status', TranslationJob::PENDING)
+                ->whereNotExists(fn ($busy) => $busy->from('translation_jobs as busy')
+                    ->whereColumn('busy.translatable_type', 'translation_jobs.translatable_type')
+                    ->whereColumn('busy.translatable_id', 'translation_jobs.translatable_id')
+                    ->where('busy.status', TranslationJob::PROCESSING))
+                ->orderBy('id')->first();
             if ($job === null) {
                 return null;
             }
@@ -436,7 +483,7 @@ PROMPT;
         return null;
     }
 
-    /** @return 'done'|'failed'|'skipped'|'auth'|'model'|'retry' */
+    /** @return 'done'|'failed'|'skipped'|'auth'|'model'|'request'|'retry' */
     private function processJob(TranslationJob $job): string
     {
         $model = $job->translatable;
@@ -473,16 +520,18 @@ PROMPT;
             static::finish($job, TranslationJob::FAILED, 'Модель «'.$modelId.'» недоступна для цього ключа: '.static::errorMessage($e));
 
             return 'model';
-        } catch (APIConnectionException|APIStatusException $e) {
+        } catch (APIConnectionException|APIStatusException|StreamInterrupted $e) {
             $status = $e instanceof APIStatusException ? $e->status : null;
-            $transient = $e instanceof APIConnectionException || $status === null || $status === 429 || $status >= 500;
+            $transient = ! $e instanceof APIStatusException || $status === null || $status === 429 || $status >= 500;
             if ($transient && $job->attempts < (int) config('auto_translate.max_attempts', 3)) {
                 $job->update(['status' => TranslationJob::PENDING, 'locked_at' => null, 'error' => 'Тимчасова помилка API, повтор пізніше: '.static::errorMessage($e)]);
 
                 return 'retry';
             }
 
-            return static::finish($job, TranslationJob::FAILED, 'Помилка API: '.static::errorMessage($e));
+            static::finish($job, TranslationJob::FAILED, 'Помилка API: '.static::errorMessage($e));
+
+            return $transient ? 'retry' : 'request';
         } catch (\Throwable $e) {
             report($e);
 
@@ -498,6 +547,7 @@ PROMPT;
             'cost_usd' => (float) $job->cost_usd + (float) Pricing::cost(
                 $response->servedModel, $response->inputTokens, $response->outputTokens, $response->cacheReadTokens, $response->cacheWriteTokens,
             ),
+            'billed_at' => now(),
         ]);
 
         if ($response->stopReason === 'refusal') {
@@ -524,6 +574,12 @@ PROMPT;
         }
         if ($fresh->currentTranslationSourceHash() !== $sourceHash) {
             return static::finish($job, TranslationJob::SKIPPED, 'Оригінал змінився під час перекладу — переклад виконається повторно.');
+        }
+
+        // Поки йшов запит, переклад могли заповнити вручну — такі поля не перезаписуємо.
+        $fields = array_values(array_intersect($fields, static::pendingFields($fresh)));
+        if ($fields === []) {
+            return static::finish($job, TranslationJob::SKIPPED, 'Переклад заповнили вручну під час запиту.');
         }
 
         try {
@@ -557,7 +613,12 @@ PROMPT;
         if (static::publishes()) {
             $model->setAttribute('translation_published', true);
         }
-        $model->setAttribute('translation_source_hash', $model->currentTranslationSourceHash());
+        // Хеш підтверджує актуальність лише тоді, коли перекладено все застаріле: без дозволу оновлювати
+        // переклад (заповнено тільки порожні поля) статус «Оригінал змінено» лишається, /en не індексується.
+        $filled = array_filter($model->englishTranslationFields(), fn (string $field) => filled($model->getAttribute($field)));
+        if (! static::isStale($model) || array_diff($filled, $fields) === []) {
+            $model->setAttribute('translation_source_hash', $model->currentTranslationSourceHash());
+        }
 
         self::$writing = true;
         $model->timestamps = false;

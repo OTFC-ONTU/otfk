@@ -194,6 +194,8 @@ class AutoTranslateSettings extends SettingsFormPage
                         'auth' => 'Ключ API не прийнято.',
                         'model' => 'Вибрана модель недоступна.',
                         'retry' => 'Тимчасова помилка API — повтор пізніше.',
+                        'request' => 'API відхилило запит (наприклад, закінчився кредит) — див. «Останні переклади».',
+                        'price' => 'Для вибраної моделі невідома ціна, тому місячний ліміт не можна контролювати: виберіть іншу модель або приберіть ліміт.',
                     ][$result['stopped']] ?? '';
                     Notification::make()
                         ->title(sprintf('Перекладено: %d, помилок: %d, пропущено: %d', $result['done'], $result['failed'], $result['skipped']))
@@ -225,11 +227,11 @@ class AutoTranslateSettings extends SettingsFormPage
         $previous = AutoTranslator::monthStart(1);
         $used = fn () => TranslationJob::query()->where('input_tokens', '>', 0);
 
-        $totals = $used()->where('updated_at', '>=', $month)
+        $totals = $used()->where('billed_at', '>=', $month)
             ->selectRaw('COUNT(*) as requests, COALESCE(SUM(input_tokens), 0) as input, COALESCE(SUM(output_tokens), 0) as output, COALESCE(SUM(cache_read_tokens + cache_write_tokens), 0) as cache, COALESCE(SUM(cost_usd), 0) as cost')
             ->first();
 
-        $byModel = $used()->where('updated_at', '>=', $month)
+        $byModel = $used()->where('billed_at', '>=', $month)
             ->select('model', DB::raw('COUNT(*) as requests'), DB::raw('SUM(input_tokens) as input'), DB::raw('SUM(output_tokens) as output'), DB::raw('SUM(cost_usd) as cost'))
             ->groupBy('model')->orderByDesc('cost')->get()
             ->map(fn ($row) => [
@@ -253,9 +255,10 @@ class AutoTranslateSettings extends SettingsFormPage
             'output' => (int) ($totals->output ?? 0),
             'cache' => (int) ($totals->cache ?? 0),
             'cost' => (float) ($totals->cost ?? 0),
-            'previous_cost' => (float) $used()->where('updated_at', '>=', $previous)->where('updated_at', '<', $month)->sum('cost_usd'),
+            'previous_cost' => (float) $used()->where('billed_at', '>=', $previous)->where('billed_at', '<', $month)->sum('cost_usd'),
             'budget' => AutoTranslator::monthlyBudget(),
             'budget_exceeded' => AutoTranslator::budgetExceeded(),
+            'price_unknown' => Pricing::rates(AutoTranslator::model()) === null,
             'by_model' => $byModel,
             'pending' => (int) ($status[TranslationJob::PENDING] ?? 0) + (int) ($status[TranslationJob::PROCESSING] ?? 0),
             'failed' => (int) ($status[TranslationJob::FAILED] ?? 0),

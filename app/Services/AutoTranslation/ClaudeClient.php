@@ -3,6 +3,7 @@
 namespace App\Services\AutoTranslation;
 
 use Anthropic\Client;
+use Anthropic\Lib\Streaming\MessageAccumulator;
 use Anthropic\Models\ModelInfo;
 use GuzzleHttp\Client as GuzzleClient;
 use Psr\Http\Client\ClientInterface;
@@ -23,13 +24,15 @@ class ClaudeClient
 
     public function __construct(string $apiKey)
     {
+        $http = self::http();
         $this->client = new Client(
             apiKey: $apiKey,
             // Явна адреса: змінні середовища ANTHROPIC_* хостингу не мають підміняти ключ чи хост.
             baseUrl: 'https://api.anthropic.com',
             requestOptions: [
-                'transporter' => self::http(),
+                'transporter' => $http,
                 'maxRetries' => 2,
+                'streamingTransporter' => $http,
                 'timeout' => (float) config('auto_translate.timeout', 600),
             ],
         );
@@ -86,9 +89,14 @@ class ClaudeClient
         }
 
         $messages = [['role' => 'user', 'content' => $prompt]];
+        // Повтори — на рівні черги (attempts), не в SDK: інакше один запис міг би «висіти» довше за блокування.
+        $options = ['maxRetries' => 0];
 
-        $message = in_array($model, (array) config('auto_translate.fallback_capable', []), true)
-            ? $this->client->beta->messages->create(
+        // Потокова відповідь: довгі сторінки генеруються хвилинами, а без стримінгу великий max_tokens
+        // впирається в тайм-аути. Акумулятор SDK збирає події в повне повідомлення.
+        if (in_array($model, (array) config('auto_translate.fallback_capable', []), true)) {
+            $accumulator = MessageAccumulator::forBetaMessages();
+            $stream = $this->client->beta->messages->createStream(
                 maxTokens: $maxTokens,
                 messages: $messages,
                 model: $model,
@@ -96,14 +104,26 @@ class ClaudeClient
                 outputConfig: $outputConfig,
                 fallbacks: 'default',
                 betas: ['server-side-fallback-2026-07-01'],
-            )
-            : $this->client->messages->create(
+                requestOptions: $options,
+            );
+        } else {
+            $accumulator = MessageAccumulator::forMessages();
+            $stream = $this->client->messages->createStream(
                 maxTokens: $maxTokens,
                 messages: $messages,
                 model: $model,
                 system: $system,
                 outputConfig: $outputConfig,
+                requestOptions: $options,
             );
+        }
+        foreach ($stream as $event) {
+            $accumulator->accumulate($event);
+        }
+        if (! $accumulator->isComplete()) {
+            throw new StreamInterrupted('Потік відповіді API обірвався до завершення.');
+        }
+        $message = $accumulator->message();
 
         // Після блоку fallback текст пише запасна модель — беремо лише його.
         $text = '';

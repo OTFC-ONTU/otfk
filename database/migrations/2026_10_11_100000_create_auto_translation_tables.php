@@ -28,6 +28,7 @@ return new class extends Migration
                 $table->unsignedInteger('cache_read_tokens')->default(0);
                 $table->unsignedInteger('cache_write_tokens')->default(0);
                 $table->decimal('cost_usd', 12, 6)->nullable();
+                $table->timestamp('billed_at')->nullable()->index();
                 $table->text('error')->nullable();
                 $table->timestamp('locked_at')->nullable();
                 $table->timestamp('finished_at')->nullable()->index();
