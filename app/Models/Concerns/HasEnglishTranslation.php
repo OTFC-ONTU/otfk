@@ -2,6 +2,7 @@
 
 namespace App\Models\Concerns;
 
+use App\Services\AutoTranslation\AutoTranslator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\ValidationException;
 
@@ -63,6 +64,17 @@ trait HasEnglishTranslation
                     : null;
             }
         });
+
+        // Автопереклад (якщо ввімкнено): запис без актуального перекладу — у чергу translation_jobs.
+        static::saved(function (self $model): void {
+            AutoTranslator::queueAfterSave($model);
+        });
+    }
+
+    /** Поля оригіналу, що мають англійський варіант `<поле>_en` (автопереклад). */
+    public function englishTranslationFields(): array
+    {
+        return $this->translationSourceFields();
     }
 
     protected function translationSourceFields(): array

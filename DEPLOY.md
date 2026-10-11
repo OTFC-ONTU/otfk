@@ -247,6 +247,10 @@ If the Telegram post was not sent (the API is unavailable), the news item is sti
 as published (duplicate protection), and the error is written to the log (`Log::warning`).
 To retry manually: clear `telegram_posted_at` for the news item and save it again.
 
+## Automatic translation (Claude API)
+
+"Налаштування → Автопереклад" (Settings → Automatic translation) in the admin: enter a personal Anthropic API key (console.anthropic.com → API Keys), choose the model, enable it. The key is stored in the DB encrypted with `APP_KEY` — after changing `APP_KEY` (or moving the DB to a server with another key) enter the key again. Translation runs right after saving (`afterResponse`) and by the scheduler `otfk:auto-translate` every minute — the scheduler / cron `schedule:run` must be enabled, and the hosting needs outbound HTTPS to `api.anthropic.com`. The first full translation: the "Перекласти все неперекладене" (Translate everything untranslated) button or `php artisan otfk:auto-translate --missing`. Set a monthly limit on the page to cap spending.
+
 ## Updating the site later (Option A)
 
 Usually nothing needs to be done — a push to `master` (Plesk) or `test` (test hosting) triggers autodeploy (`deploy.yml`). The manual path is for the case when CI is unavailable (then build the frontend locally and upload `public/build` yourself):

@@ -21,6 +21,12 @@ Schedule::command('otfk:mirror-files --limit=30')
     ->everyMinute()
     ->withoutOverlapping(30);
 
+// Автопереклад на англійську (Claude API): черга translation_jobs. Без увімкненого автоперекладу
+// команда одразу завершується. Довгі сторінки перекладаються хвилинами — без накладання запусків.
+Schedule::command('otfk:auto-translate')
+    ->everyMinute()
+    ->withoutOverlapping(30);
+
 // Чистимо статистику відвідувань, старішу за пів року (агрегати займають місце дарма)
 Schedule::call(fn () => \App\Models\SiteVisit::where('date', '<', now()->subDays(180)->toDateString())->delete())
     ->weeklyOn(0, '04:00')
