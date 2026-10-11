@@ -21,8 +21,9 @@ Schedule::command('otfk:mirror-files --limit=30')
     ->everyMinute()
     ->withoutOverlapping(30);
 
-// Автопереклад на англійську (Claude API): черга translation_jobs. Без увімкненого автоперекладу
-// команда одразу завершується. Довгі сторінки перекладаються хвилинами — без накладання запусків.
+// Автопереклад на англійську (Claude API): страховка для черги translation_jobs. Основний шлях —
+// afterResponse після збереження; планувальник добирає те, що той не встиг (обрив за max_execution_time,
+// повтор після 429/5xx, масове «Перекласти все неперекладене»). Без автоперекладу команда одразу завершується.
 Schedule::command('otfk:auto-translate')
     ->everyMinute()
     ->withoutOverlapping(30);

@@ -8,13 +8,13 @@
  */
 return [
 
-    // Модель за замовчуванням, поки адміністратор не вибрав іншу.
-    'default_model' => 'claude-opus-5-5',
+    // Модель за замовчуванням, поки адміністратор не вибрав іншу: Sonnet — якісний переклад удвічі дешевше за Opus.
+    'default_model' => 'claude-sonnet-5-5',
 
     // Список моделей до першого успішного запиту Models API (і якщо API недоступне).
     'fallback_models' => [
-        'claude-opus-5-5' => 'Claude Opus 5.5',
         'claude-sonnet-5-5' => 'Claude Sonnet 5.5',
+        'claude-opus-5-5' => 'Claude Opus 5.5',
         'claude-haiku-5-5' => 'Claude Haiku 5.5',
         'claude-fable-5-1' => 'Claude Fable 5.1',
         'claude-opus-5' => 'Claude Opus 5',

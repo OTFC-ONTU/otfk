@@ -363,6 +363,12 @@ class AutoTranslateTest extends TestCase
         $this->get(AutoTranslateSettings::getUrl())->assertForbidden();
     }
 
+    public function test_default_model_is_sonnet(): void
+    {
+        $this->assertSame('claude-sonnet-5-5', AutoTranslator::model());
+        $this->assertSame('claude-sonnet-5-5', array_key_first(AutoTranslator::modelOptions()));
+    }
+
     public function test_pricing_matches_longest_model_prefix(): void
     {
         $this->assertSame([4.0, 20.0], Pricing::rates('claude-opus-5-5'));

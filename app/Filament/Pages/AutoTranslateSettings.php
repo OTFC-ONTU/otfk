@@ -111,7 +111,7 @@ class AutoTranslateSettings extends SettingsFormPage
                             ->helperText(function (): string {
                                 $at = AutoTranslator::modelsFetchedAt();
 
-                                return 'Ціна — USD за 1 млн токенів (вхід / вихід). Opus — найякісніший переклад, Sonnet — дешевший, Haiku — найдешевший. '
+                                return 'Ціна — USD за 1 млн токенів (вхід / вихід). Sonnet (типово) — якісний переклад, удвічі дешевший за Opus; Haiku — найдешевший. '
                                     .($at
                                         ? 'Список моделей отримано з API '.$at->timezone('Europe/Kyiv')->format('d.m.Y H:i').'; оновлюється раз на тиждень при відкритті сторінки.'
                                         : 'Після збереження ключа список завантажиться з API.');
