@@ -124,7 +124,7 @@ class AutoTranslateSettings extends SettingsFormPage
                         Toggle::make('auto_translate_publish')->label('Одразу публікувати переклад на /en')
                             ->helperText('Вимкнено — переклад зберігається чернеткою (вже опублікований переклад лишається опублікованим).'),
                         Toggle::make('auto_translate_overwrite')->label('Оновлювати переклад після зміни оригіналу')
-                            ->helperText('Вимкнено — заповнюються лише порожні англійські поля, наявні (зокрема ручні) переклади не перезаписуються.'),
+                            ->helperText('Вимкнено — заповнюються лише порожні англійські поля, наявні (зокрема ручні) переклади не перезаписуються; застарілий переклад лишається зі статусом «Оригінал змінено» і автоматично не публікується.'),
                         CheckboxList::make('auto_translate_types')->label('Типи матеріалів')
                             ->options(collect(AutoTranslator::TYPES)->map(fn (array $type) => $type[1])->all())
                             ->columns(2)->bulkToggleable(),

@@ -7,6 +7,7 @@ use Anthropic\Core\Exceptions\APIStatusException;
 use Anthropic\Core\Exceptions\AuthenticationException;
 use Anthropic\Core\Exceptions\NotFoundException;
 use Anthropic\Core\Exceptions\PermissionDeniedException;
+use Anthropic\ErrorType;
 use App\Casts\SafeHtml;
 use App\Models\Banner;
 use App\Models\Department;
@@ -362,7 +363,8 @@ PROMPT;
     public static function retryFailed(): int
     {
         $count = 0;
-        TranslationJob::query()->where('status', TranslationJob::FAILED)->orderBy('id')
+        // lazyById: колбек змінює status, за яким фільтрує запит — посторінковий offset пропускав би записи.
+        TranslationJob::query()->where('status', TranslationJob::FAILED)->lazyById(200)
             ->each(function (TranslationJob $failed) use (&$count): void {
                 $failed->update(['status' => TranslationJob::RETRIED]);
                 $model = $failed->translatable;
@@ -522,7 +524,9 @@ PROMPT;
             return 'model';
         } catch (APIConnectionException|APIStatusException|StreamInterrupted $e) {
             $status = $e instanceof APIStatusException ? $e->status : null;
-            $transient = ! $e instanceof APIStatusException || $status === null || $status === 429 || $status >= 500;
+            // Помилка посеред потоку (event: error) приходить зі статусом 200 — тимчасовість визначаємо за типом.
+            $transient = ! $e instanceof APIStatusException || $status === null || $status === 429 || $status >= 500
+                || in_array($e->type, [ErrorType::OVERLOADED_ERROR, ErrorType::API_ERROR, ErrorType::RATE_LIMIT_ERROR, ErrorType::TIMEOUT_ERROR], true);
             if ($transient && $job->attempts < (int) config('auto_translate.max_attempts', 3)) {
                 $job->update(['status' => TranslationJob::PENDING, 'locked_at' => null, 'error' => 'Тимчасова помилка API, повтор пізніше: '.static::errorMessage($e)]);
 
@@ -610,14 +614,15 @@ PROMPT;
                 $model->setAttribute($field.'_en', $value);
             }
         }
-        if (static::publishes()) {
-            $model->setAttribute('translation_published', true);
-        }
         // Хеш підтверджує актуальність лише тоді, коли перекладено все застаріле: без дозволу оновлювати
-        // переклад (заповнено тільки порожні поля) статус «Оригінал змінено» лишається, /en не індексується.
+        // переклад (заповнено тільки порожні поля) статус «Оригінал змінено» лишається, /en не індексується,
+        // і такий переклад не публікується автоматично (рішення — за редактором).
         $filled = array_filter($model->englishTranslationFields(), fn (string $field) => filled($model->getAttribute($field)));
         if (! static::isStale($model) || array_diff($filled, $fields) === []) {
             $model->setAttribute('translation_source_hash', $model->currentTranslationSourceHash());
+            if (static::publishes()) {
+                $model->setAttribute('translation_published', true);
+            }
         }
 
         self::$writing = true;

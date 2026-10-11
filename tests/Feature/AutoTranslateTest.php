@@ -476,6 +476,36 @@ class AutoTranslateTest extends TestCase
         $this->assertCount(0, $this->history);
     }
 
+    public function test_overwrite_off_partial_fill_of_unpublished_translation_stays_stale_and_unpublished(): void
+    {
+        $this->enable(['auto_translate_overwrite' => '0']);
+        $news = $this->news(['excerpt' => null, 'title_en' => 'Open Day', 'body_en' => '<p>Open day.</p>', 'translation_published' => false]);
+        $news->update(['body' => '<p>Новий текст.</p>', 'excerpt' => 'Запрошуємо вступників']);
+
+        $this->mock->append($this->messageResponse(['excerpt' => 'We invite applicants']));
+        app(AutoTranslator::class)->processQueue(1);
+
+        $news->refresh();
+        $this->assertSame('We invite applicants', $news->excerpt_en);
+        $this->assertTrue($news->translationIsStale());
+        $this->assertFalse((bool) $news->translation_published, 'Застарілий переклад не публікується автоматично');
+        $this->assertFalse($news->hasIndexableEnglishTranslation());
+    }
+
+    public function test_mid_stream_overload_is_retried(): void
+    {
+        $this->enable();
+        $this->news();
+
+        $start = json_encode(['type' => 'message_start', 'message' => ['id' => 'msg', 'type' => 'message', 'role' => 'assistant', 'model' => 'claude-opus-5-5', 'content' => [], 'stop_reason' => null, 'stop_sequence' => null, 'usage' => ['input_tokens' => 10, 'output_tokens' => 1]]]);
+        $error = json_encode(['type' => 'error', 'error' => ['type' => 'overloaded_error', 'message' => 'Overloaded']]);
+        $this->mock->append(new Response(200, ['Content-Type' => 'text/event-stream'], "event: message_start\ndata: {$start}\n\nevent: error\ndata: {$error}\n\n"));
+
+        $result = app(AutoTranslator::class)->processQueue(5);
+        $this->assertSame('retry', $result['stopped']);
+        $this->assertSame(TranslationJob::PENDING, TranslationJob::sole()->status);
+    }
+
     public function test_default_model_is_sonnet(): void
     {
         $this->assertSame('claude-sonnet-5-5', AutoTranslator::model());

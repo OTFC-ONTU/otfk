@@ -81,7 +81,7 @@ trait HasEnglishTranslation
 
             // Зміна лише оригіналу не підтверджує актуальність перекладу. Автопереклад хеш ставить сам
             // (часткове заповнення без дозволу оновлювати не робить застарілий переклад актуальним).
-            if (! AutoTranslator::isWriting() && $model->isDirty($fields) || ($model->translation_published && $model->isDirty('translation_published'))) {
+            if (! AutoTranslator::isWriting() && ($model->isDirty($fields) || ($model->translation_published && $model->isDirty('translation_published')))) {
                 $model->translation_source_hash = $model->hasCompleteEnglishTranslation()
                     ? $model->currentTranslationSourceHash()
                     : null;
