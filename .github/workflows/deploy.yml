@@ -61,6 +61,9 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      # Яка версія розгорнута: https://new.otfk.od.ua/build/commit.txt = SHA master
+      - run: echo "${{ github.sha }}" > public/build/commit.txt
+
       # plesk-build = дерево master + public/build (у git він у .gitignore). Коміт має
       # батьками попередній plesk-build і перевірений SHA master — гілка лише рухається
       # вперед, тож Git у Plesk тягне її без force. Push через GITHUB_TOKEN не запускає
