@@ -4,6 +4,7 @@ namespace App\Filament\Forms;
 
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -24,6 +25,12 @@ class EnglishTranslation
             ? Textarea::make($primaryField.'_en')->rows($primaryRows)
             : TextInput::make($primaryField.'_en')->maxLength(255);
         $fields = [
+            // Знімок англійського розділу при відкритті форми: якщо редактор його не змінював, збереження
+            // не перезапише переклад, який автопереклад записав після відкриття (HasEnglishTranslation).
+            Hidden::make('english_snapshot')
+                ->afterStateHydrated(fn (Hidden $component, ?Model $record) => $component->state(
+                    $record?->exists && method_exists($record, 'englishSnapshot') ? $record->englishSnapshot() : null,
+                )),
             Placeholder::make('translation_status')
                 ->label('Стан перекладу')
                 ->content(fn (?Model $record) => $record?->translationStatus() ?? 'Відсутній'),
@@ -38,7 +45,7 @@ class EnglishTranslation
         ];
 
         if ($contentFields !== null) {
-            $fields = array_slice($fields, 0, 3);
+            $fields = array_slice($fields, 0, 4);
             foreach ($contentFields as $source => $config) {
                 $input = ($config['rows'] ?? null)
                     ? Textarea::make($source.'_en')->rows($config['rows'])

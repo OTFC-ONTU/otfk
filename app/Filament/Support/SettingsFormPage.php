@@ -43,6 +43,14 @@ abstract class SettingsFormPage extends FilamentPage implements HasForms
     /** @var array<string, mixed> */
     public ?array $data = [];
 
+    /**
+     * Англійські значення на момент відкриття сторінки: незмінене поле не перезаписує переклад,
+     * який автопереклад записав, поки сторінка була відкрита.
+     *
+     * @var array<string, ?string>
+     */
+    public array $loadedEnglish = [];
+
     /** Сторінки налаштувань — лише адміністратору; редактор не бачить групу і отримує 403. */
     public static function canAccess(): bool
     {
@@ -71,6 +79,7 @@ abstract class SettingsFormPage extends FilamentPage implements HasForms
         }
         foreach (static::translatableKeys() as $key) {
             $state[$key.'_en'] = $records->get($key)?->value_en;
+            $this->loadedEnglish[$key] = $state[$key.'_en'];
         }
 
         $this->form->fill($this->fromSettings($state));
@@ -126,8 +135,10 @@ abstract class SettingsFormPage extends FilamentPage implements HasForms
 
                 $setting->value = (string) ($state[$key] ?? '');
 
-                if (in_array($key, $translatable, true) && array_key_exists($key.'_en', $state)) {
+                if (in_array($key, $translatable, true) && array_key_exists($key.'_en', $state)
+                    && trim((string) $state[$key.'_en']) !== trim((string) ($this->loadedEnglish[$key] ?? ''))) {
                     $english = trim((string) $state[$key.'_en']);
+                    $this->loadedEnglish[$key] = $english;
                     $setting->value_en = $english !== '' ? $english : null;
                     if ($setting->isDirty('value_en')) {
                         $setting->translation_published = $english !== '';
