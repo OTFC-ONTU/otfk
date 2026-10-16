@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Filament\Pages\ContactSettings;
 use App\Filament\Pages\GeneralSettings;
+use App\Filament\Pages\AutoTranslateSettings;
 use App\Filament\Pages\TelegramSettings;
 use App\Filament\Resources\MenuItemResource;
 use App\Filament\Resources\NewsResource;
@@ -43,7 +44,7 @@ class AdminRolesTest extends TestCase
         $this->get(UserResource::getUrl())->assertForbidden();
         $this->get(SettingResource::getUrl())->assertForbidden();
         $this->get(MenuItemResource::getUrl())->assertForbidden();
-        foreach ([GeneralSettings::class, ContactSettings::class, TelegramSettings::class] as $page) {
+        foreach ([GeneralSettings::class, ContactSettings::class, TelegramSettings::class, AutoTranslateSettings::class] as $page) {
             $this->get($page::getUrl())->assertForbidden();
         }
 
