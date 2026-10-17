@@ -61,6 +61,22 @@ class HolidayThemeTest extends TestCase
         }
     }
 
+    public function test_admin_preview_garland_layout_does_not_depend_on_once_styles(): void
+    {
+        // Livewire-перемальовування прев'ю не отримує @once-<style> гірлянди:
+        // без inline-розкладки плитки ставали стовпчиком і перекривали макет.
+        $this->actingAs(User::firstOrFail());
+
+        $html = Livewire::test(HolidaySettings::class)
+            ->set('data.holiday_theme', 'halloween')
+            ->html();
+        $html = preg_replace('#<style>.*?</style>#s', '', $html);
+
+        $this->assertStringContainsString('class="hd-garland-row" style="display:flex;width:max-content;"', $html);
+        $this->assertStringContainsString('style="flex:none;display:block"', $html);
+        $this->assertMatchesRegularExpression('/<div style="[^"]*overflow:hidden[^"]*" class="hd-garland hd-garland-lights/', $html);
+    }
+
     public function test_unknown_or_expired_theme_is_ignored(): void
     {
         $this->setTheme('no-such-theme');
