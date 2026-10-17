@@ -24,7 +24,7 @@ Website of the Odesa Technical Professional College of ONTU — **Laravel 12 + F
 
 - The primary domain is kept when the old site is replaced: https://otfk.od.ua/ (user clarification 2026-10-07). SEO plan — docs/seo-plan.md; redirects are only needed for changed URLs, the Search Console property is kept.
 
-- The SEO migration is planned for October–December 2026 (reserve: January–February 2027); a planned change of application/paths/hosting from March to August is forbidden by the agreed SEO plan. Under `/uploads/`, photos and mirrored documents have different destinations; build the map from verified imports and file_mirrors, not a generic wildcard. Progress — section "Implementation status" in docs/seo-plan.md: stages 1–3, minimal stage 4 (`/en` + hreflang) and GA4 with a consent banner are in code (PR #25 merged and deployed); the old URL map is imported on the test hosting (4238 `legacy_redirects` records). Remaining: production switch-over (moving the map, checking the panel's "forced HTTPS"), the real GA4 ID, approval of the privacy policy, speed measurements.
+- The SEO migration is planned for October–December 2026 (reserve: January–February 2027); a planned change of application/paths/hosting from March to August is forbidden by the agreed SEO plan. Under `/uploads/`, photos and mirrored documents have different destinations; build the map from verified imports and file_mirrors, not a generic wildcard. Progress — section "Implementation status" in docs/seo-plan.md: stages 1–3, minimal stage 4 (`/en` + hreflang) and GA4 with a consent banner are in code (PR #25 merged and deployed); the old URL map is imported on the test hosting (4238 `legacy_redirects` records). On 2026-10-16 otfk.od.ua was switched to the new application in Plesk. Remaining: automatic deployment for the main domain, the post-switch checks of DEPLOY.md (map present in the production DB, the panel's "forced HTTPS", SEO smoke variables), the real GA4 ID, approval of the privacy policy, speed measurements.
 
 ## Code conventions (actual, taken from existing code)
 
@@ -124,10 +124,25 @@ Direct connection parameters for the just-test.shop test hosting MySQL are in a 
 - News categories and photo albums of the test DB (2026-10-07): 9 categories (`novyny-koledzhu`, `oholoshennya`, `navchalnyi-protses`, `vykhovna-robota`, `studentske-zhyttya`, `olimpiady-ta-konkursy`, `konferentsiyi-ta-seminary`, `partnerstvo-ta-kariera`, `proforiyentatsiya`; ids 1–4 renamed from demo) assigned to all 526 news items; 220 albums built from photo-report news (title/description/slug/date — from the news item, title_en/description_en — from its published translation, photos — cover + body images in order, without captions, paths to existing files `news/imported/…`/`mirror/…`). Three demo albums were unpublished. Working folder — ignored `storage/app/private/distribute-2026-10-07/` (`GUIDE.md` — classification rules, `out/` — sub-agent decisions, `final/decisions.json` — after review, `apply.php` — dry-run/`--apply` via models `saveQuietly()` with a manual hash, `backup/` — state before writing). New news items do not get categories automatically.
 - Credentials are stored only in the ignored `.env.hosting.local`; do not copy them into instructions, reports, command output or tracked files. Do not force-add the file to Git (`git add -f`).
 
+## Direct access to the production DB (Plesk)
+
+The production MariaDB of otfk.od.ua / new.otfk.od.ua (Plesk) has no remote access: port 3306 is closed from outside, and the DB user is allowed only from `localhost`, i.e. through the local socket — a regular SSH tunnel to `127.0.0.1:3306` (including DataGrip's built-in SSH tunnel) fails with `1130 Host '127.0.0.1' is not allowed`. Working method (verified by the user on 2026-10-16): forward a local TCP port to the MariaDB **Unix socket** over the subscription's SSH, so the server sees a local socket connection:
+
+```bash
+ssh -N -L 3307:/var/lib/mysql/mysql.sock <SSH_USER>@<SSH_HOST>
+```
+
+Keep it running, then connect to `127.0.0.1:3307` (DataGrip: "Use SSH tunnel" off; PHP PDO / a separate Laravel connection likewise). SSH host/user, DB name/user/password — in the ignored local file [`.env.plesk.local`](.env.plesk.local) (`DB_HOST=127.0.0.1`, `DB_PORT=3307`); if it is missing or the password is empty, ask the user. The subscription SSH is chrooted (PHP 7.2) — use it only for the tunnel, run artisan via the Toolkit «Виконавець» tab.
+
+- Intended use: bulk changes/updates that would be tedious by hand in the admin panel. This is the **live site**: the test-DB permission above does not apply here — every write needs the user's request for that specific task. Reading is fine within a requested task.
+- Before writing: a dump (Plesk → «Бази даних» → «Експортувати дамп», or `mysqldump` through the tunnel into an ignored `storage/app/private/…` folder) plus a JSON backup of the original values of the touched records; dry-run first, then `--apply`; transactions; verify by reading.
+- Prefer scripts via models with a separate connection and `saveQuietly()` (as in the test-DB imports above): no NewsObserver/Telegram, no `updated_at` change (lastmod), translation hashes via `currentTranslationSourceHash()`. Direct SQL bypasses observers, `KeepsPublicUrls` redirects and cache flushes — afterwards run `optimize:clear` in «Виконавець» (or delete the `settings.map`/`settings.translations`/`menu.navigation`/`sitemap.entries` keys from the `cache` table when the cache store is the database).
+- The same rules as for the test DB: no `db:seed`/`SiteSeeder`/`migrate:fresh`/bulk deletion, schema only via migrations, do not replace the local `.env`, never run tests against it, do not copy credentials into tracked files or output, do not `git add -f` the file.
+
 ## Last completed task
 
 - **2026-10-17 (branch `test`, PR `test` → `master`):** fixed the holiday theme preview in the admin panel («Святкова тема»): the garland tiles stacked into a column and covered the mock-up because its layout CSS (`display:flex` row, `flex:none` tiles, `overflow:hidden`) lived only in the `@once` `<style>` of `x-holiday.garland`, which the Livewire-rendered preview did not receive. The layout is now inline in the component; `@once` keeps only the animations. The public site was not affected.
-- Checks: new test `HolidayThemeTest::test_admin_preview_garland_layout_does_not_depend_on_once_styles` (fails on the old component, passes now), full `php artisan test` after merging the current `origin/test` (579 passed). Not checked in a browser.
+- Checks: new test `HolidayThemeTest::test_admin_preview_garland_layout_does_not_depend_on_once_styles` (fails on the old component, passes now), full `php artisan test` after merging the current `origin/test` and `origin/master` (579 passed). Not checked in a browser.
 
 ## Other
 

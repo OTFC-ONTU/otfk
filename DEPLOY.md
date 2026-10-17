@@ -124,6 +124,8 @@ The new site lives on a subdomain of the otfk.od.ua subscription, next to the ol
 
 `mirror-files.yml` works only over SSH of the test hosting; on Plesk, the `file_mirrors` queue is processed by the scheduler (or by the command `otfk:mirror-files` in the Artisan tab).
 
+**Direct DB access:** there is no remote MySQL access, and the DB user is allowed only from `localhost` (socket), so a plain SSH tunnel to `127.0.0.1:3306` fails with `1130 Host '127.0.0.1' is not allowed`. Forward a local port to the MariaDB Unix socket over the subscription's SSH: `ssh -N -L 3307:/var/lib/mysql/mysql.sock <subscription user>@<server IP>`, then connect a client to `127.0.0.1:3307` without its own SSH tunnel. Parameters — the ignored `.env.plesk.local`; rules for writing to the live DB — CLAUDE.md/AGENTS.md "Direct access to the production DB (Plesk)".
+
 **Which version is deployed:** `https://new.otfk.od.ua/build/commit.txt` contains the `master` SHA written by `deploy-plesk` into `public/build` (compare it with `git rev-parse origin/master`; the Plesk side takes ~3 minutes after the webhook). A 404 from the webhook step means the Plesk repository was recreated — copy its new webhook URL into `PLESK_DEPLOY_WEBHOOK`.
 
 **Check:** `curl -sI https://new.otfk.od.ua/` — the response has `X-Robots-Tag: noindex, nofollow`; `/`, `/en`, `/admin` (login with 2FA) open; the probe `storage/app/public/_probe.php` → 403 (section 6 of `docs/security-audit.md`); manually `php artisan otfk:seo-smoke --base=https://new.otfk.od.ua --expect=closed` (not run in CI for Plesk — the deployment is asynchronous).

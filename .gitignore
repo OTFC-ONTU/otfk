@@ -3,8 +3,9 @@
 .env
 .env.backup
 .env.production
-# Локальні реквізити БД тестового хостингу
+# Локальні реквізити БД тестового хостингу та продакшн-БД Plesk
 /.env.hosting.local
+/.env.plesk.local
 .phpactor.json
 .phpunit.result.cache
 /.fleet
