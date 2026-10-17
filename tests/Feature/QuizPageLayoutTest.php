@@ -24,7 +24,7 @@ class QuizPageLayoutTest extends TestCase
             ->assertSee('bg-slate-50/80', false)
             ->assertSee('accent-rule', false)
             ->assertSee($count.' питань')
-            ->assertSee('близько хвилини')
+            ->assertSee('2–3 хвилини')
             ->assertSee('без реєстрації');
     }
 

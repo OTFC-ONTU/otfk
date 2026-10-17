@@ -15,11 +15,19 @@
             return $mod10 >= 1 && $mod10 <= 4 ? __('feature.questions') : __('feature.questions_2');
         };
 
-        $ready = $questions->isNotEmpty() && $specialties->isNotEmpty();
+        $ready = $questions->isNotEmpty() && $programs->isNotEmpty();
         $count = $questions->count();
 
-        // Спеціальність за замовчуванням — коли жоден варіант не дав балів
-        $fallbackId = $specialties->first()?->id ?? 0;
+        // Дані підрахунку для Alpine: бали кожного варіанта по ОПП, максимум кожної ОПП і порядок сайту
+        // (за ним розв'язується нічия). ОПП за замовчуванням — коли жоден варіант не дав балів.
+        $quizConfig = [
+            'total' => $count,
+            'fallback' => $programs->first()?->id ?? 0,
+            'order' => $programs->pluck('id')->all(),
+            'max' => (object) $max,
+            'options' => $questions->map(fn ($question) => $question->options
+                ->map(fn ($option) => (object) array_intersect_key($option->scoreMap(), $max))->values()->all())->values()->all(),
+        ];
 
         $hasContacts = ! empty($s['contact_phone']) || ! empty($s['contact_email']);
     @endphp
@@ -52,7 +60,7 @@
                             </span>
                             <span class="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-sm font-semibold text-brand-700 ring-1 ring-brand-100">
                                 <x-ico name="clock" class="h-4 w-4" />
-                                {{ __('feature.about_a_minute') }}
+                                {{ __('feature.quiz_duration') }}
                             </span>
                             <span class="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-sm font-semibold text-brand-700 ring-1 ring-brand-100">
                                 <x-ico name="lock-open" class="h-4 w-4" />
@@ -69,7 +77,7 @@
         @if (! $ready)
             <x-empty-state icon="puzzle-piece" title="{{ __('public.no_quiz') }}" />
         @else
-            <div x-data="quiz({{ $count }}, {{ $fallbackId }})" @keydown.window="onKey($event)">
+            <div x-data="quiz(@js($quizConfig))" @keydown.window="onKey($event)">
 
                 {{-- ІНТРО --}}
                 <div x-show="step === 'intro'" class="grid gap-8 lg:grid-cols-3 lg:items-start">
@@ -107,15 +115,16 @@
                         </div>
                     </div>
 
-                    {{-- Що можна отримати — реальні спеціальності з бази --}}
+                    {{-- Що можна отримати — реальні спеціальності та їхні ОПП з бази --}}
                     <aside class="rounded-2xl bg-brand-50/70 p-6 ring-1 ring-brand-100">
                         <h2 class="text-lg font-extrabold text-brand-950">{{ __('feature.specialties_in_the_quiz') }}</h2>
-                        <p class="mt-1.5 text-sm text-slate-600">{{ __('feature.one_of_these_will_be_your_result') }}</p>
+                        <p class="mt-1.5 text-sm text-slate-600">{{ __('feature.quiz_programs_in_result', ['count' => $programs->count()]) }}</p>
+
                         <ul class="mt-5 space-y-3">
                             @foreach ($specialties as $specialty)
                                 <li>
                                     <a href="{{ \App\Support\LocalizedUrl::route('specialties.show', $specialty) }}"
-                                       class="flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-slate-200/80 transition hover:ring-gold-300">
+                                       class="flex items-start gap-3 rounded-xl bg-white p-3 ring-1 ring-slate-200/80 transition hover:ring-gold-300">
                                         <span class="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700">
                                             <x-ico :name="$specialty->icon_name" class="h-5 w-5" aria-hidden="true" />
                                         </span>
@@ -124,11 +133,17 @@
                                                 <span class="block text-xs font-bold text-gold-700">{{ $specialty->code }}</span>
                                             @endif
                                             <span class="block text-sm font-semibold leading-snug text-brand-950">{{ $specialty->localized('title') }}</span>
+                                            <span class="mt-1 block space-y-0.5 text-xs leading-snug text-slate-500">
+                                                @foreach ($programs->where('specialty_id', $specialty->id) as $program)
+                                                    <span class="block">{{ $program->localized('title') }}</span>
+                                                @endforeach
+                                            </span>
                                         </span>
                                     </a>
                                 </li>
                             @endforeach
                         </ul>
+
                         <a href="{{ \App\Support\LocalizedUrl::route('specialties.index') }}" class="btn-outline mt-6 w-full justify-center border-gold-300 text-gold-700 ring-gold-300 hover:bg-gold-50">
                             {{ __('feature.all_specialties') }} <x-ico name="arrow-right" class="h-4 w-4" />
                         </a>
@@ -172,7 +187,7 @@
                                     @foreach ($question->options as $oi => $option)
                                         <button type="button"
                                                 data-step="{{ $qi }}" data-opt="{{ $oi }}"
-                                                @click="answer({{ (int) $option->specialty_id }}, {{ (int) $option->points }})"
+                                                @click="answer({{ $qi }}, {{ $oi }})"
                                                 class="flex min-h-[3.75rem] w-full items-center gap-3 rounded-xl bg-slate-50 px-4 py-4 text-left text-base font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-brand-50 hover:ring-brand-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 active:scale-[.99]">
                                             <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-sm font-bold text-slate-400 ring-1 ring-slate-200">{{ chr(65 + $oi) }}</span>
                                             <span>{{ $payload['options'][$oi]['label'] }}</span>
@@ -193,19 +208,20 @@
                     </p>
                 </div>
 
-                {{-- РЕЗУЛЬТАТ --}}
+                {{-- РЕЗУЛЬТАТ: освітньо-професійна програма з найбільшим відсотком збігу --}}
                 <div x-show="step === 'result'" x-cloak aria-live="polite" aria-atomic="true" class="mx-auto max-w-4xl">
-                    @foreach ($specialties as $specialty)
-                        <div x-show="winnerId === {{ $specialty->id }}" x-cloak
+                    @foreach ($programs as $program)
+                        @php $specialty = $program->specialty; @endphp
+                        <div x-show="winnerId === {{ $program->id }}" x-cloak
                              class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/80">
                             <div class="relative overflow-hidden bg-gradient-to-br from-brand-800 to-brand-950 px-6 py-9 text-center sm:px-10">
                                 <svg aria-hidden="true" class="pointer-events-none absolute inset-0 h-full w-full text-white/[0.07]">
                                     <defs>
-                                        <pattern id="quiz-grid-{{ $specialty->id }}" width="28" height="28" patternUnits="userSpaceOnUse">
+                                        <pattern id="quiz-grid-{{ $program->id }}" width="28" height="28" patternUnits="userSpaceOnUse">
                                             <path d="M28 0H0V28" fill="none" stroke="currentColor" stroke-width="1" />
                                         </pattern>
                                     </defs>
-                                    <rect width="100%" height="100%" fill="url(#quiz-grid-{{ $specialty->id }})" />
+                                    <rect width="100%" height="100%" fill="url(#quiz-grid-{{ $program->id }})" />
                                 </svg>
 
                                 <div class="relative">
@@ -213,19 +229,23 @@
                                         <x-ico :name="$specialty->icon_name" class="h-8 w-8" aria-hidden="true" />
                                     </span>
                                     <p class="mt-5 text-sm font-semibold uppercase tracking-wide text-gold-300">{{ __('public.quiz_result') }}</p>
-                                    <h2 class="mt-2 text-2xl font-extrabold text-white sm:text-3xl">{{ $specialty->localized('title') }}</h2>
-                                    @if ($specialty->code)
-                                        <p class="mt-2 text-sm text-brand-200">{{ __('feature.specialty_code_label', ['code' => $specialty->code]) }}</p>
-                                    @endif
+                                    <h2 class="mx-auto mt-2 max-w-2xl text-2xl font-extrabold text-white sm:text-3xl">{{ $program->localized('title') }}</h2>
+                                    <p class="mt-2 text-sm text-brand-200">
+                                        {{ $specialty->code
+                                            ? __('feature.quiz_program_specialty', ['code' => $specialty->code, 'title' => $specialty->localized('title')])
+                                            : __('feature.quiz_program_specialty_no_code', ['title' => $specialty->localized('title')]) }}
+                                    </p>
                                     <p class="mt-4 inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 px-3 py-1 text-sm font-semibold text-gold-200 ring-1 ring-gold-300/40">
                                         <x-ico name="sparkles" class="h-4 w-4" aria-hidden="true" />
-                                        {{ __('feature.match') }} <span x-text="percentOf({{ $specialty->id }})"></span>%
+                                        {{ __('feature.match') }} <span x-text="percentOf({{ $program->id }})"></span>%
                                     </p>
                                 </div>
                             </div>
 
                             <div class="p-6 text-center sm:p-8">
-                                @if ($specialty->localized('short_description'))
+                                @if ($program->localized('description'))
+                                    <p class="mx-auto max-w-2xl leading-relaxed text-slate-600">{{ $program->localized('description') }}</p>
+                                @elseif ($specialty->localized('short_description'))
                                     <p class="mx-auto max-w-2xl leading-relaxed text-slate-600">{{ $specialty->localized('short_description') }}</p>
                                 @endif
 
@@ -233,8 +253,8 @@
                                     <a href="{{ \App\Support\LocalizedUrl::route('contacts') }}" class="btn-accent justify-center px-8 py-3.5 text-base">
                                         {{ __('feature.contact_the_college_2') }} <x-ico name="arrow-right" class="h-4 w-4" />
                                     </a>
-                                    <a href="{{ \App\Support\LocalizedUrl::route('specialties.show', $specialty) }}" class="btn-outline justify-center px-8 py-3.5 text-base">
-                                        {{ __('public.about_specialty') }} <x-ico name="arrow-right" class="h-4 w-4" />
+                                    <a href="{{ \App\Support\ProgramAnchors::url($specialty, $program) }}" class="btn-outline justify-center px-8 py-3.5 text-base">
+                                        {{ __('feature.about_program') }} <x-ico name="arrow-right" class="h-4 w-4" />
                                     </a>
                                 </div>
                             </div>
@@ -246,19 +266,22 @@
                         <h2 class="text-lg font-extrabold text-brand-950">{{ __('feature.how_your_answers_were_distributed') }}</h2>
                         <p class="mt-1.5 text-sm text-slate-500">{{ __('feature.explore_your_second_and_third_results_too') }}</p>
 
-                        <ul class="mt-6 space-y-4">
-                            @foreach ($specialties as $specialty)
-                                <li x-show="scoreOf({{ $specialty->id }}) > 0" x-cloak>
+                        {{-- Порядок рядків — за місцем у рейтингу (CSS order), показуються перші шість з балами --}}
+                        <ul class="mt-6 flex flex-col gap-4">
+                            @foreach ($programs as $program)
+                                <li x-show="scoreOf({{ $program->id }}) > 0 && rankOf({{ $program->id }}) < 6" x-cloak
+                                    :style="{ order: rankOf({{ $program->id }}) }">
                                     <div class="flex items-baseline justify-between gap-4 text-sm">
-                                        <a href="{{ \App\Support\LocalizedUrl::route('specialties.show', $specialty) }}" class="font-semibold text-brand-900 hover:text-brand-600">
-                                            @if ($specialty->code)<span class="text-gold-700">{{ $specialty->code }}</span> @endif{{ $specialty->localized('title') }}
+                                        <a href="{{ \App\Support\ProgramAnchors::url($program->specialty, $program) }}" class="min-w-0 font-semibold text-brand-900 hover:text-brand-600">
+                                            {{ $program->localized('title') }}
+                                            <span class="block text-xs font-medium text-slate-500">@if ($program->specialty->code)<span class="text-gold-700">{{ $program->specialty->code }}</span> @endif{{ $program->specialty->localized('title') }}</span>
                                         </a>
-                                        <span class="shrink-0 font-semibold text-slate-500"><span x-text="percentOf({{ $specialty->id }})"></span>%</span>
+                                        <span class="shrink-0 font-semibold text-slate-500"><span x-text="percentOf({{ $program->id }})"></span>%</span>
                                     </div>
                                     <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
                                         <div class="h-full rounded-full transition-all duration-500"
-                                             :class="winnerId === {{ $specialty->id }} ? 'bg-gold-400' : 'bg-brand-300'"
-                                             :style="'width:' + percentOf({{ $specialty->id }}) + '%'"></div>
+                                             :class="winnerId === {{ $program->id }} ? 'bg-gold-400' : 'bg-brand-300'"
+                                             :style="'width:' + percentOf({{ $program->id }}) + '%'"></div>
                                     </div>
                                 </li>
                             @endforeach
@@ -303,13 +326,17 @@
             </div>
 
             <script>
-                function quiz(total, fallbackId) {
+                function quiz(config) {
                     return {
-                        total,
-                        fallbackId,
-                        step: 'intro',      // 'intro' | номер питання | 'result'
-                        scores: {},         // specialty_id => бали
-                        history: [],        // [specialty_id, бали] — щоб працювала кнопка «Назад»
+                        total: config.total,
+                        fallbackId: config.fallback,
+                        order: config.order,      // id ОПП у порядку сайту
+                        max: config.max,          // id ОПП => найбільше можливих балів
+                        options: config.options,  // [питання][варіант] => {id ОПП: бали}
+                        step: 'intro',            // 'intro' | номер питання | 'result'
+                        scores: {},               // id ОПП => бали
+                        hits: {},                 // id ОПП => скільки відповідей її зачепили
+                        history: [],              // [питання, варіант] — щоб працювала кнопка «Назад»
 
                         start() { this.step = 0 },
 
@@ -319,24 +346,43 @@
                         get answered() { return this.history.length },
                         get progress() { return this.total ? Math.round(this.answered / this.total * 100) : 0 },
 
-                        answer(sid, pts) {
-                            if (sid) this.scores[sid] = (this.scores[sid] || 0) + pts
-                            this.history.push([sid, pts])
+                        apply(qi, oi, sign) {
+                            const weights = (this.options[qi] || [])[oi] || {}
+                            for (const [id, pts] of Object.entries(weights)) {
+                                this.scores[id] = (this.scores[id] || 0) + sign * pts
+                                this.hits[id] = (this.hits[id] || 0) + sign
+                            }
+                        },
+
+                        answer(qi, oi) {
+                            this.apply(qi, oi, 1)
+                            this.history.push([qi, oi])
                             this.step = (this.step + 1 < this.total) ? this.step + 1 : 'result'
                         },
 
                         back() {
                             const prev = this.history.pop()
-                            if (prev && prev[0]) this.scores[prev[0]] -= prev[1]
+                            if (prev) this.apply(prev[0], prev[1], -1)
                             this.step = this.history.length
                         },
 
                         scoreOf(id) { return this.scores[id] || 0 },
-                        percentOf(id) { return this.answered ? Math.round(this.scoreOf(id) / this.answered * 100) : 0 },
+                        ratioOf(id) { return this.max[id] ? this.scoreOf(id) / this.max[id] : 0 },
+                        percentOf(id) { return Math.round(this.ratioOf(id) * 100) },
+
+                        // Рейтинг: відсоток збігу, далі сирі бали, далі ширина збігу, далі порядок сайту
+                        get ranking() {
+                            return this.order.slice().sort((a, b) =>
+                                (this.ratioOf(b) - this.ratioOf(a))
+                                || (this.scoreOf(b) - this.scoreOf(a))
+                                || ((this.hits[b] || 0) - (this.hits[a] || 0))
+                                || (this.order.indexOf(a) - this.order.indexOf(b)))
+                        },
+                        rankOf(id) { return this.ranking.indexOf(id) },
 
                         get winnerId() {
-                            const top = Object.entries(this.scores).sort((a, b) => b[1] - a[1])[0]
-                            return top && top[1] > 0 ? Number(top[0]) : this.fallbackId
+                            const top = this.ranking[0]
+                            return top !== undefined && this.scoreOf(top) > 0 ? top : this.fallbackId
                         },
 
                         // Клавіші 1–9 обирають варіант поточного питання
@@ -348,7 +394,7 @@
                             if (btn) { e.preventDefault(); btn.click() }
                         },
 
-                        restart() { this.scores = {}; this.history = []; this.step = 'intro' },
+                        restart() { this.scores = {}; this.hits = {}; this.history = []; this.step = 'intro' },
                     }
                 }
             </script>
