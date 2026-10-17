@@ -29,7 +29,32 @@ class QuizQuestion extends Model
         return $query->where('is_active', true)->orderBy('sort_order');
     }
 
-    /** Питання та всі варіанти показуються однією мовою; бали й прив’язки спільні. */
+    /**
+     * Найбільше балів, яке кожна ОПП може набрати: сума її найкращих варіантів у кожному питанні.
+     * Від цього рахується відсоток збігу, тож програма, що трапляється рідше, не програє лише через це.
+     *
+     * @param  iterable<self>  $questions  з завантаженими options.scores
+     * @return array<int, int> program_id => бали
+     */
+    public static function maxPoints(iterable $questions): array
+    {
+        $max = [];
+        foreach ($questions as $question) {
+            $best = [];
+            foreach ($question->options as $option) {
+                foreach ($option->scoreMap() as $programId => $points) {
+                    $best[$programId] = max($best[$programId] ?? 0, $points);
+                }
+            }
+            foreach ($best as $programId => $points) {
+                $max[$programId] = ($max[$programId] ?? 0) + $points;
+            }
+        }
+
+        return $max;
+    }
+
+    /** Питання та всі варіанти показуються однією мовою; бали ОПП спільні. */
     public function publicPayload(): array
     {
         $english = app()->getLocale() === 'en' && $this->hasPublishedEnglishTranslation()
@@ -40,8 +65,7 @@ class QuizQuestion extends Model
             'q' => $english ? $this->question_en : $this->question,
             'options' => $this->options->map(fn (QuizOption $option) => [
                 'label' => $english ? $option->label_en : $option->label,
-                'sid' => $option->specialty_id,
-                'pts' => (int) $option->points,
+                'scores' => $option->scoreMap(),
             ])->values()->all(),
         ];
     }

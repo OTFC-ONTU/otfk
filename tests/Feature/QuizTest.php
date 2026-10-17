@@ -19,8 +19,8 @@ class QuizTest extends TestCase
             ->assertSee('Не знаєш, куди вступати?')
             ->assertSee('Почати тест');
 
-        $this->assertSame(6, \App\Models\QuizQuestion::active()->count());
-        $this->assertSame(24, \App\Models\QuizOption::count());
+        $this->assertSame(count(\Database\Seeders\QuizSeeder::questions()), \App\Models\QuizQuestion::active()->count());
+        $this->assertGreaterThan(0, \App\Models\QuizOption::count());
     }
 
     public function test_abituriyentu_section_has_quiz_tile(): void

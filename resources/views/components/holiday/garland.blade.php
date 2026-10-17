@@ -3,7 +3,9 @@
 @php
     // Святкова SVG-гірлянда, що «звисає» під шапкою (див. App\Support\HolidayTheme).
     // Малюється однаковими плитками по 160px (вишивка — візерунком), тож ширина
-    // будь-яка; стилі анімацій — у <style> нижче, щоб працювало й у прев'ю адмінки.
+    // будь-яка. Розкладка — inline: @once віддає <style> лише при першому рендері
+    // за запит, а прев'ю адмінки (Livewire) може його не отримати — тоді плитки
+    // ставали стовпчиком. У <style> нижче — тільки анімації.
     $garland = $theme['garland'];
     $colors = $garland['colors'];
     $type = $garland['type'];
@@ -13,10 +15,10 @@
         ? ($theme['nav'] ?? '#1f3568') : '#ffffff';
 @endphp
 
-<div {{ $attributes->class('hd-garland hd-garland-'.$type) }} aria-hidden="true">
+<div {{ $attributes->class('hd-garland hd-garland-'.$type)->style('pointer-events:none;overflow:hidden;line-height:0') }} aria-hidden="true">
     @if ($type === 'embroidery')
         @php $pid = 'hd-emb-'.substr(md5(json_encode($colors)), 0, 6); @endphp
-        <svg class="hd-garland-strip" width="100%" height="24" xmlns="http://www.w3.org/2000/svg">
+        <svg class="hd-garland-strip" width="100%" height="24" style="display:block" xmlns="http://www.w3.org/2000/svg">
             <defs>
                 <pattern id="{{ $pid }}" width="36" height="24" patternUnits="userSpaceOnUse">
                     <rect width="36" height="24" fill="{{ $colors[2] }}" />
@@ -31,9 +33,9 @@
             <rect width="100%" height="24" fill="url(#{{ $pid }})" />
         </svg>
     @else
-        <div class="hd-garland-row">
+        <div class="hd-garland-row" style="display:flex;width:max-content;">
             @for ($t = 0; $t < $tiles; $t++)
-                <svg width="160" height="48" viewBox="0 0 160 48" xmlns="http://www.w3.org/2000/svg">
+                <svg width="160" height="48" viewBox="0 0 160 48" style="flex:none;display:block" xmlns="http://www.w3.org/2000/svg">
                     @if ($type === 'lights')
                         <path d="M0 3Q80 15 160 3" fill="none" stroke="{{ $theme['accent'] }}" stroke-opacity=".65" stroke-width="1.4" />
                         @foreach ([20, 60, 100, 140] as $i => $x)
@@ -89,9 +91,6 @@
 
 @once
     <style>
-        .hd-garland { pointer-events: none; overflow: hidden; line-height: 0; }
-        .hd-garland-row { display: flex; width: max-content; }
-        .hd-garland-row svg { flex: none; display: block; }
         .hd-bulb { animation: hd-twinkle 3.6s ease-in-out infinite; }
         .hd-flag { transform-box: fill-box; transform-origin: 50% 0; animation: hd-sway 4s ease-in-out infinite; }
         @keyframes hd-twinkle { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
