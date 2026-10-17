@@ -2,6 +2,7 @@
 
 namespace App\Models\Concerns;
 
+use App\Services\AutoTranslation\AutoTranslator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\ValidationException;
 
@@ -45,9 +46,31 @@ trait HasEnglishTranslation
                 ->where($primary, 'like', $like)));
     }
 
+    /** Службове поле форми (EnglishTranslation::section): знімок англійських полів на момент відкриття форми. */
+    public function initializeHasEnglishTranslation(): void
+    {
+        if ($this->getFillable() !== []) {
+            $this->mergeFillable(['english_snapshot']);
+        }
+    }
+
     public static function bootHasEnglishTranslation(): void
     {
         static::saving(function (self $model): void {
+            // Форма, відкрита до автоперекладу, містить старий (часто порожній) англійський розділ. Якщо редактор
+            // його не чіпав (стан збігається зі знімком при відкритті), лишаємо переклад, що вже є в БД.
+            if (array_key_exists('english_snapshot', $model->attributes)) {
+                $snapshot = $model->attributes['english_snapshot'];
+                unset($model->attributes['english_snapshot']);
+                if ($model->exists && is_string($snapshot) && $snapshot !== '' && hash_equals($snapshot, $model->englishStateHash())) {
+                    foreach ([...array_map(fn ($field) => $field.'_en', $model->translationSourceFields()), 'translation_published'] as $field) {
+                        if ($model->isDirty($field)) {
+                            $model->attributes[$field] = $model->getRawOriginal($field);
+                        }
+                    }
+                }
+            }
+
             $fields = array_map(fn ($field) => $field.'_en', $model->translationSourceFields());
             if ($model->translation_published && ($model->isDirty($fields) || $model->isDirty('translation_published'))
                 && ! $model->hasCompleteEnglishTranslation()) {
@@ -56,13 +79,53 @@ trait HasEnglishTranslation
                 ]);
             }
 
-            // Зміна лише оригіналу не підтверджує актуальність перекладу.
-            if ($model->isDirty($fields) || ($model->translation_published && $model->isDirty('translation_published'))) {
+            // Зміна лише оригіналу не підтверджує актуальність перекладу. Автопереклад хеш ставить сам
+            // (часткове заповнення без дозволу оновлювати не робить застарілий переклад актуальним).
+            if (! AutoTranslator::isWriting() && ($model->isDirty($fields) || ($model->translation_published && $model->isDirty('translation_published')))) {
                 $model->translation_source_hash = $model->hasCompleteEnglishTranslation()
                     ? $model->currentTranslationSourceHash()
                     : null;
             }
         });
+
+        // Автопереклад (якщо ввімкнено): запис без актуального перекладу — у чергу translation_jobs.
+        static::saved(function (self $model): void {
+            AutoTranslator::queueAfterSave($model);
+        });
+    }
+
+    /**
+     * Знімок англійських полів і публікації для форми: значення нормалізуються кастами моделі (SafeHtml),
+     * як і стан форми під час збереження, тож незмінений розділ дає той самий хеш.
+     */
+    public function englishSnapshot(): string
+    {
+        $scratch = $this->newInstance();
+        foreach ($this->translationSourceFields() as $field) {
+            $scratch->setAttribute($field.'_en', $this->getAttribute($field.'_en'));
+        }
+        $scratch->setAttribute('translation_published', $this->getAttribute('translation_published'));
+
+        return $scratch->englishStateHash();
+    }
+
+    /** Хеш поточних (сирих, уже нормалізованих) значень англійських полів і публікації. */
+    protected function englishStateHash(): string
+    {
+        $state = [];
+        foreach ($this->translationSourceFields() as $field) {
+            $value = $this->attributes[$field.'_en'] ?? null;
+            $state[$field] = filled($value) ? (string) $value : null;
+        }
+        $state['translation_published'] = (bool) ($this->attributes['translation_published'] ?? false);
+
+        return hash('sha256', json_encode($state, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+    }
+
+    /** Поля оригіналу, що мають англійський варіант `<поле>_en` (автопереклад). */
+    public function englishTranslationFields(): array
+    {
+        return $this->translationSourceFields();
     }
 
     protected function translationSourceFields(): array

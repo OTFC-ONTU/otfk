@@ -18,6 +18,8 @@ use App\Filament\Resources\SettingResource\Pages\EditSetting;
 use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\SettingResource\Pages;
 use App\Models\Setting;
+use App\Services\AutoTranslation\AutoTranslator;
+use Illuminate\Database\Eloquent\Builder;
 use App\Rules\SafeUrl;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -93,7 +95,7 @@ class SettingResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->description('Сирий key-value доступ на аварійний випадок. Звичайні налаштування зручніше міняти на сторінках «Контакти та соцмережі», «Оголошення», «Telegram», «Підвал і вигляд».')
+            ->description('Сирий key-value доступ на аварійний випадок. Звичайні налаштування зручніше міняти на сторінках «Контакти та соцмережі», «Оголошення», «Telegram», «Автопереклад», «Підвал і вигляд».')
             ->columns([
                 TextColumn::make('translation_status')->label('Переклад EN')
                     ->state(fn (Setting $record) => Setting::supportsTranslation($record->key, $record->type) ? $record->translationStatus() : 'Не перекладається')->badge(),
@@ -104,6 +106,12 @@ class SettingResource extends Resource
             ->defaultSort('group')
             ->recordActions([EditAction::make()])
             ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+    }
+
+    /** Зашифрований ключ Claude API змінюється лише на сторінці «Автопереклад» (сирий шифротекст тут не потрібен). */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->where('key', '!=', AutoTranslator::API_KEY_SETTING);
     }
 
     public static function getRelations(): array

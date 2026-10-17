@@ -124,6 +124,8 @@ The new site lives on a subdomain of the otfk.od.ua subscription, next to the ol
 
 `mirror-files.yml` works only over SSH of the test hosting; on Plesk, the `file_mirrors` queue is processed by the scheduler (or by the command `otfk:mirror-files` in the Artisan tab).
 
+**Which version is deployed:** `https://new.otfk.od.ua/build/commit.txt` contains the `master` SHA written by `deploy-plesk` into `public/build` (compare it with `git rev-parse origin/master`; the Plesk side takes ~3 minutes after the webhook). A 404 from the webhook step means the Plesk repository was recreated — copy its new webhook URL into `PLESK_DEPLOY_WEBHOOK`.
+
 **Check:** `curl -sI https://new.otfk.od.ua/` — the response has `X-Robots-Tag: noindex, nofollow`; `/`, `/en`, `/admin` (login with 2FA) open; the probe `storage/app/public/_probe.php` → 403 (section 6 of `docs/security-audit.md`); manually `php artisan otfk:seo-smoke --base=https://new.otfk.od.ua --expect=closed` (not run in CI for Plesk — the deployment is asynchronous).
 
 ## Checklist — don't forget
@@ -244,6 +246,10 @@ a terminating callback: Laravel executes it in the same process at the
 If the Telegram post was not sent (the API is unavailable), the news item is still marked
 as published (duplicate protection), and the error is written to the log (`Log::warning`).
 To retry manually: clear `telegram_posted_at` for the news item and save it again.
+
+## Automatic translation (Claude API)
+
+"Налаштування → Автопереклад" (Settings → Automatic translation) in the admin: enter a personal Anthropic API key (console.anthropic.com → API Keys), choose the model, enable it. The key is stored in the DB encrypted with `APP_KEY` — after changing `APP_KEY` (or moving the DB to a server with another key) enter the key again. Translation runs right after saving (`afterResponse`, up to 5 records per request). The scheduler `otfk:auto-translate` (every minute, cron `schedule:run`) is a safety net, not a requirement: it picks up jobs interrupted by `max_execution_time`, retries after temporary API errors (429/5xx) and works through a bulk "translate everything" queue; without it the rest of the queue waits for the next save or the "Обробити чергу зараз" (Process the queue now) button. The hosting needs outbound HTTPS to `api.anthropic.com`. The first full translation: the "Перекласти все неперекладене" (Translate everything untranslated) button or `php artisan otfk:auto-translate --missing`. Set a monthly limit on the page to cap spending.
 
 ## Updating the site later (Option A)
 

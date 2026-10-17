@@ -522,8 +522,8 @@
                 $versionColor = $versionColors[$s['site_version_color'] ?? 'gold'] ?? $versionColors['gold'];
             @endphp
             <div class="container-site flex flex-col items-center justify-center gap-2.5 text-center text-xs text-brand-300 sm:flex-row">
-                {{-- Копірайт дослівно як у підвалі оригіналу otfk.od.ua (рік зафіксований там) --}}
-                <span>© 2014-2025 {{ __('layout.copyright') }}</span>
+                {{-- Копірайт як у підвалі оригіналу otfk.od.ua; кінцевий рік — поточний за Києвом (app.timezone = UTC) --}}
+                <span>© 2014-{{ now('Europe/Kyiv')->year }} {{ __('layout.copyright') }}</span>
                 <x-analytics-settings-link />
                 @if ($versionLabel !== '')
                     <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium ring-1 {{ $versionColor['badge'] }}"
