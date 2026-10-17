@@ -37,7 +37,7 @@ class StaffAndQuizTranslationTest extends TestCase
         foreach (['First', 'Second'] as $i => $label) {
             $question->options()->create([
                 'label' => 'Український варіант '.$i, 'label_en' => $label.' English option',
-                'translation_published' => true, 'points' => $i + 1, 'sort_order' => $i,
+                'translation_published' => true, 'sort_order' => $i,
             ]);
         }
 
@@ -90,12 +90,13 @@ class StaffAndQuizTranslationTest extends TestCase
     public function test_quiz_payload_translates_whole_question_and_keeps_scoring_and_originals(): void
     {
         $question = $this->question();
+        $program = \App\Models\Program::firstOrFail();
+        $question->options()->firstOrFail()->scores()->create(['program_id' => $program->id, 'points' => 2]);
         app()->setLocale('en');
-        $payload = $question->publicPayload();
+        $payload = $question->fresh()->publicPayload();
         $this->assertSame('English quiz question', $payload['q']);
         $this->assertSame(['First English option', 'Second English option'], array_column($payload['options'], 'label'));
-        $this->assertSame([1, 2], array_column($payload['options'], 'pts'));
-        $this->assertSame([null, null], array_column($payload['options'], 'sid'));
+        $this->assertSame([[$program->id => 2], []], array_column($payload['options'], 'scores'));
         $this->get('/en/kviz')->assertOk()->assertSee('English quiz question')->assertSee('First English option');
         $this->get('/kviz')->assertViewHas('questions', fn ($questions) => $questions->find($question->id)->publicPayload()['q'] === 'Українське питання квізу')->assertDontSee('English quiz question');
         $this->assertSame('Українське питання квізу', $question->fresh()->question);
@@ -115,7 +116,7 @@ class StaffAndQuizTranslationTest extends TestCase
             $this->assertSame(['Український варіант 0', 'Український варіант 1'], array_column($payload['options'], 'label'));
             QuizOption::whereKey($option->id)->update(['translation_published' => true, 'label_en' => 'First English option']);
         }
-        $question->options()->create(['label' => 'Новий варіант', 'points' => 3, 'sort_order' => 2]);
+        $question->options()->create(['label' => 'Новий варіант', 'sort_order' => 2]);
         $this->get('/en/kviz')->assertViewHas('questions', fn ($questions) => $questions->find($question->id)->publicPayload()['options'][2]['label'] === 'Новий варіант')->assertDontSee('English quiz question')->assertDontSee('First English option');
         $question->options()->where('sort_order', 2)->delete();
         $question->update(['translation_published' => false]);
@@ -128,7 +129,7 @@ class StaffAndQuizTranslationTest extends TestCase
     {
         $option = $this->question()->options()->firstOrFail();
         $hash = $option->translation_source_hash;
-        $option->update(['points' => 5]);
+        $option->update(['sort_order' => 5]);
         $this->assertFalse($option->translationIsStale());
         $option->update(['label' => 'Змінений варіант']);
         $this->assertSame($hash, $option->translation_source_hash);

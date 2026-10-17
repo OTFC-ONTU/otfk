@@ -34,6 +34,9 @@ class AcademicTranslationTest extends TestCase
     public function test_specialty_translation_reaches_details_cards_form_quiz_and_metadata(): void
     {
         $specialty = $this->specialty();
+        // У квізі показуються спеціальності, ОПП яких отримують бали
+        $program = Program::create(['specialty_id' => $specialty->id, 'title' => 'Українська програма квізу', 'title_en' => 'English quiz program', 'translation_published' => true]);
+        \App\Models\QuizOption::firstOrFail()->scores()->create(['program_id' => $program->id, 'points' => 1]);
         foreach (['/en/spetsialnosti', '/en/spetsialnosti/'.$specialty->slug, '/en/kviz'] as $path) {
             $this->get($path)->assertOk()->assertSee('English specialty')->assertDontSee('Українська спеціальність');
         }
