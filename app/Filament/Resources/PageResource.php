@@ -85,7 +85,7 @@ class PageResource extends Resource
                     ->fileAttachmentsDisk('public')
                     ->fileAttachmentsDirectory('pages')
                     ->fileAttachmentsVisibility('public')
-                    ->helperText('Зображення можна вставляти просто в текст — кнопкою прикріплення в редакторі.')
+                    ->helperText('Фото вставляються в текст кнопкою «Вставити фото» (можна кілька одразу) або перетягуванням у текст; PDF — кнопкою «PDF-файл / відео», на сайті це картка файлу.')
                     ->columnSpanFull(),
                 FileUpload::make('cover_image')->label('Зображення')->image()->directory('pages')->imageEditor()->imageResizeMode('contain')->imageResizeTargetWidth('1600')->imageResizeTargetHeight('1600')->columnSpanFull()
                     ->helperText('Горизонтальне фото вгорі сторінки та в її плитці. Необовʼязково.'),

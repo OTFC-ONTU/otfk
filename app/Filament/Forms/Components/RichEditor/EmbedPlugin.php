@@ -18,13 +18,16 @@ use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 /**
- * Кнопка «PDF / відео» редактора: вставляє <iframe> з PDF (посилання або завантажений файл),
+ * Кнопка «PDF-файл / відео» редактора: вставляє <iframe> з PDF (завантажений файл або посилання),
  * відео YouTube, документом Google Drive/Docs або картою Google. Адреса нормалізується
  * EmbedSource; на сайті PDF показується карткою файлу (FileCards), відео — плеєром.
  */
 class EmbedPlugin implements RichContentPlugin
 {
     public const NAME = 'embed';
+
+    /** Назва кнопки: саме так PDF стає на сайті плиткою-карткою файлу (фото — кнопкою «Вставити фото»). */
+    public const LABEL = 'PDF-файл / відео';
 
     public const UNSUPPORTED = 'Це посилання не можна вбудувати. Підходять YouTube, Google Drive/Docs, карта Google (адреса вбудовування) або PDF на цьому сайті — інші PDF завантажте файлом.';
 
@@ -58,8 +61,8 @@ class EmbedPlugin implements RichContentPlugin
     {
         return [
             RichEditorTool::make(self::NAME)
-                ->label('PDF / відео')
-                ->icon(Heroicon::OutlinedFilm)
+                ->label(self::LABEL.' (на сайті — картка файлу або плеєр)')
+                ->icon(Heroicon::OutlinedDocumentText)
                 ->action(arguments: '$getEditor().isActive(\'embed\') ? { src: $getEditor().getAttributes(\'embed\').src, title: $getEditor().getAttributes(\'embed\').title } : {}')
                 ->activeKey('embed'),
         ];
@@ -69,15 +72,25 @@ class EmbedPlugin implements RichContentPlugin
     {
         return [
             Action::make(self::NAME)
-                ->label('PDF / відео')
-                ->modalHeading('Вбудувати PDF або відео')
-                ->modalDescription('Посилання на YouTube, документ Google Drive/Docs, карту Google (адреса «Вбудувати карту») або PDF — або завантажте PDF. На сайті PDF показується карткою файлу з переглядом, відео — плеєром.')
+                ->label(self::LABEL)
+                ->modalHeading('Вставити PDF-файл або відео')
+                ->modalDescription('PDF на сайті показується плиткою — карткою файлу з назвою, переглядом і завантаженням. Завантажте PDF або вставте посилання на PDF, відео YouTube (буде плеєр), документ Google Drive/Docs чи карту Google. Фото — кнопкою «Вставити фото».')
                 ->modalSubmitActionLabel('Вставити')
                 ->modalWidth(Width::Large)
                 ->fillForm(fn (array $arguments): array => ['url' => $arguments['src'] ?? null, 'title' => $arguments['title'] ?? null])
                 ->schema([
+                    FileUpload::make('file')
+                        ->label('PDF-файл')
+                        ->disk('public')
+                        ->directory('documents/vbudovani')
+                        ->acceptedFileTypes(['application/pdf'])
+                        ->maxSize(20480)
+                        // Читабельне й унікальне ім'я: однакові «Наказ.pdf» з різних сторінок не перезаписують одне одного
+                        ->getUploadedFileNameForStorageUsing(fn (TemporaryUploadedFile $file): string => (Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) ?: 'dokument').'-'.Str::lower(Str::random(6)).'.pdf')
+                        ->live()
+                        ->hidden(fn (Get $get): bool => filled($get('url'))),
                     TextInput::make('url')
-                        ->label('Посилання')
+                        ->label('або посилання')
                         ->placeholder('https://www.youtube.com/watch?v=… або https://drive.google.com/file/d/…')
                         ->maxLength(2048)
                         ->requiredWithout('file')
@@ -88,16 +101,6 @@ class EmbedPlugin implements RichContentPlugin
                             }
                         })
                         ->hidden(fn (Get $get): bool => filled($get('file'))),
-                    FileUpload::make('file')
-                        ->label('або PDF-файл')
-                        ->disk('public')
-                        ->directory('documents/vbudovani')
-                        ->acceptedFileTypes(['application/pdf'])
-                        ->maxSize(20480)
-                        // Читабельне й унікальне ім'я: однакові «Наказ.pdf» з різних сторінок не перезаписують одне одного
-                        ->getUploadedFileNameForStorageUsing(fn (TemporaryUploadedFile $file): string => (Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) ?: 'dokument').'-'.Str::lower(Str::random(6)).'.pdf')
-                        ->live()
-                        ->hidden(fn (Get $get): bool => filled($get('url'))),
                     TextInput::make('title')
                         ->label('Назва')
                         ->helperText('Підпис картки PDF і назва для екранних читачів. Порожня — береться назва файлу або попередній заголовок.')

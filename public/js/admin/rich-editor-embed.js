@@ -78,7 +78,7 @@ export default function () {
                 const dom = document.createElement('div')
                 dom.className = 'otfk-embed-card'
                 dom.contentEditable = 'false'
-                dom.title = 'Виділіть і натисніть «PDF / відео», щоб замінити; Delete — видалити'
+                dom.title = 'Виділіть і натисніть «PDF-файл / відео», щоб замінити; Delete — видалити'
                 dom.style.cssText = 'display:flex;align-items:center;gap:.75rem;margin:.75rem 0;padding:.625rem .75rem;border-radius:.75rem;border:1px solid rgb(148 163 184 / .5);cursor:grab'
                 render(dom, node)
 
