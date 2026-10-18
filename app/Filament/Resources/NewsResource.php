@@ -68,7 +68,7 @@ class NewsResource extends Resource
                 ->fileAttachmentsDisk('public')
                 ->fileAttachmentsDirectory('news')
                 ->fileAttachmentsVisibility('public')
-                ->helperText('Зображення можна вставляти просто в текст — кнопкою прикріплення в редакторі.')
+                ->helperText('Фото вставляються в текст кнопкою «Вставити фото» (можна кілька одразу) або перетягуванням у текст; PDF — кнопкою «PDF-файл / відео», на сайті це картка файлу.')
                 ->columnSpanFull(),
 
             EnglishTranslation::section(false),

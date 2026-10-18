@@ -6,6 +6,7 @@ use App\Filament\Support\SettingsFormPage;
 use App\Models\TranslationJob;
 use App\Services\AutoTranslation\AutoTranslator;
 use App\Services\AutoTranslation\Pricing;
+use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
@@ -263,7 +264,64 @@ class AutoTranslateSettings extends SettingsFormPage
             'pending' => (int) ($status[TranslationJob::PENDING] ?? 0) + (int) ($status[TranslationJob::PROCESSING] ?? 0),
             'failed' => (int) ($status[TranslationJob::FAILED] ?? 0),
             'done' => (int) ($status[TranslationJob::DONE] ?? 0),
+            'skipped' => (int) ($status[TranslationJob::SKIPPED] ?? 0),
             'recent' => TranslationJob::query()->latest('updated_at')->latest('id')->limit(15)->get(),
+            ...$this->dashboardCharts($month),
+        ];
+    }
+
+    /**
+     * Дані графіків: вартість і запити по днях (30 днів) та по місяцях (6 місяців) за київським
+     * часом, розподіл витрат поточного місяця за типами матеріалів. Групування — у PHP,
+     * бо billed_at зберігається в UTC, а день/місяць рахуються за Києвом (однаково для SQLite і MySQL).
+     */
+    private function dashboardCharts(CarbonImmutable $month): array
+    {
+        $today = CarbonImmutable::now('Europe/Kyiv')->startOfDay();
+        $from = AutoTranslator::monthStart(5)->min($today->subDays(29)->utc());
+
+        $days = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $day = $today->subDays($i);
+            $days[$day->format('Y-m-d')] = ['label' => $day->format('d.m'), 'cost' => 0.0, 'requests' => 0, 'tokens' => 0];
+        }
+        $months = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $start = AutoTranslator::monthStart($i)->timezone('Europe/Kyiv');
+            $months[$start->format('Y-m')] = ['label' => $start->locale('uk')->translatedFormat('M'), 'cost' => 0.0, 'requests' => 0];
+        }
+
+        TranslationJob::query()->where('input_tokens', '>', 0)->where('billed_at', '>=', $from)
+            ->select('billed_at', 'cost_usd', 'input_tokens', 'output_tokens')
+            ->orderBy('id')
+            ->each(function (TranslationJob $job) use (&$days, &$months): void {
+                $at = $job->billed_at->timezone('Europe/Kyiv');
+                if (isset($days[$key = $at->format('Y-m-d')])) {
+                    $days[$key]['cost'] += (float) $job->cost_usd;
+                    $days[$key]['requests']++;
+                    $days[$key]['tokens'] += $job->input_tokens + $job->output_tokens;
+                }
+                if (isset($months[$key = $at->format('Y-m')])) {
+                    $months[$key]['cost'] += (float) $job->cost_usd;
+                    $months[$key]['requests']++;
+                }
+            });
+
+        $labels = collect(AutoTranslator::TYPES)->mapWithKeys(fn (array $type) => [$type[0] => $type[1]]);
+        $byType = TranslationJob::query()->where('input_tokens', '>', 0)->where('billed_at', '>=', $month)
+            ->select('translatable_type', DB::raw('COUNT(*) as requests'), DB::raw('COALESCE(SUM(cost_usd), 0) as cost'))
+            ->groupBy('translatable_type')->get()
+            ->map(fn ($row) => [
+                'label' => $labels[$row->translatable_type] ?? class_basename($row->translatable_type),
+                'requests' => (int) $row->requests,
+                'cost' => (float) $row->cost,
+            ])
+            ->sortByDesc(fn (array $row) => [$row['cost'], $row['requests']])->values()->all();
+
+        return [
+            'daily' => array_values($days),
+            'monthly' => array_values($months),
+            'by_type' => $byType,
         ];
     }
 }

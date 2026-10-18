@@ -5,7 +5,10 @@ namespace App\Filament\Forms\Components;
 use DOMDocument;
 use DOMElement;
 use App\Filament\Forms\Components\RichEditor\EmbedPlugin;
+use App\Filament\Forms\Components\RichEditor\InsertImagesAction;
 use DOMXPath;
+use Filament\Actions\Action;
+use Filament\Support\Icons\Heroicon;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\RichEditor\RichEditorTool;
 use Filament\Forms\Components\RichEditor\StateCasts\RichEditorStateCast;
@@ -102,8 +105,19 @@ class HtmlRichEditor extends RichEditor
         foreach ([2, 3, 4] as $level) {
             ($tools["h{$level}"] ?? null)?->jsHandler("window.otfkHtmlEditor ? window.otfkHtmlEditor.heading(\$getEditor(), {$level}) : \$getEditor()?.chain().focus().toggleHeading({ level: {$level} }).run()");
         }
+        // «Прикріпити файли» наводило на думку, що так додаються й PDF; кнопка вставляє лише фото
+        ($tools[InsertImagesAction::NAME] ?? null)?->label(InsertImagesAction::LABEL)->icon(Heroicon::OutlinedPhoto);
 
         return $tools;
+    }
+
+    /** Стандартну дію одного вкладення замінює InsertImagesAction (кілька фото, перетягування кількох). */
+    public function getDefaultActions(): array
+    {
+        return array_map(
+            fn (Action $action): Action => $action->getName() === InsertImagesAction::NAME ? InsertImagesAction::make() : $action,
+            parent::getDefaultActions(),
+        );
     }
 
     /** @return array<StateCast> */
