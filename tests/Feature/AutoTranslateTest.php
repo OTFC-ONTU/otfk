@@ -375,6 +375,36 @@ class AutoTranslateTest extends TestCase
             ->assertSee('Модель відмовилася перекладати цей текст.');
     }
 
+    public function test_dashboard_charts_group_by_kyiv_day_month_and_type(): void
+    {
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-10-18 12:00', 'Europe/Kyiv'));
+        $this->actingAs(User::firstOrFail());
+        $this->enable();
+        // 22:30 UTC 15.10 — це вже 16.10 за Києвом.
+        TranslationJob::create(['translatable_type' => News::class, 'translatable_id' => 1, 'label' => 'Новини: А', 'status' => TranslationJob::DONE, 'model' => 'claude-opus-5-5', 'input_tokens' => 100, 'output_tokens' => 50, 'cost_usd' => 0.25, 'billed_at' => '2026-10-15 22:30:00']);
+        TranslationJob::create(['translatable_type' => Page::class, 'translatable_id' => 1, 'label' => 'Сторінки: Б', 'status' => TranslationJob::DONE, 'model' => 'claude-opus-5-5', 'input_tokens' => 100, 'output_tokens' => 50, 'cost_usd' => 0.5, 'billed_at' => '2026-10-17 09:00:00']);
+        TranslationJob::create(['translatable_type' => Page::class, 'translatable_id' => 2, 'label' => 'Сторінки: В', 'status' => TranslationJob::DONE, 'model' => 'claude-opus-5-5', 'input_tokens' => 100, 'output_tokens' => 50, 'cost_usd' => 1.0, 'billed_at' => '2026-08-10 09:00:00']);
+
+        $stats = (new AutoTranslateSettings)->dashboard();
+
+        $this->assertCount(30, $stats['daily']);
+        $this->assertSame('18.10', $stats['daily'][29]['label']);
+        $byDay = collect($stats['daily'])->keyBy('label');
+        $this->assertSame(0.25, $byDay['16.10']['cost']);
+        $this->assertSame(0, $byDay['15.10']['requests']);
+        $this->assertSame(0.5, $byDay['17.10']['cost']);
+
+        $this->assertCount(6, $stats['monthly']);
+        $this->assertSame([0.0, 0.0, 0.0, 1.0, 0.0, 0.75], array_column($stats['monthly'], 'cost'));
+
+        $this->assertSame(['Сторінки', 'Новини'], array_column($stats['by_type'], 'label'));
+        $this->assertSame(1, $stats['by_type'][0]['requests']);
+
+        $this->get(AutoTranslateSettings::getUrl())->assertOk()
+            ->assertSee('Витрати за 30 днів')->assertSee('Стан черги')->assertSee('По місяцях')
+            ->assertSee('Витрати за типами матеріалів');
+    }
+
     public function test_page_is_admin_only(): void
     {
         $this->actingAs(User::factory()->editor()->create());
