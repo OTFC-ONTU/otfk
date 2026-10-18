@@ -91,4 +91,12 @@ class HeritageProseTest extends TestCase
         $this->assertMatchesRegularExpression('/\.prose-site \{\s*@apply prose prose-slate prose-lg max-w-none/', $css);
         $this->assertDoesNotMatchRegularExpression('/\.heritage-frame \{[^}]*max-w-\[65ch\]/', $css);
     }
+
+    /** Фото в абзаці, вирівняному в редакторі по центру/праворуч, вирівнюється так само і на сайті. */
+    public function test_aligned_paragraph_aligns_its_images(): void
+    {
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        $this->assertMatchesRegularExpression('/\.prose-site :is\(p, h2, h3, h4\)\[style\*="text-align"\] img \{ display: inline-block; \}/', $css);
+    }
 }
