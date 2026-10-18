@@ -97,6 +97,8 @@ class HeritageProseTest extends TestCase
     {
         $css = file_get_contents(resource_path('css/app.css'));
 
-        $this->assertMatchesRegularExpression('/\.prose-site :is\(p, h2, h3, h4\)\[style\*="text-align"\] img \{ display: inline-block; \}/', $css);
+        $this->assertMatchesRegularExpression('/\.prose-site :is\(p, h2, h3, h4\):is\(\[style\*="text-align: center"\][^)]*\[style\*="text-align: right"\][^)]*\) img \{ display: inline-block; \}/', $css);
+        // Звичайний чи justify-абзац фото не зачіпає: воно лишається окремим блоком
+        $this->assertDoesNotMatchRegularExpression('/\[style\*="text-align"\] img/', $css);
     }
 }

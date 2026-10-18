@@ -74,6 +74,38 @@ class EditorInsertImagesTest extends TestCase
             });
     }
 
+    /** Документ, який надішле TipTap після вставки кількох фото, зберігається з постійними адресами всіх файлів. */
+    public function test_several_inserted_photos_are_moved_to_storage_on_save(): void
+    {
+        Storage::fake('public');
+        $page = $this->page();
+        $content = [];
+
+        Livewire::test(EditPage::class, ['record' => $page->getRouteKey()])
+            ->callAction($this->action(), data: ['file' => [UploadedFile::fake()->image('a.jpg'), UploadedFile::fake()->image('b.png')]])
+            ->assertHasNoFormErrors()
+            ->assertDispatched('run-rich-editor-commands', function (string $event, array $params) use (&$content): bool {
+                $content = $params['commands'][0]['arguments'][0];
+
+                return true;
+            })
+            ->set('data.body', ['type' => 'doc', 'content' => [
+                ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Текст']]],
+                ...$content,
+            ]])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $body = $page->fresh()->body;
+        preg_match_all('~<img[^>]*src="/storage/([^"]+)"~', $body, $sources);
+
+        $this->assertCount(2, $sources[1], $body);
+        $this->assertStringNotContainsString('livewire', $body);
+        foreach ($sources[1] as $path) {
+            Storage::disk('public')->assertExists($path);
+        }
+    }
+
     public function test_single_photo_is_inserted_at_cursor_and_pdf_is_rejected(): void
     {
         Storage::fake('public');

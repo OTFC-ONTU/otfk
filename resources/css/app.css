@@ -163,9 +163,10 @@
        і будь-які native <details> із CMS (конференції тощо) — без змін HTML у БД */
     /* Розмір фото з редактора (width/height і inline-стиль у px): на вузькому екрані зменшується пропорційно */
     .prose-site img[width], .prose-site img[style*="width"] { max-width: 100%; height: auto !important; }
-    /* Фото в редакторі — inline-вузол в абзаці: вирівнювання абзацу (по центру/праворуч) має діяти і на сайті,
+    /* Фото в редакторі — inline-вузол в абзаці: вирівнювання абзацу по центру/праворуч має діяти і на сайті (лише ці —
+       justify/left лишають фото окремим блоком, як раніше),
        а preflight робить img блоковим і text-align його не зсуває */
-    .prose-site :is(p, h2, h3, h4)[style*="text-align"] img { display: inline-block; }
+    .prose-site :is(p, h2, h3, h4):is([style*="text-align: center"], [style*="text-align:center"], [style*="text-align: right"], [style*="text-align:right"], [style*="text-align: end"], [style*="text-align:end"]) img { display: inline-block; }
     .prose-site details { @apply my-4 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200; }
     .prose-site details > summary { @apply flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-base font-semibold leading-snug text-brand-950 transition hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-brand-600; }
     .prose-site details > summary::-webkit-details-marker { display: none; }
