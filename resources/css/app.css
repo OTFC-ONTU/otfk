@@ -164,10 +164,14 @@
     /* Розмір фото з редактора (width/height і inline-стиль у px): на вузькому екрані зменшується пропорційно */
     .prose-site img[width], .prose-site img[style*="width"] { max-width: 100%; height: auto !important; }
     /* Імпортований HTML не розширює сторінку на телефоні: inline min-width/width у px, max-width: none на фото чи обгортці
-       і довгі посилання без пробілів інакше розтягують колонку ширше екрана (таблиці мають власну прокрутку) */
-    .prose-site { overflow-wrap: anywhere; }
+       і довгі посилання без пробілів інакше розтягують колонку ширше екрана (таблиці мають власну прокрутку).
+       break-word, а не anywhere: anywhere зменшує min-content комірок, і широка таблиця стискалась замість прокрутки.
+       Власний менший inline max-width (напр. фото 240px) лишається; max-width: none — ні */
+    .prose-site { overflow-wrap: break-word; }
+    .prose-site [style*="width"]:not(table, table *) { min-width: 0 !important; }
     .prose-site :where(img, video, iframe, embed, object),
-    .prose-site [style*="width"]:not(table, table *) { min-width: 0 !important; max-width: 100% !important; }
+    .prose-site [style*="width"]:not([style*="max-width"], table, table *),
+    .prose-site :is([style*="max-width:none"], [style*="max-width: none"]):not(table, table *) { min-width: 0 !important; max-width: 100% !important; }
     /* Фото в редакторі — inline-вузол в абзаці: вирівнювання абзацу по центру/праворуч має діяти і на сайті (лише ці —
        justify/left лишають фото окремим блоком, як раніше),
        а preflight робить img блоковим і text-align його не зсуває */

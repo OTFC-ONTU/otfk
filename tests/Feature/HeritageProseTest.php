@@ -101,13 +101,19 @@ class HeritageProseTest extends TestCase
         // Звичайний чи justify-абзац фото не зачіпає: воно лишається окремим блоком
         $this->assertDoesNotMatchRegularExpression('/\[style\*="text-align"\] img/', $css);
     }
+
     /** Широкий імпортований вміст (inline min-width/width, iframe, довгі посилання) не розширює сторінку на телефоні. */
     public function test_wide_content_does_not_widen_page_on_mobile(): void
     {
         $css = file_get_contents(resource_path('css/app.css'));
 
-        $this->assertStringContainsString('.prose-site { overflow-wrap: anywhere; }', $css);
-        $this->assertStringContainsString('.prose-site [style*="width"]:not(table, table *) { min-width: 0 !important; max-width: 100% !important; }', $css);
+        // break-word (не anywhere): таблиці зберігають min-content і прокручуються, а не стискаються
+        $this->assertStringContainsString('.prose-site { overflow-wrap: break-word; }', $css);
+        $this->assertStringNotContainsString('.prose-site { overflow-wrap: anywhere; }', $css);
+        $this->assertStringContainsString('.prose-site [style*="width"]:not(table, table *) { min-width: 0 !important; }', $css);
+        // Власний менший inline max-width не розтягується до 100%, а max-width: none — обмежується
+        $this->assertStringContainsString('.prose-site [style*="width"]:not([style*="max-width"], table, table *),', $css);
+        $this->assertStringContainsString('.prose-site :is([style*="max-width:none"], [style*="max-width: none"]):not(table, table *) { min-width: 0 !important; max-width: 100% !important; }', $css);
         $this->assertMatchesRegularExpression('/\.prose-site :where\(img, video, iframe, embed, object\),/', $css);
 
         // Колонка grid із текстом не росте до min-content вмісту: без min-w-0 відсоткова max-width не діє

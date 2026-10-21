@@ -21,9 +21,14 @@ use Illuminate\Support\Facades\Storage;
  * JSON із \/ та \uXXXX), налаштування (логотип), редиректи й file_mirrors. Хибний збіг
  * лише зберігає файл — команда помиляється в бік «не чіпати».
  *
- * --apply не видаляє, а переносить файли в storage/app/private/orphan-files/<мітка>/
- * (поза вебом) з manifest.json; --restore=<мітка> повертає їх на місце. Файли, змінені
- * пізніше за --older-than днів, пропускаються (щойно завантажене в незбережену форму).
+ * Файли старого сайту (mirror/, imported/, news/imported/, documents/…/<md5>.pdf) типово
+ * не перевіряються: otfk:legacy-map будує з них карту старих адрес, навіть якщо в тексті
+ * на них уже немає посилань (--include-legacy — перевіряти й їх).
+ *
+ * --apply не видаляє, а переносить файли в storage/app/private/orphan-files/<мітка>/files/
+ * (поза вебом); manifest.json із запланованим списком пишеться ДО перенесення, а
+ * --restore=<мітка> повертає все, що лежить у files/, тож обірваний запуск теж
+ * відновлюється. Файли, змінені пізніше за --older-than днів, пропускаються.
  */
 class OrphanFiles extends Command
 {
@@ -32,7 +37,10 @@ class OrphanFiles extends Command
         {--path= : Перевіряти лише цей каталог диска, напр. documents/vbudovani}
         {--older-than=1 : Пропускати файли, змінені менше ніж N днів тому}
         {--limit=200 : Скільки файлів показати у звіті (0 — усі)}
-        {--restore= : Повернути файли з кошика за назвою його каталогу}';
+        {--include-legacy : Перевіряти й файли старого сайту (mirror, imported, news/imported, md5-PDF документів)}
+        {--find= : Показати, які таблиці та стовпці посилаються на цей файл (шлях на диску)}
+        {--restore= : Повернути файли з кошика за назвою його каталогу}
+        {--trash-dir= : Каталог кошика (типово storage/app/private/orphan-files)}';
 
     protected $description = 'Звіт/перенесення в кошик файлів storage/app/public, на які не посилається жоден запис БД';
 
@@ -47,6 +55,11 @@ class OrphanFiles extends Command
     /** Тимчасові/службові каталоги диска. */
     private const SKIP_DIRS = ['livewire-tmp/'];
 
+    /** Файли старого сайту, з яких otfk:legacy-map будує карту старих адрес. */
+    private const LEGACY_DIRS = ['mirror/', 'imported/', 'news/imported/'];
+
+    private const LEGACY_PATTERN = '~^documents/[^/]+/[0-9a-f]{32}\.pdf$~';
+
     /** Оригінали, для яких ImageOptimizer створює сусідню .webp-копію. */
     private const WEBP_SOURCES = ['jpg', 'jpeg', 'png'];
 
@@ -54,6 +67,9 @@ class OrphanFiles extends Command
     {
         if ($this->option('restore')) {
             return $this->restore((string) $this->option('restore'));
+        }
+        if ($this->option('find')) {
+            return $this->find(trim((string) $this->option('find'), '/'));
         }
 
         $disk = Storage::disk('public');
@@ -64,20 +80,30 @@ class OrphanFiles extends Command
             return self::FAILURE;
         }
 
-        $cutoff = now()->subDays(max(0, (int) $this->option('older-than')))->getTimestamp();
-        $haystack = $this->referenceHaystack();
-
+        $legacy = (bool) $this->option('include-legacy');
         $files = array_values(array_filter(
             $prefix === '' ? $disk->allFiles() : $disk->allFiles($prefix),
             fn (string $path) => ! str_starts_with(basename($path), '.')
-                && ! $this->startsWithAny($path, self::SKIP_DIRS),
+                && ! $this->startsWithAny($path, self::SKIP_DIRS)
+                && ($legacy || ! $this->isLegacy($path)),
         ));
-        $present = array_flip($files);
 
+        $referenced = $this->referencedFiles($files, $this->referenceHaystack());
+
+        $usedImages = [];
+        foreach ($files as $path) {
+            $ext = pathinfo($path, PATHINFO_EXTENSION);
+            if (isset($referenced[$path]) && in_array(strtolower($ext), self::WEBP_SOURCES, true)) {
+                $usedImages[substr($path, 0, -strlen($ext) - 1)] = true;
+            }
+        }
+
+        $cutoff = now()->subDays(max(0, (int) $this->option('older-than')))->getTimestamp();
         $orphans = [];
         $recent = 0;
         foreach ($files as $path) {
-            if (str_contains($haystack, $path) || $this->isVariantOfUsed($path, $present, $haystack)) {
+            // .webp-копія ImageOptimizer живе, доки використовується її оригінал (будь-який регістр розширення).
+            if (isset($referenced[$path]) || (str_ends_with(strtolower($path), '.webp') && isset($usedImages[substr($path, 0, -5)]))) {
                 continue;
             }
             if ($disk->lastModified($path) > $cutoff) {
@@ -88,7 +114,7 @@ class OrphanFiles extends Command
             $orphans[$path] = $disk->size($path);
         }
 
-        $this->report($orphans, count($files), $recent);
+        $this->report($orphans, count($files), $recent, $legacy);
 
         if (! $this->option('apply') || $orphans === []) {
             return self::SUCCESS;
@@ -98,12 +124,77 @@ class OrphanFiles extends Command
     }
 
     /**
+     * Точна перевірка «шлях входить у haystack» без str_contains для кожного файлу: шлях
+     * закінчується на «.розширення», тож будь-яке його входження закінчується там, де в
+     * haystack закінчується це розширення. Для кожного розширення знаходимо ці позиції один раз
+     * і порівнюємо хвости потрібної довжини через хеш-множину.
+     *
+     * @param  list<string>  $files
+     * @return array<string, true>
+     */
+    private function referencedFiles(array $files, string $haystack): array
+    {
+        $groups = [];
+        $referenced = [];
+        foreach ($files as $path) {
+            $ext = pathinfo($path, PATHINFO_EXTENSION);
+            if ($ext === '' || str_contains($ext, '/')) {
+                if (str_contains($haystack, $path)) {
+                    $referenced[$path] = true;
+                }
+
+                continue;
+            }
+            $groups['.'.$ext][strlen($path)][] = $path;
+        }
+
+        foreach ($groups as $suffix => $byLength) {
+            $ends = [];
+            $offset = 0;
+            while (($pos = strpos($haystack, $suffix, $offset)) !== false) {
+                $ends[] = $pos + strlen($suffix);
+                $offset = $pos + 1;
+            }
+            if ($ends === []) {
+                continue;
+            }
+            foreach ($byLength as $length => $paths) {
+                $tails = [];
+                foreach ($ends as $end) {
+                    if ($end >= $length) {
+                        $tails[substr($haystack, $end - $length, $length)] = true;
+                    }
+                }
+                foreach ($paths as $path) {
+                    if (isset($tails[$path])) {
+                        $referenced[$path] = true;
+                    }
+                }
+            }
+        }
+
+        return $referenced;
+    }
+
+    /**
      * Усі текстові значення БД одним рядком, нормалізовані так, щоб шлях файлу шукався
      * простим входженням: HTML-сутності, екранування JSON (\/ і \uXXXX), URL-кодування.
      */
     private function referenceHaystack(): string
     {
         $parts = [];
+        $this->eachTextValue(function (string $table, string $column, string $value) use (&$parts): void {
+            $parts[] = $value;
+        });
+        $haystack = implode("\n", $parts);
+        unset($parts);
+
+        return $haystack;
+    }
+
+    /** @param  callable(string, string, string): void  $callback  таблиця, стовпець, нормалізоване значення */
+    private function eachTextValue(callable $callback): void
+    {
         // Лише поточна БД: без схеми MySQL повертає таблиці всіх доступних баз.
         foreach (Schema::getTables(Schema::getCurrentSchemaName()) as $table) {
             $name = $table['name'];
@@ -118,15 +209,13 @@ class OrphanFiles extends Command
                 continue;
             }
             foreach (DB::table($name)->select($columns)->cursor() as $row) {
-                foreach ((array) $row as $value) {
+                foreach ((array) $row as $column => $value) {
                     if (is_string($value) && $value !== '' && str_contains($value, '.')) {
-                        $parts[] = $this->normalize($value);
+                        $callback($name, $column, $this->normalize($value));
                     }
                 }
             }
         }
-
-        return implode("\n", $parts);
     }
 
     private function normalize(string $value): string
@@ -146,27 +235,40 @@ class OrphanFiles extends Command
         return $value;
     }
 
-    /** .webp-копія ImageOptimizer живе, доки використовується її оригінал. */
-    private function isVariantOfUsed(string $path, array $present, string $haystack): bool
+    private function isLegacy(string $path): bool
     {
-        if (strtolower(pathinfo($path, PATHINFO_EXTENSION)) !== 'webp') {
-            return false;
-        }
-        $base = substr($path, 0, -strlen('.webp'));
-        foreach (self::WEBP_SOURCES as $ext) {
-            foreach ([$ext, strtoupper($ext)] as $variant) {
-                $source = $base.'.'.$variant;
-                if (isset($present[$source]) && str_contains($haystack, $source)) {
-                    return true;
-                }
-            }
+        return $this->startsWithAny($path, self::LEGACY_DIRS) || preg_match(self::LEGACY_PATTERN, $path) === 1;
+    }
+
+    /** Де саме згадується файл — щоб прибрати всі посилання перед видаленням (напр. персональні дані). */
+    private function find(string $path): int
+    {
+        if (! Storage::disk('public')->exists($path)) {
+            $this->warn("Файлу {$path} немає на диску public — шукаю лише згадки в БД.");
         }
 
-        return false;
+        $hits = [];
+        $this->eachTextValue(function (string $table, string $column, string $value) use ($path, &$hits): void {
+            if (str_contains($value, $path)) {
+                $hits["{$table}.{$column}"] = ($hits["{$table}.{$column}"] ?? 0) + 1;
+            }
+        });
+
+        if ($hits === []) {
+            $this->info("Посилань на {$path} у БД немає.");
+
+            return self::SUCCESS;
+        }
+        foreach ($hits as $place => $count) {
+            $this->line("  {$place}: {$count}");
+        }
+        $this->info('Файл використовується: приберіть ці посилання (зокрема англійську версію, чернетки, редиректи), тоді він стане «сиротою».');
+
+        return self::SUCCESS;
     }
 
     /** @param  array<string, int>  $orphans */
-    private function report(array $orphans, int $total, int $recent): void
+    private function report(array $orphans, int $total, int $recent, bool $legacy): void
     {
         $limit = max(0, (int) $this->option('limit'));
         $shown = 0;
@@ -193,9 +295,17 @@ class OrphanFiles extends Command
             'Перевірено файлів: %d; без посилань: %d (%s); пропущено нових (молодші за --older-than): %d.',
             $total, count($orphans), $this->humanSize(array_sum($orphans)), $recent,
         ));
+        if (! $legacy) {
+            $this->comment('Файли старого сайту (mirror/, imported/, news/imported/, md5-PDF документів) не перевірялись — див. --include-legacy.');
+        }
         if (! $this->option('apply') && $orphans !== []) {
             $this->comment('Це лише звіт. Щоб перенести файли в кошик (з можливістю повернення), додайте --apply.');
         }
+    }
+
+    private function trashRoot(): string
+    {
+        return rtrim((string) ($this->option('trash-dir') ?: storage_path(self::TRASH_DIR)), '/\\');
     }
 
     /** @param  array<string, int>  $orphans */
@@ -203,29 +313,30 @@ class OrphanFiles extends Command
     {
         $disk = Storage::disk('public');
         $batch = now()->format('Ymd-His').'-'.bin2hex(random_bytes(3));
-        $dir = storage_path(self::TRASH_DIR.'/'.$batch);
+        $dir = $this->trashRoot().'/'.$batch;
         File::ensureDirectoryExists($dir.'/files');
 
-        $moved = [];
+        // Маніфест — до перенесення: обірваний запуск лишає зрозумілий кошик, який --restore поверне.
+        File::put($dir.'/manifest.json', json_encode([
+            'created_at' => now()->toIso8601String(),
+            'files' => array_keys($orphans),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
+
+        $moved = 0;
         $failed = 0;
         foreach (array_keys($orphans) as $path) {
             $target = $dir.'/files/'.$path;
             File::ensureDirectoryExists(dirname($target));
             if (@rename($disk->path($path), $target)) {
-                $moved[] = $path;
+                $moved++;
             } else {
                 $failed++;
                 $this->warn("Не вдалося перенести {$path}");
             }
         }
 
-        File::put($dir.'/manifest.json', json_encode([
-            'created_at' => now()->toIso8601String(),
-            'files' => $moved,
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
-
-        $this->info(sprintf('Перенесено в кошик %s: %d файлів. Повернути: php artisan otfk:orphan-files --restore=%s', 'storage/'.self::TRASH_DIR.'/'.$batch, count($moved), $batch));
-        $this->comment('Коли переконаєтеся, що на сайті нічого не зламалось, каталог кошика можна видалити вручну.');
+        $this->info(sprintf('Перенесено в кошик %s: %d файлів. Повернути: php artisan otfk:orphan-files --restore=%s', $dir, $moved, $batch));
+        $this->comment('Перевірте сайт і журнал 404 (звернення до /storage/…); коли все гаразд, каталог кошика можна видалити вручну.');
 
         return $failed > 0 ? self::FAILURE : self::SUCCESS;
     }
@@ -237,24 +348,19 @@ class OrphanFiles extends Command
 
             return self::FAILURE;
         }
-        $dir = storage_path(self::TRASH_DIR.'/'.$batch);
-        $manifest = json_decode((string) @file_get_contents($dir.'/manifest.json'), true);
-        if (! is_array($manifest) || ! is_array($manifest['files'] ?? null)) {
-            $this->error("Кошика {$batch} немає або в ньому відсутній manifest.json.");
+        $dir = $this->trashRoot().'/'.$batch.'/files';
+        if (! is_dir($dir)) {
+            $this->error("Кошика {$batch} немає.");
 
             return self::FAILURE;
         }
 
+        // Повертаємо те, що фактично лежить у кошику (маніфест може бути неповним після збою).
         $disk = Storage::disk('public');
         $restored = 0;
         $skipped = 0;
-        foreach ($manifest['files'] as $path) {
-            $source = $dir.'/files/'.$path;
-            if (! is_string($path) || str_contains($path, '..') || ! is_file($source)) {
-                $skipped++;
-
-                continue;
-            }
+        foreach (File::allFiles($dir, true) as $file) {
+            $path = str_replace('\\', '/', $file->getRelativePathname());
             if ($disk->exists($path)) {
                 $this->warn("Пропущено {$path}: на диску вже є файл з цим іменем.");
                 $skipped++;
@@ -262,7 +368,7 @@ class OrphanFiles extends Command
                 continue;
             }
             File::ensureDirectoryExists(dirname($disk->path($path)));
-            if (@rename($source, $disk->path($path))) {
+            if (@rename($file->getPathname(), $disk->path($path))) {
                 $restored++;
             } else {
                 $this->warn("Не вдалося повернути {$path}");
@@ -288,6 +394,10 @@ class OrphanFiles extends Command
 
     private function humanSize(int $bytes): string
     {
-        return $bytes >= 1048576 ? sprintf('%.1f МБ', $bytes / 1048576) : sprintf('%.0f КБ', $bytes / 1024);
+        return match (true) {
+            $bytes >= 1048576 => sprintf('%.1f МБ', $bytes / 1048576),
+            $bytes >= 1024 => sprintf('%.0f КБ', $bytes / 1024),
+            default => $bytes.' Б',
+        };
     }
 }
