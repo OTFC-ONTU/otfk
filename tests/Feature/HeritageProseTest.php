@@ -102,6 +102,16 @@ class HeritageProseTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/\[style\*="text-align"\] img/', $css);
     }
 
+    /** Текст, вирівняний по ширині, на телефоні показується ліворуч; центр/праворуч і ПК не змінюються. */
+    public function test_justified_text_aligns_left_on_mobile(): void
+    {
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        $this->assertMatchesRegularExpression('/@media \(width < 40rem\) \{\s*\.prose-site :is\(\[style\*="text-align: justify"\], \[style\*="text-align:justify"\], \[align="justify" i\]\) \{ text-align: left !important; \}\s*\}/', $css);
+        // Лише justify: центр/праворуч не перевизначаються, і без медіазапиту правила немає
+        $this->assertDoesNotMatchRegularExpression('/text-align: (center|right)[^}]*\{ text-align: left/', $css);
+        $this->assertSame(1, substr_count($css, '{ text-align: left !important; }'));
+    }
     /** Широкий імпортований вміст (inline min-width/width, iframe, довгі посилання) не розширює сторінку на телефоні. */
     public function test_wide_content_does_not_widen_page_on_mobile(): void
     {

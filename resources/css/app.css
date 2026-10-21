@@ -176,6 +176,12 @@
        justify/left лишають фото окремим блоком, як раніше),
        а preflight робить img блоковим і text-align його не зсуває */
     .prose-site :is(p, h2, h3, h4):is([style*="text-align: center"], [style*="text-align:center"], [style*="text-align: right"], [style*="text-align:right"], [style*="text-align: end"], [style*="text-align:end"]) img { display: inline-block; }
+    /* Вирівнювання по ширині на телефоні: у вузькій колонці (35–45 знаків) пробіли розтягуються в «ріки», тож до sm —
+       ліворуч (inline-стиль редактора й імпортований align="justify"; у БД без змін, на ПК — як обрав редактор).
+       Центр/праворуч не чіпаємо — це свідомий вибір для підписів і фото */
+    @media (width < 40rem) {
+        .prose-site :is([style*="text-align: justify"], [style*="text-align:justify"], [align="justify" i]) { text-align: left !important; }
+    }
     .prose-site details { @apply my-4 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200; }
     .prose-site details > summary { @apply flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-base font-semibold leading-snug text-brand-950 transition hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-brand-600; }
     .prose-site details > summary::-webkit-details-marker { display: none; }
