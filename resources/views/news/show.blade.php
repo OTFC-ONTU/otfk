@@ -100,7 +100,7 @@
     </section>
 
     <section class="container-site grid gap-10 py-12 lg:grid-cols-12">
-        <article class="lg:col-span-8"
+        <article class="min-w-0 lg:col-span-8"
                  x-data="{
                      imgs: [], idx: null,
                      init() {

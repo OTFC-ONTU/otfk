@@ -59,7 +59,7 @@
     <div @class(['grid gap-8 lg:grid-cols-4 lg:items-start', 'mt-12' => $featured->isNotEmpty()])>
 
         {{-- Усі сторінки розділу: живий пошук + пронумеровані картки --}}
-        <div class="lg:col-span-3"
+        <div class="min-w-0 lg:col-span-3"
              x-data="{
                  q: '',
                  items: @js($needles),
