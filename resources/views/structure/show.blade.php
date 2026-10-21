@@ -71,7 +71,7 @@
     </section>
 
     <section class="container-site grid gap-10 py-12 lg:grid-cols-3">
-        <div class="lg:col-span-2">
+        <div class="min-w-0 lg:col-span-2">
             @if (filled($department->localized('description')))
                 <x-prose.article :drop-cap="false">
                     {!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($staffCount ? \App\Support\DepartmentStaffAnchor::links($department->localized('description')) : $department->localized('description')))), false) !!}

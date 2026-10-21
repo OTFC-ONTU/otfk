@@ -11,7 +11,7 @@
 @endphp
 
 <section class="container-site grid gap-10 py-12 lg:grid-cols-3 lg:items-start">
-    <div class="lg:col-span-2">
+    <div class="min-w-0 lg:col-span-2">
         @if ($page->cover_image)
             <x-picture :path="$page->cover_image" :alt="$page->localized('title')" sized decoding="async"
                        class="mb-8 w-full rounded-2xl object-cover" />

@@ -117,7 +117,7 @@
                 </div>
             </aside>
 
-            <div class="order-1 lg:order-2 lg:col-span-9">
+            <div class="order-1 min-w-0 lg:order-2 lg:col-span-9">
                 @if ($sectionPage && $search === '')
                     {{-- Розділ має CMS-сторінку з повним вмістом оригіналу: показуємо її замість списку документів --}}
                     <x-prose.article>
