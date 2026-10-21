@@ -228,6 +228,16 @@ The CSV is built by `php artisan otfk:legacy-map --out=storage/app/private/legac
 - `storage/logs/security-*.log` and `storage/app/private/sanitize-backup-*.json` are not included in `storage-export` — copy them manually if needed.
 - GitHub Actions secrets (`REMOTE_HOST`, `REMOTE_USER`, `REMOTE_KEY`, `REMOTE_PATH`, `REMOTE_PORT`) must be moved to the new server (for `test`; the Plesk branch `master` is deployed via Laravel Toolkit and does not use the SSH secrets) — otherwise autodeploy will keep going to the old server.
 
+## Unused uploaded files
+
+Removing a PDF/photo from a page in the editor (or clearing a file field) removes only the link; the file stays in `storage/app/public` and is still served by its direct `/storage/…` URL. To find and remove such files, run in Toolkit «Виконавець» (Plesk) or over SSH on the test hosting:
+
+1. `php artisan otfk:orphan-files` — report only (add `--path=documents/vbudovani` to limit the directory, `--limit=0` to list everything).
+2. `php artisan otfk:orphan-files --apply` — moves the listed files to `storage/app/private/orphan-files/<batch>/` (not public) with a manifest.
+3. If something broke: `php artisan otfk:orphan-files --restore=<batch>`. Once the site is checked, the batch directory can be deleted by hand.
+
+Run it on the server whose DB and files belong together (never compare local files with a remote DB). A file referenced anywhere in the DB — even by a draft, an unpublished record or a redirect — is kept.
+
 ## Availability monitoring (no code)
 
 Free options: [UptimeRobot](https://uptimerobot.com) or Better Stack — ping `https://your-domain/` every 5 minutes. Notifications by email/Telegram if the site goes down.
