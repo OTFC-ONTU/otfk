@@ -489,7 +489,7 @@
                 <h3 class="text-sm font-semibold uppercase tracking-wide text-white">{{ __('layout.partners') }}</h3>
                 <ul class="mt-4 space-y-2 text-sm text-brand-200">
                     @forelse ($partners as $partner)
-                        <li><a href="{{ \App\Support\LocalizedUrl::to($partner->url) }}" @if ($partner->open_new_tab) target="_blank" rel="noopener" @endif class="hover:text-white">{{ $partner->localized('title') }}</a></li>
+                        <li><a href="{{ \App\Support\LocalizedUrl::to($partner->url) }}" @if ($partner->open_new_tab) target="_blank" @endif @if ($partner->rel()) rel="{{ $partner->rel() }}" @endif class="hover:text-white">{{ $partner->localized('title') }}</a></li>
                     @empty
                         <li><a href="https://onaft.edu.ua" target="_blank" rel="noopener" class="hover:text-white">{{ __('layout.university') }}</a></li>
                         <li><a href="https://mon.gov.ua" target="_blank" rel="noopener" class="hover:text-white">{{ __('layout.ministry') }}</a></li>

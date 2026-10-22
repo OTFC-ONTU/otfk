@@ -91,10 +91,20 @@ class QuizProgramScoringTest extends TestCase
             ->assertDontSee('winnerId === '.$program->id.'"', false);
     }
 
+    /**
+     * Відкочує дві міграції квізу разом з усіма новішими (кількість кроків
+     * рахується від назви, тож нові міграції після них не ламають тест).
+     */
+    private function rollbackQuizMigrations(): void
+    {
+        $steps = DB::table('migrations')->where('migration', '>=', '2026_10_17_100000_create_quiz_option_scores_table')->count();
+        Artisan::call('migrate:rollback', ['--step' => $steps]);
+    }
+
     /** Стара прив’язка «варіант → спеціальність» переноситься на всі ОПП спеціальності. */
     public function test_migration_moves_specialty_links_to_all_programs_of_specialty(): void
     {
-        Artisan::call('migrate:rollback', ['--step' => 2]);
+        $this->rollbackQuizMigrations();
 
         $specialty = Specialty::whereHas('programs', null, '>', 1)->firstOrFail();
         $questionId = DB::table('quiz_questions')->insertGetId(['question' => 'Власне питання редактора', 'sort_order' => 99, 'is_active' => true]);
@@ -114,7 +124,7 @@ class QuizProgramScoringTest extends TestCase
 
     public function test_untouched_legacy_quiz_is_replaced_and_edited_one_is_kept(): void
     {
-        Artisan::call('migrate:rollback', ['--step' => 2]);
+        $this->rollbackQuizMigrations();
         DB::table('quiz_questions')->delete();
         foreach (['Чим би ти зайнявся у вільний вечір?', 'Обери свій інструмент:'] as $i => $text) {
             DB::table('quiz_questions')->insert(['question' => $text, 'sort_order' => $i, 'is_active' => true]);
