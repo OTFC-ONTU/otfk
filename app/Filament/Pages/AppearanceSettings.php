@@ -61,6 +61,7 @@ class AppearanceSettings extends SettingsFormPage
                 'title_en' => $link->title_en,
                 'url' => $link->url,
                 'open_new_tab' => $link->open_new_tab,
+                'nofollow' => $link->nofollow,
                 'is_visible' => $link->is_visible,
             ])
             ->all();
@@ -90,9 +91,11 @@ class AppearanceSettings extends SettingsFormPage
                                 TextInput::make('url')->label('Посилання')->required()->maxLength(255)
                                     ->placeholder('https://...'),
                                 Toggle::make('open_new_tab')->label('У новій вкладці')->default(true)->inline(false),
+                                Toggle::make('nofollow')->label('Не передавати SEO-вагу (nofollow)')->default(true)->inline(false)
+                                    ->helperText('Увімкнено для сторонніх сайтів: пошуковики не вважатимуть посилання рекомендацією коледжу. Вимикайте лише для своїх (ОНТУ, МОН).'),
                                 Toggle::make('is_visible')->label('Показувати')->default(true)->inline(false),
                             ])
-                            ->columns(['sm' => 2, 'lg' => 4])
+                            ->columns(['sm' => 2, 'lg' => 5])
                             ->reorderable()
                             ->addActionLabel('Додати партнера')
                             ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
@@ -157,6 +160,7 @@ class AppearanceSettings extends SettingsFormPage
                 'title_en' => $partner['title_en'] ?? null,
                 'url' => (string) $partner['url'],
                 'open_new_tab' => (bool) ($partner['open_new_tab'] ?? true),
+                'nofollow' => (bool) ($partner['nofollow'] ?? true),
                 'is_visible' => (bool) ($partner['is_visible'] ?? true),
                 'sort_order' => $index,
             ]);
