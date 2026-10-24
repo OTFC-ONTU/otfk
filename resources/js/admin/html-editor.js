@@ -2,6 +2,18 @@
 // чанком лише при першому переході поля в режим «HTML» (App\Filament\Forms\Components\HtmlRichEditor).
 import { formatHtml } from './html-format.js'
 import { detailsSnippet, headingsToDetails } from './html-sections.js'
+import { fixPastedBlocks } from './html-paste-fix.js'
+
+/** Блоки з інтервалом і відступом (public/js/admin/rich-editor-spacing.js, BlockSpacingExtension). */
+const SPACING_TYPES = ['paragraph', 'heading', 'bulletList', 'orderedList']
+const INDENT_TYPES = ['paragraph', 'bulletList', 'orderedList']
+const LISTS = ['bulletList', 'orderedList']
+const MAX_INDENT = 3
+
+/** Сповіщення панелі Filament (без нього — нічого не показуємо). */
+const notify = (title, status = 'info') => {
+    if (window.FilamentNotification) new window.FilamentNotification().title(title)[status]().send()
+}
 
 window.otfkHtmlEditor = {
     formatHtml,
@@ -147,6 +159,112 @@ window.otfkHtmlEditor = {
         const cursor = pos + 1 + Math.min($from.parentOffset, nodes[0].content.size)
         editor.view.dispatch(tr.setSelection(state.selection.constructor.near(tr.doc.resolve(cursor))).scrollIntoView())
         editor.view.focus()
+
+        return true
+    },
+
+    /**
+     * Блоки, до яких застосовуються інтервал і відступ: виділені абзаци/заголовки, а якщо рядок
+     * у списку — сам список (найближчий), щоб змінювалися відстані між пунктами й відступ усього списку.
+     *
+     * @returns {Array<{ pos: number, node: object }>}
+     */
+    spacingTargets(editor, attribute) {
+        const state = editor?.state
+        if (! state) return []
+        const types = attribute === 'spacing' ? SPACING_TYPES : INDENT_TYPES
+        const targets = new Map()
+        const add = (node, pos) => {
+            const $pos = state.doc.resolve(pos + 1)
+            for (let depth = $pos.depth - 1; depth > 0; depth--) {
+                if (LISTS.includes($pos.node(depth).type.name)) {
+                    targets.set($pos.before(depth), $pos.node(depth))
+                    return
+                }
+            }
+            if (types.includes(node.type.name)) targets.set(pos, node)
+        }
+        const { from, to, $from } = state.selection
+        state.doc.nodesBetween(from, to, (node, pos) => {
+            if (! node.isTextblock) return true
+            add(node, pos)
+            return false
+        })
+        if (! targets.size && $from.parent.isTextblock && $from.depth > 0) add($from.parent, $from.before())
+
+        return [...targets].map(([pos, node]) => ({ pos, node }))
+    },
+
+    /** Змінює атрибут блоків-цілей одним кроком історії (Ctrl+Z повертає все разом). */
+    updateTargets(editor, targets, attribute, value) {
+        if (! targets.length) return false
+        const tr = editor.state.tr
+        targets.forEach(({ pos, node }) => tr.setNodeMarkup(pos, undefined, { ...node.attrs, [attribute]: value(node) }))
+        editor.view.dispatch(tr)
+        editor.view.focus()
+
+        return true
+    },
+
+    /** Кнопки «Щільніше» / «Просторіше»; повторне натискання повертає звичайний інтервал. */
+    setBlockSpacing(editor, spacing) {
+        const targets = this.spacingTargets(editor, 'spacing')
+        const reset = targets.length && targets.every(({ node }) => node.attrs.spacing === spacing)
+
+        return this.updateTargets(editor, targets, 'spacing', () => (reset ? null : spacing))
+    },
+
+    blockSpacingIs(editor, spacing) {
+        const targets = this.spacingTargets(editor, 'spacing')
+
+        return targets.length > 0 && targets.every(({ node }) => node.attrs.spacing === spacing)
+    },
+
+    /** Кнопки відступу ліворуч: рівні 1–3, на телефоні крок менший (.prose-site [data-indent]). */
+    changeIndent(editor, delta) {
+        return this.updateTargets(editor, this.spacingTargets(editor, 'indent'), 'indent', (node) => {
+            const level = Math.min(MAX_INDENT, Math.max(0, (Number(node.attrs.indent) || 0) + delta))
+
+            return level ? String(level) : null
+        })
+    },
+
+    /**
+     * «Виправити вставлений текст» (html-paste-fix.js) для блоків верхнього рівня, яких торкається
+     * виділення, або для всього тексту, якщо нічого не виділено. Один крок історії.
+     */
+    fixPastedText(editor) {
+        const state = editor?.state
+        if (! state) return false
+        const { doc, selection } = state
+        const start = selection.empty ? 0 : selection.$from.index(0)
+        const end = selection.empty ? doc.childCount : Math.max(start + 1, selection.$to.indexAfter(0))
+
+        const blocks = []
+        let from = 0
+        for (let index = 0; index < start; index++) from += doc.child(index).nodeSize
+        let to = from
+        for (let index = start; index < end; index++) {
+            blocks.push(doc.child(index).toJSON())
+            to += doc.child(index).nodeSize
+        }
+
+        const { blocks: fixed, changed } = fixPastedBlocks(blocks)
+        if (! changed) {
+            notify('Виправляти нічого: переносів рядків, порожніх абзаців і рядків із «•» не знайдено')
+            return false
+        }
+
+        try {
+            const nodes = fixed.map((json) => state.schema.nodeFromJSON(json))
+            editor.view.dispatch(state.tr.replaceWith(from, to, nodes).scrollIntoView())
+        } catch (error) {
+            console.error(error)
+            notify('Не вдалося виправити цей фрагмент — виділіть менший уривок тексту', 'danger')
+            return false
+        }
+        editor.view.focus()
+        notify('Текст виправлено. Скасувати — Ctrl+Z', 'success')
 
         return true
     },
