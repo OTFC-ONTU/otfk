@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Support\Sanitizer\BlockSpacingAttributeSanitizer;
 use App\Support\Sanitizer\ClassAttributeSanitizer;
 use App\Support\Sanitizer\IframeSourceSanitizer;
 use App\Support\Sanitizer\StyleAttributeSanitizer;
@@ -101,6 +102,12 @@ class HtmlSanitizer
         foreach (['data-trix-attachment', 'data-trix-content-type', 'data-trix-attributes'] as $attribute) {
             $config = $config->allowAttribute($attribute, ['figure']);
         }
+
+        // Пресети інтервалу й відступу з редактора (BlockSpacingExtension) — лише відомі значення
+        $config = $config
+            ->allowAttribute('data-spacing', ['p', 'h2', 'h3', 'h4', 'ul', 'ol'])
+            ->allowAttribute('data-indent', ['p', 'ul', 'ol'])
+            ->withAttributeSanitizer(new BlockSpacingAttributeSanitizer);
 
         return $config;
     }

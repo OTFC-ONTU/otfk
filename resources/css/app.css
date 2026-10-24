@@ -182,6 +182,21 @@
     @media (width < 40rem) {
         .prose-site :is([style*="text-align: justify"], [style*="text-align:justify"], [align="justify" i]) { text-align: left !important; }
     }
+    /* Пресети інтервалу й відступу з редактора (data-spacing / data-indent, BlockSpacingExtension): у HTML — лише
+       назва, розміри тут; на телефоні «просторіше» і крок відступу менші, щоб текст не стискався у вузьку колонку */
+    .prose-site { --otfk-loose: 1.5em; --otfk-loose-item: .75em; --otfk-indent-step: 1rem; }
+    @media (min-width: 640px) { .prose-site { --otfk-loose: 2em; --otfk-loose-item: 1em; --otfk-indent-step: 2.5rem; } }
+    .prose-site :is(p, h2, h3, h4, ul, ol)[data-spacing="compact"] { margin-top: .35em; margin-bottom: .35em; }
+    .prose-site :is(ul, ol)[data-spacing="compact"] > li { margin-top: .1em; margin-bottom: .1em; }
+    .prose-site :is(p, ul, ol)[data-spacing="loose"] { margin-top: var(--otfk-loose); margin-bottom: var(--otfk-loose); }
+    .prose-site :is(h2, h3, h4)[data-spacing="loose"] { margin-top: calc(var(--otfk-loose) * 1.25); margin-bottom: var(--otfk-loose-item); }
+    .prose-site :is(ul, ol)[data-spacing="loose"] > li { margin-top: var(--otfk-loose-item); margin-bottom: var(--otfk-loose-item); }
+    .prose-site :is(ul, ol)[data-spacing] > li > p { margin-top: 0; margin-bottom: 0; }
+    .prose-site > [data-spacing]:first-child { margin-top: 0; }
+    .prose-site > [data-spacing]:last-child { margin-bottom: 0; }
+    .prose-site [data-indent="1"] { margin-inline-start: var(--otfk-indent-step); }
+    .prose-site [data-indent="2"] { margin-inline-start: calc(var(--otfk-indent-step) * 2); }
+    .prose-site [data-indent="3"] { margin-inline-start: calc(var(--otfk-indent-step) * 3); }
     .prose-site details { @apply my-4 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200; }
     .prose-site details > summary { @apply flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-base font-semibold leading-snug text-brand-950 transition hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-brand-600; }
     .prose-site details > summary::-webkit-details-marker { display: none; }
