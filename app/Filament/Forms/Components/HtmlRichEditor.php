@@ -4,6 +4,7 @@ namespace App\Filament\Forms\Components;
 
 use DOMDocument;
 use DOMElement;
+use App\Filament\Forms\Components\RichEditor\BlockSpacingPlugin;
 use App\Filament\Forms\Components\RichEditor\EmbedPlugin;
 use App\Filament\Forms\Components\RichEditor\InsertImagesAction;
 use DOMXPath;
@@ -34,7 +35,7 @@ class HtmlRichEditor extends RichEditor
     /**
      * Розмітка, яку TipTap не зберігає без втрат (без розділювачів — спільна для PHP і JS).
      * Зберігаються: заголовки, списки, цитати, таблиці (colspan/rowspan), details, посилання
-     * з target, зображення з width/height, вирівнювання тексту абзаців і заголовків,
+     * з target, зображення з width/height, вирівнювання тексту абзаців і заголовків, пресети інтервалу/відступу (data-*),
      * <iframe> з усіма атрибутами (вузол EmbedExtension; обгортка <p> навколо нього зникає),
      * рядок заголовка таблиці (thead стає першим рядком tbody з тими самими <th>).
      */
@@ -51,6 +52,9 @@ class HtmlRichEditor extends RichEditor
     /** Кнопки розміру зображення: частка колонки сайту (html-editor.js imageSizes) або вся ширина. */
     private const IMAGE_SIZES = ['small' => 'Мале', 'medium' => 'Середнє', 'large' => 'Велике', '' => 'Уся ширина'];
 
+    /** Кнопка «Виправити вставлений текст». */
+    public const FIX_PASTED = 'fixPastedText';
+
     /** Маркери імпорту (їх читають Page::publicBody(), карта старих адрес, синхронізація). */
     private const MARKER = '<!--imported-from:[^>]*-->';
 
@@ -58,7 +62,15 @@ class HtmlRichEditor extends RichEditor
     {
         parent::setUp();
 
-        $this->plugins([EmbedPlugin::make()]);
+        $this->plugins([EmbedPlugin::make(), BlockSpacingPlugin::make()]);
+
+        // Текст із Word/Telegram: переноси рядків → абзаци, «•» на початку рядка → список (resources/js/admin/html-paste-fix.js)
+        $this->tools([
+            RichEditorTool::make(self::FIX_PASTED)
+                ->label('Виправити вставлений текст: рядки стануть абзацами, рядки з «•» — списком (у виділеному або в усьому тексті)')
+                ->icon(Heroicon::OutlinedSparkles)
+                ->jsHandler('window.otfkHtmlEditor?.fixPastedText($getEditor())'),
+        ]);
 
         // Розмір зображення — кнопками плаваючої панелі (частка колонки сайту) або перетягуванням кутика;
         // width/height зберігаються, пропорції — так само (resources/js/admin/html-editor.js)
@@ -88,9 +100,10 @@ class HtmlRichEditor extends RichEditor
             ['bold', 'italic', 'underline', 'strike', 'subscript', 'superscript', 'link'],
             ['h2', 'h3', 'h4'],
             ['alignStart', 'alignCenter', 'alignEnd', 'alignJustify'],
+            BlockSpacingPlugin::toolNames(),
             ['blockquote', 'bulletList', 'orderedList', 'horizontalRule'],
             ['table', 'details', EmbedPlugin::NAME, ...($this->hasFileAttachments(default: true) ? ['attachFiles'] : [])],
-            ['clearFormatting', 'undo', 'redo'],
+            [self::FIX_PASTED, 'clearFormatting', 'undo', 'redo'],
         ];
     }
 
