@@ -234,10 +234,12 @@
                 pointer-events: none;
             }
             /* Пресети інтервалу й відступу (BlockSpacingPlugin) — як на сайті на комп'ютері (.prose-site у app.css) */
-            .otfk-html-rich-editor .fi-fo-rich-editor-content :is(p, h2, h3, h4, ul, ol)[data-spacing="compact"] { margin-top: .35em !important; margin-bottom: .35em !important; }
+            .otfk-html-rich-editor .fi-fo-rich-editor-content :is(p, h1, h2, h3, h4, h5, h6, ul, ol)[data-spacing="compact"] { margin-top: .35em !important; margin-bottom: .35em !important; }
+            .otfk-html-rich-editor .fi-fo-rich-editor-content [data-spacing="compact"] + :is(p, ul, ol):not([data-spacing]) { margin-top: .35em !important; }
+            .otfk-html-rich-editor .fi-fo-rich-editor-content :is(p, ul, ol):not([data-spacing]):has(+ [data-spacing="compact"]) { margin-bottom: .35em !important; }
             .otfk-html-rich-editor .fi-fo-rich-editor-content :is(ul, ol)[data-spacing="compact"] > li { margin-top: .1em !important; margin-bottom: .1em !important; }
             .otfk-html-rich-editor .fi-fo-rich-editor-content :is(p, ul, ol)[data-spacing="loose"] { margin-top: 2em !important; margin-bottom: 2em !important; }
-            .otfk-html-rich-editor .fi-fo-rich-editor-content :is(h2, h3, h4)[data-spacing="loose"] { margin-top: 2.5em !important; margin-bottom: 1em !important; }
+            .otfk-html-rich-editor .fi-fo-rich-editor-content :is(h1, h2, h3, h4, h5, h6)[data-spacing="loose"] { margin-top: 2.5em !important; margin-bottom: 1em !important; }
             .otfk-html-rich-editor .fi-fo-rich-editor-content :is(ul, ol)[data-spacing="loose"] > li { margin-top: 1em !important; margin-bottom: 1em !important; }
             .otfk-html-rich-editor .fi-fo-rich-editor-content :is(ul, ol)[data-spacing] > li > p { margin-top: 0 !important; margin-bottom: 0 !important; }
             .otfk-html-rich-editor .fi-fo-rich-editor-content [data-indent="1"] { margin-inline-start: 2.5rem !important; }

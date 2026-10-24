@@ -131,12 +131,15 @@ function fixBlocks(nodes, parentType) {
         return splitLines(node)
     })
 
-    // Порожні абзаци-«відступи» не потрібні: відстань між абзацами на сайті задає оформлення
-    const filled = blocks.filter((node) => ! isEmptyParagraph(node))
-    blocks = filled.length ? filled : blocks.slice(0, 1)
+    // Порожні абзаци-«відступи» не потрібні: відстань між абзацами на сайті задає оформлення.
+    // Пункт списку (схема «paragraph block*») має починатися з абзацу — там їх не чіпаємо
+    if (parentType !== 'listItem') {
+        const filled = blocks.filter((node) => ! isEmptyParagraph(node))
+        blocks = filled.length ? filled : blocks.slice(0, 1)
+    }
 
-    // Усередині пункту списку чи таблиці «•» не перетворюємо на вкладений список
-    return ['listItem', 'tableCell', 'tableHeader', 'table', 'tableRow', 'bulletList', 'orderedList'].includes(parentType) ? blocks : buildLists(blocks)
+    // Усередині пункту списку «•» не перетворюємо на вкладений список; у рядках і самих списках блоків-абзаців немає
+    return ['listItem', 'table', 'tableRow', 'bulletList', 'orderedList'].includes(parentType) ? blocks : buildLists(blocks)
 }
 
 /**

@@ -50,6 +50,8 @@ class EditorBlockSpacingTest extends TestCase
         $this->assertStringNotContainsString('data-indent="9"', $clean);
         $this->assertStringNotContainsString('<div data-spacing', $clean);
         $this->assertStringContainsString('<p data-indent="3">c</p>', $clean);
+        // Імпортовані заголовки інших рівнів TipTap теж зберігає — пресет не губиться
+        $this->assertStringContainsString('<h5 data-spacing="loose">d</h5>', HtmlSanitizer::clean('<h5 data-spacing="loose">d</h5>'));
 
         $editor = RichContentRenderer::make()->plugins([BlockSpacingPlugin::make()])->getEditor()->setContent('<p data-spacing="huge">a</p>');
         $this->assertSame('<p>a</p>', $editor->getHtml());
@@ -89,6 +91,9 @@ class EditorBlockSpacingTest extends TestCase
 
         $this->assertStringContainsString('[data-spacing="compact"]', $css);
         $this->assertStringContainsString('[data-spacing="loose"]', $css);
+        // Схлопування відступів: «щільніше» зменшує й відступи сусідів; відступ усередині розгортного блоку — до його поля
+        $this->assertStringContainsString('[data-spacing="compact"] + :is(p, ul, ol):not([data-spacing])', $css);
+        $this->assertStringContainsString('details:not(.content-accordion) > [data-indent="1"]', $css);
         foreach (['1', '2', '3'] as $level) {
             $this->assertStringContainsString('[data-indent="'.$level.'"]', $css);
         }

@@ -105,7 +105,7 @@ class HtmlSanitizer
 
         // Пресети інтервалу й відступу з редактора (BlockSpacingExtension) — лише відомі значення
         $config = $config
-            ->allowAttribute('data-spacing', ['p', 'h2', 'h3', 'h4', 'ul', 'ol'])
+            ->allowAttribute('data-spacing', ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol'])
             ->allowAttribute('data-indent', ['p', 'ul', 'ol'])
             ->withAttributeSanitizer(new BlockSpacingAttributeSanitizer);
 

@@ -238,7 +238,11 @@ window.otfkHtmlEditor = {
         if (! state) return false
         const { doc, selection } = state
         const start = selection.empty ? 0 : selection.$from.index(0)
-        const end = selection.empty ? doc.childCount : Math.max(start + 1, selection.$to.indexAfter(0))
+        // Виділення, що закінчується на самому початку наступного блоку, цей блок не зачіпає
+        const $to = selection.$to
+        let atBlockStart = $to.depth > 0 && $to.parentOffset === 0 && $to.index(0) > start
+        for (let depth = 1; atBlockStart && depth < $to.depth; depth++) atBlockStart = $to.index(depth) === 0
+        const end = selection.empty ? doc.childCount : Math.max(start + 1, atBlockStart ? $to.index(0) : $to.indexAfter(0))
 
         const blocks = []
         let from = 0

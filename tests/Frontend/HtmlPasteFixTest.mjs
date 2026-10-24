@@ -69,3 +69,15 @@ test('уже охайний текст не змінюється', () => {
     const source = [p([text('Абзац')]), { type: 'bulletList', content: [li('пункт')] }, { type: 'heading', attrs: { level: 2 }, content: [text('Заголовок')] }];
     assert.deepEqual(fixPastedBlocks(source), { blocks: source, changed: false });
 });
+
+test('пункт списку лишає порожній перший абзац (схема «paragraph block*»)', () => {
+    const item = { type: 'listItem', content: [p([]), { type: 'bulletList', content: [li('вкладений')] }] };
+    const { blocks } = fixPastedBlocks([{ type: 'bulletList', content: [item] }]);
+    assert.deepEqual(blocks[0].content[0].content[0], p([]));
+});
+
+test('рядки з «•» у клітинці таблиці стають списком', () => {
+    const cell = { type: 'tableCell', content: [p([text('• один'), br, text('• два')])] };
+    const { blocks } = fixPastedBlocks([{ type: 'table', content: [{ type: 'tableRow', content: [cell] }] }]);
+    assert.deepEqual(blocks[0].content[0].content[0].content, [{ type: 'bulletList', content: [li('один'), li('два')] }]);
+});

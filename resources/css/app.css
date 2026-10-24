@@ -184,12 +184,15 @@
     }
     /* Пресети інтервалу й відступу з редактора (data-spacing / data-indent, BlockSpacingExtension): у HTML — лише
        назва, розміри тут; на телефоні «просторіше» і крок відступу менші, щоб текст не стискався у вузьку колонку */
-    .prose-site { --otfk-loose: 1.5em; --otfk-loose-item: .75em; --otfk-indent-step: 1rem; }
-    @media (min-width: 640px) { .prose-site { --otfk-loose: 2em; --otfk-loose-item: 1em; --otfk-indent-step: 2.5rem; } }
-    .prose-site :is(p, h2, h3, h4, ul, ol)[data-spacing="compact"] { margin-top: .35em; margin-bottom: .35em; }
+    .prose-site { --otfk-loose: 1.5em; --otfk-loose-item: .75em; --otfk-indent-step: 1rem; --otfk-details-gap: 1rem; }
+    @media (min-width: 640px) { .prose-site { --otfk-loose: 2em; --otfk-loose-item: 1em; --otfk-indent-step: 2.5rem; --otfk-details-gap: 1.25rem; } }
+    .prose-site :is(p, h1, h2, h3, h4, h5, h6, ul, ol)[data-spacing="compact"] { margin-top: .35em; margin-bottom: .35em; }
+    /* Вертикальні відступи схлопуються до більшого з двох сусідів — «щільніше» зменшує й відступи сусідніх блоків */
+    .prose-site [data-spacing="compact"] + :is(p, ul, ol):not([data-spacing]) { margin-top: .35em; }
+    .prose-site :is(p, ul, ol):not([data-spacing]):has(+ [data-spacing="compact"]) { margin-bottom: .35em; }
     .prose-site :is(ul, ol)[data-spacing="compact"] > li { margin-top: .1em; margin-bottom: .1em; }
     .prose-site :is(p, ul, ol)[data-spacing="loose"] { margin-top: var(--otfk-loose); margin-bottom: var(--otfk-loose); }
-    .prose-site :is(h2, h3, h4)[data-spacing="loose"] { margin-top: calc(var(--otfk-loose) * 1.25); margin-bottom: var(--otfk-loose-item); }
+    .prose-site :is(h1, h2, h3, h4, h5, h6)[data-spacing="loose"] { margin-top: calc(var(--otfk-loose) * 1.25); margin-bottom: var(--otfk-loose-item); }
     .prose-site :is(ul, ol)[data-spacing="loose"] > li { margin-top: var(--otfk-loose-item); margin-bottom: var(--otfk-loose-item); }
     .prose-site :is(ul, ol)[data-spacing] > li > p { margin-top: 0; margin-bottom: 0; }
     .prose-site > [data-spacing]:first-child { margin-top: 0; }
@@ -214,6 +217,10 @@
     .prose-site details:not(.content-accordion) > :not(summary) { @apply mx-4 sm:mx-5; }
     .prose-site details:not(.content-accordion)[open] > :last-child { @apply mb-4; }
     .prose-site details:not(.content-accordion)[open] > summary + * { @apply mt-4; }
+    /* Відступ пресета всередині розгортного блоку — до власного поля блоку (mx-4 / sm:mx-5) */
+    .prose-site details:not(.content-accordion) > [data-indent="1"] { margin-inline-start: calc(var(--otfk-details-gap) + var(--otfk-indent-step)); }
+    .prose-site details:not(.content-accordion) > [data-indent="2"] { margin-inline-start: calc(var(--otfk-details-gap) + var(--otfk-indent-step) * 2); }
+    .prose-site details:not(.content-accordion) > [data-indent="3"] { margin-inline-start: calc(var(--otfk-details-gap) + var(--otfk-indent-step) * 3); }
     .file-card__actions { @apply flex shrink-0 items-center gap-2 self-end; }
     .file-card__description { @apply mt-2 text-sm leading-relaxed text-slate-500; }
     .prose-site :where(.file-card-list, li:has(> .file-card-container)) { margin: 0; padding: 0; list-style: none; }
