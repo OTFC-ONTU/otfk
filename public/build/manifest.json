@@ -4,7 +4,7 @@
     "name": "preload-helper"
   },
   "resources/css/app.css": {
-    "file": "assets/app-B-VkWk6P.css",
+    "file": "assets/app-DVpuYZH9.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -28,7 +28,7 @@
     "isDynamicEntry": true
   },
   "resources/js/admin/html-editor.js": {
-    "file": "assets/html-editor-BGnWJ7TP.js",
+    "file": "assets/html-editor-BMTMXI5y.js",
     "name": "html-editor",
     "src": "resources/js/admin/html-editor.js",
     "isEntry": true,
