@@ -53,6 +53,29 @@ class LocalizationShellTest extends TestCase
         $this->assertSame('Home', $item->localized_label);
     }
 
+    public function test_news_sidebar_and_404_sections_use_translated_menu_labels(): void
+    {
+        $root = MenuItem::navigation()->first(fn (MenuItem $item) => $item->page?->slug === 'abituriyentu');
+        $this->assertNotNull($root);
+        MenuItem::create([
+            'parent_id' => $root->id, 'label' => 'Правила прийому', 'label_en' => 'Admission rules',
+            'link_type' => 'url', 'url' => '/faq', 'is_visible' => true, 'sort_order' => -100,
+        ]);
+        $root->update(['label_en' => 'For applicants']);
+
+        $news = \App\Models\News::create([
+            'title' => 'Новина для бічної панелі', 'slug' => 'novyna-bichna-panel',
+            'body' => '<p>Текст</p>', 'is_published' => true, 'published_at' => now()->subHour(),
+        ]);
+
+        $this->get('/en/novyny/'.$news->slug)->assertOk()
+            ->assertSee('Admission rules')->assertDontSee('Правила прийому');
+        $this->get('/novyny/'.$news->slug)->assertOk()
+            ->assertSee('Правила прийому');
+
+        $this->get('/en/nemaye-takoyi-storinky')->assertNotFound()->assertSee('For applicants');
+    }
+
     public function test_ukrainian_material_is_preserved_inside_english_shell(): void
     {
         $page = Page::where('slug', 'abituriyentu')->firstOrFail();

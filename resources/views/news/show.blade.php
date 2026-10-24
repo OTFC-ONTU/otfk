@@ -296,7 +296,7 @@
                                     <a href="{{ $link->href }}" @if ($link->open_new_tab) target="_blank" rel="noopener" @endif
                                        class="group inline-flex items-start gap-2 text-brand-100 transition hover:text-white">
                                         <x-ico name="chevron-right" class="mt-0.5 h-4 w-4 shrink-0 text-gold-400 transition group-hover:translate-x-0.5" />
-                                        {{ $link->label }}
+                                        {{ $link->localized_label }}
                                     </a>
                                 </li>
                             @endforeach
