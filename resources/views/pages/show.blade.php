@@ -58,8 +58,13 @@
         {{-- Світла шапка-картка — у стилі решти внутрішніх сторінок --}}
         @php
             $headerIcon = $isHub ? 'folder-open' : 'document-text';
-            $readingMinutes = (int) max(1, round(mb_strlen(strip_tags((string) $page->publicBody())) / 1100));
-            $fileLinks = preg_match_all('/(?:href|src)="[^"]+\.(?:pdf|docx?|xlsx?|pptx?|zip|rar)(?:\?[^"]*)?"/i', (string) $page->publicBody());
+            $publicBody = $page->publicBody();
+            $readingMinutes = (int) max(1, round(mb_strlen(strip_tags($publicBody)) / 1100));
+            $fileLinks = preg_match_all('/(?:href|src)="[^"]+\.(?:pdf|docx?|xlsx?|pptx?|zip|rar)(?:\?[^"]*)?"/i', $publicBody);
+            $excerpt = $page->localized('excerpt');
+            // Єдине місце короткого опису. Якщо тіло сторінки починається з нього, текст лишається лише в тілі;
+            // на хабі тіло йде не одразу під шапкою і може бути скорочене (HubIntro), тож опис лишається в шапці.
+            $showExcerpt = filled($excerpt) && ($isHub || ! \App\Support\LeadExcerpt::repeatsBody($excerpt, $publicBody));
         @endphp
         <section class="border-b border-slate-200/70 bg-slate-50/80">
             <div class="container-site py-8 lg:py-10">
@@ -81,9 +86,8 @@
                         <h1 @class(['text-3xl font-extrabold leading-tight text-brand-950 sm:text-4xl', 'mt-3' => $page->parent])>{{ $page->localized('title') }}</h1>
                         <div class="accent-rule"></div>
 
-                        {{-- Єдине місце короткого опису на звичайній сторінці; якщо тіло починається з нього, текст лишається лише в тілі --}}
-                        @if (filled($page->localized('excerpt')) && ! \App\Support\LeadExcerpt::repeatsBody($page->localized('excerpt'), $page->publicBody()))
-                            <p class="mt-5 max-w-2xl text-lg leading-relaxed text-slate-500">{{ $page->localized('excerpt') }}</p>
+                        @if ($showExcerpt)
+                            <p class="mt-5 max-w-2xl text-lg leading-relaxed text-slate-500">{{ $excerpt }}</p>
                         @endif
 
                         <div class="mt-5 flex flex-wrap items-center gap-2 text-sm">
@@ -106,7 +110,7 @@
                                     </span>
                                 @endif
                             @else
-                                @if (filled($page->publicBody()))
+                                @if (filled($publicBody))
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-gold-50 px-3 py-1 font-semibold text-gold-700 ring-1 ring-gold-300/70">
                                         <x-ico name="clock" class="h-4 w-4" aria-hidden="true" />
                                         {{ __('feature.reading_approx', ['minutes' => $readingMinutes]) }}

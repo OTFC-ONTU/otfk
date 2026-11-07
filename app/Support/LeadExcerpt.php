@@ -15,14 +15,8 @@ class LeadExcerpt
      */
     public static function repeatsBody(?string $excerpt, ?string $body): bool
     {
-        $lead = self::plain($excerpt);
+        $lead = MetaText::clean($excerpt);
 
-        return $lead !== '' && Str::startsWith(self::plain($body), Str::limit($lead, 60, ''));
-    }
-
-    private static function plain(?string $html): string
-    {
-        // Санітайзер кодує символи (наприклад, апостроф), тож порівнюємо вже декодований текст.
-        return Str::squish(html_entity_decode(strip_tags((string) $html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        return $lead !== '' && Str::startsWith(MetaText::clean($body), Str::limit($lead, 60, ''));
     }
 }

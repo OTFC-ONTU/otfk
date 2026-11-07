@@ -3,7 +3,7 @@
 @php
     // НЕ показуємо лід-абзац, якщо тіло вже починається з того самого тексту —
     // інакше перший абзац дублюється на сторінці.
-    $show = filled($excerpt) && ! \App\Support\LeadExcerpt::repeatsBody($excerpt, $body);
+    $show = \App\Support\MetaText::clean($excerpt) !== '' && ! \App\Support\LeadExcerpt::repeatsBody($excerpt, $body);
 @endphp
 
 @if ($show)
