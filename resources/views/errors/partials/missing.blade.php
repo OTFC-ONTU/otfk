@@ -86,7 +86,7 @@
                     @continue($item->href === '#')
                     <a href="{{ $item->href }}"
                        class="flex min-h-16 items-center justify-between gap-3 rounded-2xl bg-white px-5 py-4 shadow-sm ring-1 ring-slate-200/80 transition hover:shadow-md hover:ring-brand-200">
-                        <span class="font-semibold text-brand-950">{{ $item->label }}</span>
+                        <span class="font-semibold text-brand-950">{{ $item->localized_label }}</span>
                         <x-ico name="arrow-right" class="h-4 w-4 shrink-0 text-gold-600" aria-hidden="true" />
                     </a>
                 @endforeach

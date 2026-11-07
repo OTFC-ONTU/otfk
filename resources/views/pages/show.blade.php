@@ -9,6 +9,14 @@
     $featured = $children->where('is_featured', true)->values();
     $rest = $children->where('is_featured', false)->values();
 
+    // Кнопки-посилання: на хабі всі йдуть у спільний список після плиток підсторінок (з прапорцем «Вгорі» —
+    // ще й у «Ключові дії»), на звичайній сторінці — під текстом або над ним; сторінку хабом не роблять
+    $pageLinks = $page->sectionLinks()->visible()->ordered()->get();
+    $featuredLinks = $pageLinks->where('is_featured', true)->values();
+    $sectionLinks = $pageLinks->where('is_featured', false)->values();
+    $hubCardCount = $rest->count() + $pageLinks->count();
+    $keyActionCount = $featured->count() + $featuredLinks->count();
+
     // Сусідні сторінки того самого розділу — і для сайдбару, і для переходів «попередня/наступна»
     $siblings = $page->parent_id
         ? $page->parent->children()->published()->ordered()->get()
@@ -91,14 +99,14 @@
                                     <x-ico name="document-duplicate" class="h-4 w-4" aria-hidden="true" />
                                     {{ $children->count() }} {{ $pageWord($children->count()) }}
                                 </span>
-                                @if ($featured->isNotEmpty())
+                                @if ($keyActionCount > 0)
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 font-semibold text-brand-800 ring-1 ring-brand-100">
                                         <x-ico name="star" class="h-4 w-4" aria-hidden="true" />
-                                        {{ $featured->count() }} {{ $featured->count() === 1 ? __('feature.key_action') : __('feature.key_actions_2') }}
+                                        {{ $keyActionCount }} {{ $keyActionCount === 1 ? __('feature.key_action') : __('feature.key_actions_2') }}
                                     </span>
                                 @endif
                                 {{-- Чип про пошук — лише коли поле пошуку справді показується (див. partials/hub) --}}
-                                @if ($rest->count() > 5)
+                                @if ($hubCardCount > 5)
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-600">
                                         <x-ico name="magnifying-glass" class="h-4 w-4" aria-hidden="true" />
                                         {{ __('feature.quick_search_in_this_section') }}
@@ -144,13 +152,17 @@
                 <x-lead-excerpt :excerpt="$page->localized('excerpt')" :body="$page->publicBody()" heritage />
             </div>
 
+            @include('pages.partials.section-links', ['links' => $featuredLinks, 'top' => true])
+
             @if (filled($page->publicBody()))
                 <x-prose.article heritage :drop-cap="$page->slug === 'istoriya'">
                     {!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->publicBody()))), ! $page->cover_image) !!}
                 </x-prose.article>
-            @else
+            @elseif ($pageLinks->isEmpty())
                 <x-empty-state icon="document-text" title="{{ __('public.no_page_content') }}" />
             @endif
+
+            @include('pages.partials.section-links', ['links' => $sectionLinks])
         </section>
 
         @include('pages.partials.neighbours')

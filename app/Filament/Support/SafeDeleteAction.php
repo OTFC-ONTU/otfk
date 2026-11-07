@@ -132,6 +132,12 @@ class SafeDeleteAction
             $parent = $record->parent_id ? Page::query()->find($record->parent_id) : null;
             $lines[] = "Підсторінок: {$children} — вони перейдуть ".($parent ? 'до розділу «'.$parent->title.'»' : 'на верхній рівень').'.';
         }
+        if ($record instanceof Page && ($buttons = $record->sectionLinks()->count())) {
+            $parent = $record->parent_id ? Page::query()->find($record->parent_id) : null;
+            $lines[] = "Кнопок-посилань: {$buttons} — ".($parent
+                ? 'вони перейдуть до розділу «'.$parent->title.'».'
+                : 'вони лишаться в адмінці без сторінки й не показуватимуться на сайті.');
+        }
         if ($links = self::linkingMaterials($path)) {
             $lines[] = "На цю адресу посилаються інші матеріали ({$links}) — посилання працюватимуть через перенаправлення, але їх краще виправити.";
         }

@@ -2,7 +2,9 @@
 
 @php
     // Пошук по назвах — на клієнті, без запитів на сервер (сторінок у розділі до кількох десятків)
-    $needles = $rest->map(fn ($child) => mb_strtolower($child->localized('title')))->values();
+    $needles = $rest->map(fn ($child) => mb_strtolower($child->localized('title')))
+        ->concat($pageLinks->map(fn ($link) => mb_strtolower($link->localized('title'))))
+        ->values();
 
     // Короткий опис іде вступом над картками; довгий текст (як-от «Виховна робота») —
     // окремою статтею «Про розділ» під картками
@@ -25,8 +27,8 @@
         </x-prose.article>
     @endif
 
-    {{-- Ключові дії розділу — сторінки з прапорцем «Ключова сторінка розділу» в адмінці --}}
-    @if ($featured->isNotEmpty())
+    {{-- Ключові дії розділу — сторінки з прапорцем «Ключова сторінка розділу» і кнопки-посилання з прапорцем «Вгорі» --}}
+    @if ($keyActionCount > 0)
         <div class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <h2 class="text-2xl font-extrabold text-brand-950">{{ __('feature.key_actions') }}</h2>
@@ -53,10 +55,32 @@
                     <x-ico name="arrow-right" class="mt-1 h-5 w-5 shrink-0 text-gold-500 transition group-hover:translate-x-1" aria-hidden="true" />
                 </a>
             @endforeach
+            @foreach ($featuredLinks as $j => $link)
+                @php($i = $featured->count() + $j)
+                <a href="{{ \App\Support\LocalizedUrl::to($link->url) }}"
+                   @if ($link->open_new_tab) target="_blank" @endif
+                   @if ($link->rel()) rel="{{ $link->rel() }}" @endif
+                   class="card card-interactive group flex items-start gap-4 p-5">
+                    <span @class([
+                        'grid h-12 w-12 shrink-0 place-items-center rounded-xl',
+                        'bg-gold-500 text-white' => $i % 2 === 0,
+                        'bg-brand-950 text-gold-400' => $i % 2 !== 0,
+                    ])>
+                        <x-ico name="link" class="h-6 w-6" aria-hidden="true" />
+                    </span>
+                    <span class="min-w-0 flex-1 font-bold leading-snug text-brand-950 group-hover:text-brand-700">
+                        {{ $link->localized('title') }}
+                        @if ($link->open_new_tab)
+                            <span class="sr-only">({{ __('feature.opens_in_new_tab') }})</span>
+                        @endif
+                    </span>
+                    <x-ico :name="$link->open_new_tab ? 'arrow-top-right-on-square' : 'arrow-right'" class="mt-1 h-5 w-5 shrink-0 text-gold-500 transition group-hover:translate-x-1" aria-hidden="true" />
+                </a>
+            @endforeach
         </div>
     @endif
 
-    <div @class(['grid gap-8 lg:grid-cols-4 lg:items-start', 'mt-12' => $featured->isNotEmpty()])>
+    <div @class(['grid gap-8 lg:grid-cols-4 lg:items-start', 'mt-12' => $keyActionCount > 0])>
 
         {{-- Усі сторінки розділу: живий пошук + пронумеровані картки --}}
         <div class="min-w-0 lg:col-span-3"
@@ -77,7 +101,7 @@
                     <h2 class="text-2xl font-extrabold text-brand-950">{{ __('feature.all_pages_in_this_section') }}</h2>
                     <div class="accent-rule"></div>
                 </div>
-                @if ($rest->count() > 5)
+                @if ($hubCardCount > 5)
                     <div class="relative w-full sm:w-80">
                         <x-ico name="magnifying-glass" aria-hidden="true"
                                class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -89,7 +113,7 @@
                 @endif
             </div>
 
-            @if ($rest->count() > 5)
+            @if ($hubCardCount > 5)
                 <p class="mt-3 text-sm text-slate-500" x-show="needle !== ''" x-cloak>
                     {{ __('feature.found') }} <span class="font-semibold text-brand-800" x-text="found"></span>
                     <span x-text="found === 1 ? @js(__('feature.page_2')) : (found >= 2 && found <= 4 ? @js(__('feature.pages')) : @js(__('feature.pages_2')))"></span>
@@ -107,9 +131,12 @@
                         <x-ico name="arrow-right" class="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-brand-600" aria-hidden="true" />
                     </a>
                 @endforeach
+                @foreach ($pageLinks as $i => $link)
+                    @include('pages.partials.section-link-card', ['link' => $link, 'number' => $rest->count() + $i + 1, 'searchIndex' => $rest->count() + $i])
+                @endforeach
             </div>
 
-            @if ($rest->count() > 5)
+            @if ($hubCardCount > 5)
                 <div class="mt-6" x-show="found === 0" x-cloak>
                     <x-empty-state icon="magnifying-glass" title="{{ __('feature.no_pages_match_this_search') }}">
                         <button type="button" @click="q = ''" class="btn-outline">{{ __('feature.reset_search') }}</button>
