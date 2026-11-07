@@ -144,8 +144,8 @@ Keep it running, then connect to `127.0.0.1:3307` (DataGrip: "Use SSH tunnel" of
 
 ## Last completed task
 
-- **2026-10-24 (branch `test`, not committed):** menu labels in the English version. The «Useful for applicants» sidebar on a news page (children of the «Абітурієнту» menu item) and the «Popular sections» block on the 404 page printed `MenuItem::label` instead of `localized_label`, so on `/en` the items stayed Ukrainian. Both views now use `localized_label` (`label_en` → `navigation.labels` dictionary → original). Test `LocalizationShellTest::test_news_sidebar_and_404_sections_use_translated_menu_labels`.
-- Checks: `LocalizationShellTest` — the new test passes, `test_search_suggestion_links_keep_the_selected_language` fails locally (known PHP 8.5 Cyrillic-URL issue); `HomeBlocksTranslationTest` passes. On the just-test.shop DB all five children of «Абітурієнту» already have `label_en` (read-only check); production was not checked. Not checked in a browser.
+- **2026-11-07 (branch `chore/symfony-security-update` → `test`, not yet in `master`):** `composer update 'symfony/*' --with-dependencies` (minor/patch only, 26 packages, `composer.lock` only) closed 11 advisories in 6 Symfony packages that made the blocking `composer audit --locked` fail in CI and in the `deploy.yml` gate on every branch. `master` was also merged into `test`.
+- Checks: `composer audit --locked` is clean; `php artisan test` on PHP 8.5 — 598 passed, 12 failed, the known local count for that PHP version. Until this update reaches `master`, deployment from `master` stays blocked by the audit gate. PR #40 (page excerpt duplicate) is still open and not in `test`.
 
 ## Other
 
