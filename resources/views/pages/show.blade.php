@@ -9,6 +9,10 @@
     $featured = $children->where('is_featured', true)->values();
     $rest = $children->where('is_featured', false)->values();
 
+    // Кнопки-посилання: на хабі йдуть після плиток підсторінок, але не роблять сторінку хабом
+    $sectionLinks = $page->sectionLinks()->visible()->ordered()->get();
+    $hubCardCount = $rest->count() + $sectionLinks->count();
+
     // Сусідні сторінки того самого розділу — і для сайдбару, і для переходів «попередня/наступна»
     $siblings = $page->parent_id
         ? $page->parent->children()->published()->ordered()->get()
@@ -98,7 +102,7 @@
                                     </span>
                                 @endif
                                 {{-- Чип про пошук — лише коли поле пошуку справді показується (див. partials/hub) --}}
-                                @if ($rest->count() > 5)
+                                @if ($hubCardCount > 5)
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-600">
                                         <x-ico name="magnifying-glass" class="h-4 w-4" aria-hidden="true" />
                                         {{ __('feature.quick_search_in_this_section') }}
@@ -148,9 +152,11 @@
                 <x-prose.article heritage :drop-cap="$page->slug === 'istoriya'">
                     {!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->publicBody()))), ! $page->cover_image) !!}
                 </x-prose.article>
-            @else
+            @elseif ($sectionLinks->isEmpty())
                 <x-empty-state icon="document-text" title="{{ __('public.no_page_content') }}" />
             @endif
+
+            @include('pages.partials.section-links')
         </section>
 
         @include('pages.partials.neighbours')

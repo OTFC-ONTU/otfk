@@ -97,6 +97,8 @@ return [
     'content_for_this_page_will_be_added' => 'Матеріали цієї сторінки незабаром буде додано.',
     'key_actions' => 'Ключові дії',
     'all_pages_in_this_section' => 'Усі сторінки розділу',
+    'section_links' => 'Посилання',
+    'opens_in_new_tab' => 'відкривається в новій вкладці',
     'search_pages_in_this_section' => 'Пошук по сторінках розділу',
     'about_this_section' => 'Про розділ',
     'cannot_find_the_page_you_need' => 'Не знайшли потрібну сторінку?',

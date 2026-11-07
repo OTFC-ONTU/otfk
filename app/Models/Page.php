@@ -59,6 +59,12 @@ class Page extends Model
         return $this->hasMany(Page::class, 'parent_id')->orderBy('sort_order');
     }
 
+    /** Кнопки-посилання, що показуються на цій сторінці (quick_links, location=page_link). */
+    public function sectionLinks(): HasMany
+    {
+        return $this->hasMany(QuickLink::class)->where('location', QuickLink::LOCATION_PAGE_LINK);
+    }
+
     /**
      * Підпис сторінки у списках вибору адмінки: назва, а в дужках — шлях її розділів,
      * бо назви на кшталт «IT» чи «Легка промисловість» повторюються в різних розділах.
@@ -192,6 +198,8 @@ class Page extends Model
         // Підсторінки видаленої сторінки лишаються в її розділі, а не стають сторінками верхнього рівня
         static::deleting(function (Page $page): void {
             static::query()->where('parent_id', $page->getKey())->update(['parent_id' => $page->parent_id]);
+            // Кнопки-посилання теж переходять до розділу вище; без нього лишаються в адмінці без сторінки
+            QuickLink::query()->where('page_id', $page->getKey())->update(['page_id' => $page->parent_id]);
         });
     }
 

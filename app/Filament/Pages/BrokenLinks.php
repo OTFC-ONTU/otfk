@@ -22,7 +22,7 @@ class BrokenLinks extends FilamentPage
 
     protected static string | \UnitEnum | null $navigationGroup = 'Сторінки та меню';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 5;
 
     protected string $view = 'filament.pages.broken-links';
 

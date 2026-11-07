@@ -2,7 +2,9 @@
 
 @php
     // Пошук по назвах — на клієнті, без запитів на сервер (сторінок у розділі до кількох десятків)
-    $needles = $rest->map(fn ($child) => mb_strtolower($child->localized('title')))->values();
+    $needles = $rest->map(fn ($child) => mb_strtolower($child->localized('title')))
+        ->concat($sectionLinks->map(fn ($link) => mb_strtolower($link->localized('title'))))
+        ->values();
 
     // Короткий опис іде вступом над картками; довгий текст (як-от «Виховна робота») —
     // окремою статтею «Про розділ» під картками
@@ -74,10 +76,10 @@
 
             <div class="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <h2 class="text-2xl font-extrabold text-brand-950">{{ __('feature.all_pages_in_this_section') }}</h2>
+                    <h2 class="text-2xl font-extrabold text-brand-950">{{ $rest->isEmpty() && $sectionLinks->isNotEmpty() ? __('feature.section_links') : __('feature.all_pages_in_this_section') }}</h2>
                     <div class="accent-rule"></div>
                 </div>
-                @if ($rest->count() > 5)
+                @if ($hubCardCount > 5)
                     <div class="relative w-full sm:w-80">
                         <x-ico name="magnifying-glass" aria-hidden="true"
                                class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -89,7 +91,7 @@
                 @endif
             </div>
 
-            @if ($rest->count() > 5)
+            @if ($hubCardCount > 5)
                 <p class="mt-3 text-sm text-slate-500" x-show="needle !== ''" x-cloak>
                     {{ __('feature.found') }} <span class="font-semibold text-brand-800" x-text="found"></span>
                     <span x-text="found === 1 ? @js(__('feature.page_2')) : (found >= 2 && found <= 4 ? @js(__('feature.pages')) : @js(__('feature.pages_2')))"></span>
@@ -107,9 +109,12 @@
                         <x-ico name="arrow-right" class="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-brand-600" aria-hidden="true" />
                     </a>
                 @endforeach
+                @foreach ($sectionLinks as $i => $link)
+                    @include('pages.partials.section-link-card', ['link' => $link, 'number' => $rest->count() + $i + 1, 'searchIndex' => $rest->count() + $i])
+                @endforeach
             </div>
 
-            @if ($rest->count() > 5)
+            @if ($hubCardCount > 5)
                 <div class="mt-6" x-show="found === 0" x-cloak>
                     <x-empty-state icon="magnifying-glass" title="{{ __('feature.no_pages_match_this_search') }}">
                         <button type="button" @click="q = ''" class="btn-outline">{{ __('feature.reset_search') }}</button>
