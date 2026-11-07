@@ -81,7 +81,8 @@
                         <h1 @class(['text-3xl font-extrabold leading-tight text-brand-950 sm:text-4xl', 'mt-3' => $page->parent])>{{ $page->localized('title') }}</h1>
                         <div class="accent-rule"></div>
 
-                        @if (filled($page->localized('excerpt')))
+                        {{-- Єдине місце короткого опису на звичайній сторінці; якщо тіло починається з нього, текст лишається лише в тілі --}}
+                        @if (filled($page->localized('excerpt')) && ! \App\Support\LeadExcerpt::repeatsBody($page->localized('excerpt'), $page->publicBody()))
                             <p class="mt-5 max-w-2xl text-lg leading-relaxed text-slate-500">{{ $page->localized('excerpt') }}</p>
                         @endif
 

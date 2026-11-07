@@ -17,8 +17,6 @@
                        class="mb-8 w-full rounded-2xl object-cover" />
         @endif
 
-        <x-lead-excerpt :excerpt="$page->localized('excerpt')" :body="$page->localized('body')" />
-
         {{-- На мобільному сайдбар опиняється в самому низу довгої сторінки, тож якорі дублюються тут --}}
         @if ($showToc)
             <details class="card mb-6 p-5 lg:hidden">
