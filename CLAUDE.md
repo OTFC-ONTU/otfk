@@ -145,8 +145,8 @@ Keep it running, then connect to `127.0.0.1:3307` (DataGrip: "Use SSH tunnel" of
 
 ## Last completed task
 
-- **2026-11-07 (branch `feat/page-section-links`, worktree, not committed):** link buttons on pages: admin «Кнопки-посилання» creates a tile with a button text, parent page and URL, opening in a new tab by default. `quick_links` gets `page_id` and a 2048-character `url` (migration `2026_11_07_100000`).
-- Checks: `php artisan test` on PHP 8.5 — 12 failed (the known local Cyrillic URL count), the rest passed; `PageSectionLinksTest` covers hub, ordinary and heritage pages, `/en`, validation, deletion and reorder. Checked in the browser on a local SQLite copy: hub and ordinary page cards, `/en`, admin list and form. The migration ran up/down/up on SQLite only, not on MySQL/MariaDB; not deployed.
+- **2026-11-07 (branch `feat/page-section-links`, merged into `test`, not pushed):** link buttons on pages: admin «Кнопки-посилання» creates a tile with a button text, parent page and URL, opening in a new tab by default. `quick_links` gets `page_id` and a 2048-character `url` (migration `2026_11_07_100000`).
+- Checks: `php artisan test` on PHP 8.5 — 12 failed (the known local Cyrillic URL count), the rest passed; `PageSectionLinksTest` covers hub, ordinary and heritage pages, `/en`, validation, deletion and reorder. Checked in the browser on a local SQLite copy: hub and ordinary page cards, `/en`, admin list and form. The migration ran up/down/up on SQLite only, not on MySQL/MariaDB; not deployed; run `php artisan migrate` on each environment.
 
 ## Other
 
