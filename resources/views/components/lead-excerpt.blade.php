@@ -1,12 +1,9 @@
 @props(['excerpt' => null, 'body' => null, 'heritage' => false])
 
 @php
-    // excerpt часто = обрізаний початок body (автогенерація при імпорті новин),
-    // тож НЕ показуємо лід-абзац, якщо тіло вже починається з того самого тексту —
+    // НЕ показуємо лід-абзац, якщо тіло вже починається з того самого тексту —
     // інакше перший абзац дублюється на сторінці.
-    $lead = \Illuminate\Support\Str::of((string) $excerpt)->stripTags()->squish();
-    $bodyStart = \Illuminate\Support\Str::of((string) $body)->stripTags()->squish();
-    $show = $lead->isNotEmpty() && ! $bodyStart->startsWith((string) $lead->limit(60, ''));
+    $show = \App\Support\MetaText::clean($excerpt) !== '' && ! \App\Support\LeadExcerpt::repeatsBody($excerpt, $body);
 @endphp
 
 @if ($show)
