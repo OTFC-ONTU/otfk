@@ -55,6 +55,39 @@ class PageSectionLinksTest extends TestCase
         $this->assertStringContainsString('x-show="match(1)"', $response->getContent());
     }
 
+    public function test_featured_link_goes_to_key_actions_above_the_list(): void
+    {
+        $hub = $this->page('tsentr');
+        $this->page('normatyvna-baza', ['parent_id' => $hub->id, 'title' => 'Нормативна база']);
+        $this->link($hub, ['title' => 'Вакансія вгорі', 'is_featured' => true]);
+        $this->link($hub, ['title' => 'Звичайна кнопка']);
+
+        $html = $this->get('/tsentr')->assertOk()
+            ->assertSeeInOrder(['Ключові дії', 'Вакансія вгорі', 'Усі сторінки розділу', 'Нормативна база', 'Звичайна кнопка'])
+            ->assertSee('1 ключова дія')
+            ->getContent();
+
+        // Кнопка вгорі показується один раз і не бере участі в пошуку по списку
+        $this->assertSame(1, substr_count($html, 'Вакансія вгорі'));
+        $this->assertStringContainsString('x-show="match(1)"', $html);
+        $this->assertStringNotContainsString('x-show="match(2)"', $html);
+    }
+
+    public function test_featured_link_on_ordinary_page_goes_above_the_text(): void
+    {
+        $page = $this->page('zvychaina');
+        $this->link($page, ['title' => 'Кнопка вгорі', 'is_featured' => true]);
+        $this->link($page, ['title' => 'Кнопка внизу']);
+
+        $this->get('/zvychaina')->assertOk()
+            ->assertSeeInOrder(['Кнопка вгорі', 'Текст сторінки.', 'Посилання', 'Кнопка внизу']);
+
+        // Лише кнопка вгорі — без заголовка «Посилання» під текстом
+        QuickLink::where('title', 'Кнопка внизу')->delete();
+        $html = $this->get('/zvychaina')->assertOk()->getContent();
+        $this->assertDoesNotMatchRegularExpression('~<h2[^>]*>\s*Посилання\s*</h2>~u', $html);
+    }
+
     public function test_link_counts_towards_hub_search_threshold(): void
     {
         $hub = $this->page('tsentr');
@@ -150,7 +183,7 @@ class PageSectionLinksTest extends TestCase
         $url = 'https://docs.google.com/forms/d/e/'.str_repeat('a', 300).'/viewform';
 
         Livewire::test(CreatePageLink::class)
-            ->fillForm(['title' => 'Вакансія', 'page_id' => $page->id, 'url' => '  '.$url.' '])
+            ->fillForm(['title' => 'Вакансія', 'page_id' => $page->id, 'url' => '  '.$url.' ', 'is_featured' => true])
             ->call('create')
             ->assertHasNoFormErrors();
 
@@ -160,6 +193,7 @@ class PageSectionLinksTest extends TestCase
         $this->assertSame($url, $link->url);
         $this->assertTrue($link->open_new_tab);
         $this->assertTrue($link->is_visible);
+        $this->assertTrue($link->is_featured);
     }
 
     public function test_form_rejects_unsafe_addresses_and_addresses_without_scheme(): void
