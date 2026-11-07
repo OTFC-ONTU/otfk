@@ -5,14 +5,18 @@ namespace App\Models;
 use App\Models\Concerns\HasSortOrder;
 use App\Models\Concerns\HasEnglishTranslation;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class QuickLink extends Model
 {
     use HasSortOrder;
     use HasEnglishTranslation;
 
+    /** Кнопка-посилання на сторінці розділу (адмінка: «Кнопки-посилання»). */
+    public const LOCATION_PAGE_LINK = 'page_link';
+
     protected $fillable = ['title_en', 'description_en', 'translation_published',
-        'location', 'title', 'description', 'url', 'icon',
+        'location', 'page_id', 'title', 'description', 'url', 'icon',
         'color', 'open_new_tab', 'nofollow', 'sort_order', 'is_visible',
     ];
 
@@ -23,6 +27,12 @@ class QuickLink extends Model
             'nofollow' => 'boolean',
             'is_visible' => 'boolean',
         ];
+    }
+
+    /** Сторінка, на якій показується кнопка-посилання. */
+    public function page(): BelongsTo
+    {
+        return $this->belongsTo(Page::class);
     }
 
     public function scopeVisible($query)
@@ -41,7 +51,7 @@ class QuickLink extends Model
     }
 
     /**
-     * Значення rel для посилання в підвалі: noopener для нової вкладки,
+     * Значення rel для посилання в підвалі чи кнопки на сторінці: noopener для нової вкладки,
      * nofollow — лише для зовнішніх адрес із прапорцем (внутрішнім
      * сторінкам сайту вагу не обрізаємо).
      */

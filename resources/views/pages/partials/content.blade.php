@@ -36,9 +36,11 @@
             <x-prose.article :drop-cap="$page->slug === 'istoriya'">
                 {!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->bodyWithAnchors()))), ! $page->cover_image) !!}
             </x-prose.article>
-        @else
+        @elseif ($sectionLinks->isEmpty())
             <x-empty-state icon="document-text" title="{{ __('feature.content_for_this_page_will_be_added') }}" />
         @endif
+
+        @include('pages.partials.section-links')
 
         {{-- Перехід до сусідніх сторінок розділу — щоб не повертатися до меню --}}
         @if ($previous || $next)
