@@ -1,12 +1,18 @@
-{{-- Кнопка-посилання у вигляді плитки підсторінки: $link, $number, необовʼязковий $searchIndex для пошуку на хабі --}}
+{{-- Кнопка-посилання у вигляді плитки підсторінки: $link, $number (null — значок замість номера), необовʼязковий $searchIndex для пошуку на хабі --}}
 <a href="{{ \App\Support\LocalizedUrl::to($link->url) }}"
    @if ($link->open_new_tab) target="_blank" @endif
    @if ($link->rel()) rel="{{ $link->rel() }}" @endif
    @isset($searchIndex) x-show="match({{ $searchIndex }})" @endisset
    class="card card-interactive group flex items-center gap-4 p-4">
-    <span class="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1 font-mono text-sm font-bold text-brand-800 transition group-hover:bg-brand-950 group-hover:text-gold-400">
-        {{ str_pad((string) $number, 2, '0', STR_PAD_LEFT) }}
-    </span>
+    @if (isset($number))
+        <span class="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1 font-mono text-sm font-bold text-brand-800 transition group-hover:bg-brand-950 group-hover:text-gold-400">
+            {{ str_pad((string) $number, 2, '0', STR_PAD_LEFT) }}
+        </span>
+    @else
+        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gold-500 text-white transition group-hover:bg-brand-950 group-hover:text-gold-400">
+            <x-ico name="link" class="h-4 w-4" aria-hidden="true" />
+        </span>
+    @endif
     <span class="min-w-0 flex-1 font-semibold leading-snug text-slate-800 group-hover:text-brand-700">
         {{ $link->localized('title') }}
         @if ($link->open_new_tab)

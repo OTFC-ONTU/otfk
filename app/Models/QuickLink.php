@@ -17,13 +17,14 @@ class QuickLink extends Model
 
     protected $fillable = ['title_en', 'description_en', 'translation_published',
         'location', 'page_id', 'title', 'description', 'url', 'icon',
-        'color', 'open_new_tab', 'nofollow', 'sort_order', 'is_visible',
+        'color', 'open_new_tab', 'is_featured', 'nofollow', 'sort_order', 'is_visible',
     ];
 
     protected function casts(): array
     {
         return ['translation_published' => 'boolean',
             'open_new_tab' => 'boolean',
+            'is_featured' => 'boolean',
             'nofollow' => 'boolean',
             'is_visible' => 'boolean',
         ];

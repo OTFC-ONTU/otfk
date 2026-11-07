@@ -3,7 +3,7 @@
 @php
     // Пошук по назвах — на клієнті, без запитів на сервер (сторінок у розділі до кількох десятків)
     $needles = $rest->map(fn ($child) => mb_strtolower($child->localized('title')))
-        ->concat($sectionLinks->map(fn ($link) => mb_strtolower($link->localized('title'))))
+        ->concat($pageLinks->map(fn ($link) => mb_strtolower($link->localized('title'))))
         ->values();
 
     // Короткий опис іде вступом над картками; довгий текст (як-от «Виховна робота») —
@@ -27,8 +27,8 @@
         </x-prose.article>
     @endif
 
-    {{-- Ключові дії розділу — сторінки з прапорцем «Ключова сторінка розділу» в адмінці --}}
-    @if ($featured->isNotEmpty())
+    {{-- Ключові дії розділу — сторінки з прапорцем «Ключова сторінка розділу» і кнопки-посилання з прапорцем «Вгорі» --}}
+    @if ($keyActionCount > 0)
         <div class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <h2 class="text-2xl font-extrabold text-brand-950">{{ __('feature.key_actions') }}</h2>
@@ -55,10 +55,32 @@
                     <x-ico name="arrow-right" class="mt-1 h-5 w-5 shrink-0 text-gold-500 transition group-hover:translate-x-1" aria-hidden="true" />
                 </a>
             @endforeach
+            @foreach ($featuredLinks as $j => $link)
+                @php($i = $featured->count() + $j)
+                <a href="{{ \App\Support\LocalizedUrl::to($link->url) }}"
+                   @if ($link->open_new_tab) target="_blank" @endif
+                   @if ($link->rel()) rel="{{ $link->rel() }}" @endif
+                   class="card card-interactive group flex items-start gap-4 p-5">
+                    <span @class([
+                        'grid h-12 w-12 shrink-0 place-items-center rounded-xl',
+                        'bg-gold-500 text-white' => $i % 2 === 0,
+                        'bg-brand-950 text-gold-400' => $i % 2 !== 0,
+                    ])>
+                        <x-ico name="link" class="h-6 w-6" aria-hidden="true" />
+                    </span>
+                    <span class="min-w-0 flex-1 font-bold leading-snug text-brand-950 group-hover:text-brand-700">
+                        {{ $link->localized('title') }}
+                        @if ($link->open_new_tab)
+                            <span class="sr-only">({{ __('feature.opens_in_new_tab') }})</span>
+                        @endif
+                    </span>
+                    <x-ico :name="$link->open_new_tab ? 'arrow-top-right-on-square' : 'arrow-right'" class="mt-1 h-5 w-5 shrink-0 text-gold-500 transition group-hover:translate-x-1" aria-hidden="true" />
+                </a>
+            @endforeach
         </div>
     @endif
 
-    <div @class(['grid gap-8 lg:grid-cols-4 lg:items-start', 'mt-12' => $featured->isNotEmpty()])>
+    <div @class(['grid gap-8 lg:grid-cols-4 lg:items-start', 'mt-12' => $keyActionCount > 0])>
 
         {{-- Усі сторінки розділу: живий пошук + пронумеровані картки --}}
         <div class="min-w-0 lg:col-span-3"
@@ -76,7 +98,7 @@
 
             <div class="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <h2 class="text-2xl font-extrabold text-brand-950">{{ $rest->isEmpty() && $sectionLinks->isNotEmpty() ? __('feature.section_links') : __('feature.all_pages_in_this_section') }}</h2>
+                    <h2 class="text-2xl font-extrabold text-brand-950">{{ __('feature.all_pages_in_this_section') }}</h2>
                     <div class="accent-rule"></div>
                 </div>
                 @if ($hubCardCount > 5)
@@ -109,7 +131,7 @@
                         <x-ico name="arrow-right" class="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-brand-600" aria-hidden="true" />
                     </a>
                 @endforeach
-                @foreach ($sectionLinks as $i => $link)
+                @foreach ($pageLinks as $i => $link)
                     @include('pages.partials.section-link-card', ['link' => $link, 'number' => $rest->count() + $i + 1, 'searchIndex' => $rest->count() + $i])
                 @endforeach
             </div>

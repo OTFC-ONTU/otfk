@@ -32,15 +32,17 @@
             </details>
         @endif
 
+        @include('pages.partials.section-links', ['links' => $featuredLinks, 'top' => true])
+
         @if (filled($page->localized('body')))
             <x-prose.article :drop-cap="$page->slug === 'istoriya'">
                 {!! \App\Support\LazyMedia::render(\App\Support\FileCards::render(\App\Support\ResponsiveTables::render(\App\Support\LocalizedHtml::links($page->bodyWithAnchors()))), ! $page->cover_image) !!}
             </x-prose.article>
-        @elseif ($sectionLinks->isEmpty())
+        @elseif ($pageLinks->isEmpty())
             <x-empty-state icon="document-text" title="{{ __('feature.content_for_this_page_will_be_added') }}" />
         @endif
 
-        @include('pages.partials.section-links')
+        @include('pages.partials.section-links', ['links' => $sectionLinks])
 
         {{-- Перехід до сусідніх сторінок розділу — щоб не повертатися до меню --}}
         @if ($previous || $next)

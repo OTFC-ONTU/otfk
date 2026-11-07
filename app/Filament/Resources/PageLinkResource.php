@@ -56,7 +56,7 @@ class PageLinkResource extends Resource
                 ->relationship('page', 'title', fn (Builder $query) => $query->with('parent.parent.parent')->orderBy('title'))
                 ->getOptionLabelFromRecordUsing(fn (Page $page): string => $page->adminOptionLabel())
                 ->searchable()->preload()->required()->columnSpanFull()
-                ->helperText('У розділі кнопка стане в кінці списку підсторінок, на звичайній сторінці — під текстом.'),
+                ->helperText('У розділі кнопка стане в кінці списку підсторінок, на звичайній сторінці — під текстом (або вгорі — прапорець «Вгорі»).'),
             TextInput::make('url')->label('Посилання')->required()->maxLength(2048)->columnSpanFull()
                 ->placeholder('https://… або /novyny')
                 ->dehydrateStateUsing(fn (?string $state): string => trim((string) $state))
@@ -66,6 +66,8 @@ class PageLinkResource extends Resource
                 ->validationMessages(['regex' => 'Посилання має починатися з https://, http:// або / (сторінка цього сайту).']),
             Toggle::make('open_new_tab')->label('Відкривати у новій вкладці')->default(true),
             Toggle::make('is_visible')->label('Показувати')->default(true),
+            Toggle::make('is_featured')->label('Вгорі')->default(false)->columnSpanFull()
+                ->helperText('У розділі кнопка додатково з’явиться великою карткою в блоці «Ключові дії» над списком (у списку теж лишиться), на звичайній сторінці — стане над текстом.'),
             EnglishTranslation::section(contentFields: [], primaryLabel: 'Англійський текст на кнопці'),
         ])->columns(2);
     }
@@ -79,6 +81,7 @@ class PageLinkResource extends Resource
                 TextColumn::make('url')->label('Посилання')->color('gray')->limit(40),
                 TextColumn::make('translation_status')->label('Переклад EN')
                     ->state(fn (QuickLink $record) => $record->translationStatus())->badge(),
+                IconColumn::make('is_featured')->label('Вгорі')->boolean()->toggleable(),
                 IconColumn::make('open_new_tab')->label('Нова вкладка')->boolean()->toggleable(),
                 IconColumn::make('is_visible')->label('Показ')->boolean(),
                 TextColumn::make('sort_order')->label('Порядок')->numeric()->sortable()->toggleable(isToggledHiddenByDefault: true),
