@@ -67,7 +67,7 @@ class PageLinkResource extends Resource
             Toggle::make('open_new_tab')->label('Відкривати у новій вкладці')->default(true),
             Toggle::make('is_visible')->label('Показувати')->default(true),
             Toggle::make('is_featured')->label('Вгорі')->default(false)->columnSpanFull()
-                ->helperText('У розділі кнопка стане великою карткою в блоці «Ключові дії» над списком підсторінок, на звичайній сторінці — над текстом.'),
+                ->helperText('У розділі кнопка додатково з’явиться великою карткою в блоці «Ключові дії» над списком (у списку теж лишиться), на звичайній сторінці — стане над текстом.'),
             EnglishTranslation::section(contentFields: [], primaryLabel: 'Англійський текст на кнопці'),
         ])->columns(2);
     }

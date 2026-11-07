@@ -3,7 +3,7 @@
 @php
     // Пошук по назвах — на клієнті, без запитів на сервер (сторінок у розділі до кількох десятків)
     $needles = $rest->map(fn ($child) => mb_strtolower($child->localized('title')))
-        ->concat($sectionLinks->map(fn ($link) => mb_strtolower($link->localized('title'))))
+        ->concat($pageLinks->map(fn ($link) => mb_strtolower($link->localized('title'))))
         ->values();
 
     // Короткий опис іде вступом над картками; довгий текст (як-от «Виховна робота») —
@@ -98,7 +98,7 @@
 
             <div class="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <h2 class="text-2xl font-extrabold text-brand-950">{{ $rest->isEmpty() && $sectionLinks->isNotEmpty() ? __('feature.section_links') : __('feature.all_pages_in_this_section') }}</h2>
+                    <h2 class="text-2xl font-extrabold text-brand-950">{{ __('feature.all_pages_in_this_section') }}</h2>
                     <div class="accent-rule"></div>
                 </div>
                 @if ($hubCardCount > 5)
@@ -131,7 +131,7 @@
                         <x-ico name="arrow-right" class="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-brand-600" aria-hidden="true" />
                     </a>
                 @endforeach
-                @foreach ($sectionLinks as $i => $link)
+                @foreach ($pageLinks as $i => $link)
                     @include('pages.partials.section-link-card', ['link' => $link, 'number' => $rest->count() + $i + 1, 'searchIndex' => $rest->count() + $i])
                 @endforeach
             </div>

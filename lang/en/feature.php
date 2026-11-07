@@ -97,7 +97,6 @@ return [
     'content_for_this_page_will_be_added' => 'Content for this page will be added soon.',
     'key_actions' => 'Key actions',
     'all_pages_in_this_section' => 'All pages in this section',
-    'section_links' => 'Links',
     'opens_in_new_tab' => 'opens in a new tab',
     'search_pages_in_this_section' => 'Search pages in this section',
     'about_this_section' => 'About this section',

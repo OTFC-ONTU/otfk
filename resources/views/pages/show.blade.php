@@ -9,12 +9,12 @@
     $featured = $children->where('is_featured', true)->values();
     $rest = $children->where('is_featured', false)->values();
 
-    // Кнопки-посилання: на хабі йдуть після плиток підсторінок (з прапорцем «Вгорі» — у «Ключові дії»),
-    // на звичайній сторінці — під текстом (або над ним); сторінку хабом не роблять
+    // Кнопки-посилання: на хабі всі йдуть у спільний список після плиток підсторінок (з прапорцем «Вгорі» —
+    // ще й у «Ключові дії»), на звичайній сторінці — під текстом або над ним; сторінку хабом не роблять
     $pageLinks = $page->sectionLinks()->visible()->ordered()->get();
     $featuredLinks = $pageLinks->where('is_featured', true)->values();
     $sectionLinks = $pageLinks->where('is_featured', false)->values();
-    $hubCardCount = $rest->count() + $sectionLinks->count();
+    $hubCardCount = $rest->count() + $pageLinks->count();
     $keyActionCount = $featured->count() + $featuredLinks->count();
 
     // Сусідні сторінки того самого розділу — і для сайдбару, і для переходів «попередня/наступна»
