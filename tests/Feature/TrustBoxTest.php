@@ -160,7 +160,12 @@ class TrustBoxTest extends TestCase
         $mail->assertHasSubject('Скринька довіри: нове звернення — Освітній процес');
         $mail->assertSeeInHtml(self::TEXT);
         $mail->assertSeeInText(self::TEXT);
-        $mail->assertSeeInHtml('близько');
+
+        // Час — точний за Києвом (взимку UTC+2), як і в заголовку Date листа.
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-11 18:59:30', 'UTC'));
+        $late = new TrustBoxMessage('skrynka.otfk@gmail.com', self::TEXT); // Mailable кешує рендер — новий екземпляр
+        $late->assertSeeInText('Надіслано: 11.11.2026 20:59 (Київ)');
+        $this->travelBack();
         foreach (['203.0.113.7', 'UniqueAgent'] as $trace) {
             $mail->assertDontSeeInHtml($trace);
             $mail->assertDontSeeInText($trace);

@@ -9,7 +9,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
 /**
- * Лист «Скриньки довіри». Містить лише тему, текст і час із точністю до години
+ * Лист «Скриньки довіри». Містить лише тему, текст і час надсилання
  * (Київ): без IP, браузера, Reply-To. Службовий лист українською для всіх версій сайту.
  */
 class TrustBoxMessage extends Mailable
@@ -40,6 +40,8 @@ class TrustBoxMessage extends Mailable
 
     public function content(): Content
     {
+        // Точний час за Києвом: лист іде одразу після надсилання форми, тож поштовий
+        // клієнт однаково показує цей час у заголовку Date — приховувати його немає сенсу.
         $sentAt = now('Europe/Kyiv');
 
         return new Content(
@@ -48,8 +50,7 @@ class TrustBoxMessage extends Mailable
             with: [
                 'topic' => $this->topic,
                 'text' => $this->appeal,
-                // Лише година: точний час зайве звужує коло можливих авторів.
-                'sentAt' => $sentAt->format('d.m.Y').', близько '.$sentAt->format('H').':00 (Київ)',
+                'sentAt' => $sentAt->format('d.m.Y H:i').' (Київ)',
                 'language' => $this->pageLanguage === 'en' ? 'англійська' : 'українська',
                 'test' => $this->test,
                 'site' => parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'otfk.od.ua',
