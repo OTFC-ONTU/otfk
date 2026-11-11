@@ -22,7 +22,10 @@ class SecurityHeaders
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
         $response->headers->set('Content-Security-Policy', "frame-ancestors 'self'");
-        $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+        // Сторінка може задати суворішу політику сама (Скринька довіри — no-referrer).
+        if (! $response->headers->has('Referrer-Policy')) {
+            $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+        }
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
         // Адмінку й її службові адреси не індексуємо незалежно від robots.txt.

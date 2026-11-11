@@ -15,6 +15,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\StructureController;
+use App\Http\Controllers\TrustBoxController;
 use App\Http\Controllers\VideoController;
 use Illuminate\Support\Facades\Route;
 
@@ -62,10 +63,16 @@ Route::get('/poshuk/pidkazky', [SearchController::class, 'suggest'])
 
 Route::get('/kontakty', [ContactController::class, 'index'])->name('contacts');
 
+// Скринька довіри: анонімне звернення (лист на адреси з налаштувань). POST — загальний
+// запобіжник від флуду; ліміти успішних звернень рахує сам контролер.
+Route::get('/skrynka-doviry', [TrustBoxController::class, 'show'])->name('trust-box');
+Route::post('/skrynka-doviry', [TrustBoxController::class, 'send'])
+    ->middleware('throttle:20,10')->name('trust-box.send');
+
 /*
  | Динамічна редагована сторінка (catch-all). Реєструється ОСТАННЬОЮ та
  | виключає службові префікси, щоб не перехоплювати /admin, /livewire тощо.
  */
 Route::get('/{page:slug}', [PageController::class, 'show'])
-    ->where('page', '^(?!(?:en|admin|admin-preview|personal|livewire|novyny|video|kontakty|dokumenty|spetsialnosti|struktura|administratsiya|halereya|poshuk|sitemap|storage|up|build|vendor)$)[^/]+$')
+    ->where('page', '^(?!(?:en|admin|admin-preview|personal|livewire|novyny|video|kontakty|dokumenty|spetsialnosti|struktura|administratsiya|halereya|poshuk|skrynka-doviry|sitemap|storage|up|build|vendor)$)[^/]+$')
     ->name('pages.show');
