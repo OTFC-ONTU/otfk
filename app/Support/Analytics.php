@@ -47,6 +47,10 @@ class Analytics
     /** Чи віддати ID і дозволити завантаження gtag після згоди — лише основний домен. */
     public static function tracking(?Request $request = null): bool
     {
-        return self::bannerVisible() && Seo::onPrimaryHost($request);
+        $request ??= request();
+
+        // На сторінці «Скриньки довіри» gtag не завантажується навіть після згоди.
+        return self::bannerVisible() && Seo::onPrimaryHost($request)
+            && ! $request->routeIs('trust-box', 'trust-box.send', 'en.trust-box', 'en.trust-box.send');
     }
 }
