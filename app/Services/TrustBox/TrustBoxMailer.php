@@ -6,7 +6,8 @@ use App\Mail\TrustBoxMessage;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Надсилання листів «Скриньки довіри» через Gmail SMTP з паролем застосунку.
+ * Надсилання листів «Скриньки довіри» через Gmail SMTP з паролем застосунку
+ * (скринька @gmail.com або Google Workspace з доменом коледжу — той самий smtp.gmail.com).
  * Mailer збирається на льоту (Mail::build) і не чіпає глобальні MAIL_* сайту.
  * Кожен отримувач отримує окремий лист, де в «Кому» лише він.
  * Тести підміняють клас через контейнер (реальний SMTP у тестах не викликається).
@@ -62,7 +63,7 @@ class TrustBoxMailer
 
         return match (true) {
             str_contains($text, '535') || str_contains($text, 'Username and Password not accepted') || str_contains($text, 'BadCredentials')
-                => 'Gmail відхилив адресу або пароль застосунку. Перевірте, що пароль створено саме для цієї скриньки і двоетапна перевірка увімкнена.',
+                => 'Gmail відхилив адресу або пароль застосунку. Перевірте, що пароль створено саме для цієї скриньки і двоетапна перевірка увімкнена (у Google Workspace паролі застосунків має дозволити адміністратор домену).',
             str_contains($text, 'Connection could not be established') || str_contains($text, 'timed out') || str_contains($text, 'Connection refused')
                 => 'Немає з\'єднання з smtp.gmail.com:587. Можливо, хостинг блокує вихідну пошту.',
             str_contains($text, '550') || str_contains($text, '553')
