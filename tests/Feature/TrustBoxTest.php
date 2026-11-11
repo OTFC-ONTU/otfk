@@ -376,8 +376,13 @@ class TrustBoxTest extends TestCase
         $page->call('save');
         $this->assertSame(self::PASSWORD, TrustBox::password());
         $page->set('data.app_password', 'short')->call('save')->assertHasErrors(['data.app_password']);
-        $page->set('data.app_password', null)->set('data.'.TrustBox::SENDER, 'someone@ukr.net')->call('save')
+        $page->set('data.app_password', null)->set('data.'.TrustBox::SENDER, 'not-an-email')->call('save')
             ->assertHasErrors(['data.'.TrustBox::SENDER]);
+
+        // Google Workspace з доменом коледжу — та сама SMTP-авторизація, адреса приймається.
+        $page->set('data.'.TrustBox::SENDER, 'Skrinka@otfk.ukr.education')->call('save')->assertHasNoErrors();
+        $this->assertSame('skrinka@otfk.ukr.education', TrustBox::sender());
+        $this->assertFalse(TrustBox::available(), 'Новий відправник потребує нового тестового листа');
     }
 
     public function test_failed_test_mail_does_not_verify(): void

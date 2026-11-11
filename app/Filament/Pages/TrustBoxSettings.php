@@ -18,7 +18,7 @@ use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Log;
 
 /**
- * «Скринька довіри» (App\Services\TrustBox\TrustBox): службова скринька Gmail
+ * «Скринька довіри» (App\Services\TrustBox\TrustBox): службова скринька Google (Gmail або Workspace)
  * і пароль застосунку, список отримувачів (1–5, кожен отримує окремий лист),
  * ключі Cloudflare Turnstile, тестовий лист і лічильники за місяць.
  * Пароль і секретний ключ зберігаються зашифрованими й у форму не повертаються.
@@ -87,14 +87,12 @@ class TrustBoxSettings extends SettingsFormPage
                         Toggle::make(TrustBox::ENABLED)->label('Скринька довіри працює на сайті')
                             ->helperText('Коли вимкнено, посилання зникають із шапки, меню й підвалу, а сторінка /skrynka-doviry показує контакти приймальні замість форми. Увімкнути можна лише після успішного тестового листа.'),
                     ]),
-                Section::make('Пошта-відправник (Gmail)')
-                    ->description('Окрема скринька лише для цих листів. Пароль застосунку створюється в акаунті Google: Безпека → Двоетапна перевірка → Паролі застосунків.')
+                Section::make('Пошта-відправник (Gmail або Google Workspace)')
+                    ->description('Окрема скринька Google лише для цих листів: @gmail.com або адреса домену коледжу в Google Workspace. Пароль застосунку створюється в акаунті Google цієї скриньки: Безпека → Двоетапна перевірка → Паролі застосунків (у Workspace адміністратор домену має дозволити двоетапну перевірку).')
                     ->columns(2)
                     ->schema([
                         TextInput::make(TrustBox::SENDER)->label('Адреса відправника')
                             ->email()->required()->maxLength(190)
-                            ->rule('ends_with:@gmail.com')
-                            ->validationMessages(['ends_with' => 'Потрібна адреса @gmail.com — пароль застосунку працює лише з Gmail.'])
                             ->helperText('Від цієї адреси отримувачі бачитимуть листи.'),
                         TextInput::make('app_password')->label('Пароль застосунку')
                             ->password()->revealable()->autocomplete('new-password')->maxLength(40)
