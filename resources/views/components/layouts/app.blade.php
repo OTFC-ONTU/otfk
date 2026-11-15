@@ -8,6 +8,8 @@
     $menu = MenuItem::navigation();
     $s = Setting::publicMap();
     $partners = QuickLink::visible()->location('footer_partner')->ordered()->get();
+    // Скринька довіри: посилання лише коли скринька ввімкнена й перевірена тестовим листом
+    $trustBoxUrl = \App\Services\TrustBox\TrustBox::available() ? \App\Support\LocalizedUrl::route('trust-box') : null;
     $logo = ! empty($s['logo']) ? asset('storage/' . $s['logo']) : null;
     // Без завантаженої іконки — щит герба коледжу для вкладки (favicon.ico 16/32/48, icon-32.png) і повний герб для телефонів (180/192px)
     $favicon = ! empty($s['favicon']) ? asset('storage/' . $s['favicon']) : asset('favicon.ico');
@@ -177,6 +179,11 @@
                     @endif
                 </div>
                 <div class="flex items-center gap-4">
+                    @if ($trustBoxUrl)
+                        <a href="{{ $trustBoxUrl }}" class="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-0.5 font-medium text-white ring-1 ring-white/25 transition hover:bg-white/20">
+                            <x-ico name="lock-closed" class="h-3.5 w-3.5" aria-hidden="true" /> {{ __('trust_box.title') }}
+                        </a>
+                    @endif
                     @if (! empty($s['social_facebook']))
                         <a href="{{ $s['social_facebook'] }}" target="_blank" rel="noopener" class="hover:text-white">Facebook</a>
                     @endif
@@ -383,6 +390,11 @@
                         <a href="{{ \App\Support\LocalizedUrl::route('bells') }}" class="btn-outline px-2 text-xs">{{ __('public.bells') }}</a>
                         <a href="{{ \App\Support\LocalizedUrl::route('contacts') }}" class="btn-outline px-2 text-xs">{{ __('public.contacts') }}</a>
                     </div>
+                    @if ($trustBoxUrl)
+                        <a href="{{ $trustBoxUrl }}" class="btn-outline mt-2 w-full border-gold-300 text-xs text-gold-800 ring-gold-300 hover:bg-gold-50">
+                            <x-ico name="lock-closed" class="h-4 w-4" aria-hidden="true" /> {{ __('trust_box.title') }}
+                        </a>
+                    @endif
                     <div class="mt-3 space-y-2 text-sm text-slate-600">
                         @if (! empty($s['contact_phone']))
                             <a href="tel:{{ preg_replace('/[^+\d]/', '', $s['contact_phone']) }}" class="block hover:text-brand-700">{{ $s['contact_phone'] }}</a>
@@ -467,6 +479,9 @@
                     <li><a href="{{ \App\Support\LocalizedUrl::route('specialties.index') }}" class="hover:text-white">{{ __('layout.specialties') }}</a></li>
                     <li><a href="{{ \App\Support\LocalizedUrl::route('galleries.index') }}" class="hover:text-white">{{ __('layout.gallery') }}</a></li>
                     <li><a href="{{ \App\Support\LocalizedUrl::route('contacts') }}" class="hover:text-white">{{ __('layout.contacts') }}</a></li>
+                    @if ($trustBoxUrl)
+                        <li><a href="{{ $trustBoxUrl }}" class="inline-flex items-center gap-1.5 hover:text-white"><x-ico name="lock-closed" class="h-3.5 w-3.5 text-gold-300" aria-hidden="true" /> {{ __('trust_box.title') }}</a></li>
+                    @endif
                 </ul>
             </div>
 

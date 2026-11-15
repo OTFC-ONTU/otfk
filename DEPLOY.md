@@ -142,6 +142,7 @@ The new site lives on a subdomain of the otfk.od.ua subscription, next to the ol
 - [ ] `php artisan filament:assets` (admin styles)
 - [ ] `public/build` uploaded to the server (by autodeploy or manually after `npm run build`)
 - [ ] write permissions: `chmod -R 775 storage bootstrap/cache` (if 500 errors occur)
+- [ ] «Скринька довіри» (`/skrynka-doviry`) sends mail synchronously from PHP to `smtp.gmail.com:587` (STARTTLS): the hosting must allow outgoing SMTP. Check with «Налаштування → Скринька довіри → Надіслати тестовий лист» — the box can be enabled only after a successful test e-mail. Turnstile (optional) needs outgoing HTTPS to `challenges.cloudflare.com`.
 
 ## Verify after deployment
 

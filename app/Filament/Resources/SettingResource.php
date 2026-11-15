@@ -19,6 +19,7 @@ use App\Filament\Forms\EnglishTranslation;
 use App\Filament\Resources\SettingResource\Pages;
 use App\Models\Setting;
 use App\Services\AutoTranslation\AutoTranslator;
+use App\Services\TrustBox\TrustBox;
 use Illuminate\Database\Eloquent\Builder;
 use App\Rules\SafeUrl;
 use Filament\Forms;
@@ -108,10 +109,10 @@ class SettingResource extends Resource
             ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }
 
-    /** Зашифрований ключ Claude API змінюється лише на сторінці «Автопереклад» (сирий шифротекст тут не потрібен). */
+    /** Зашифровані ключі (Claude API, пароль і секрет «Скриньки довіри») змінюються лише на своїх сторінках налаштувань. */
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('key', '!=', AutoTranslator::API_KEY_SETTING);
+        return parent::getEloquentQuery()->whereNotIn('key', [AutoTranslator::API_KEY_SETTING, ...TrustBox::SECRET_KEYS]);
     }
 
     public static function getRelations(): array

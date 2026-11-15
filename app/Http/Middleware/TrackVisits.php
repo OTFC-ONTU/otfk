@@ -14,6 +14,8 @@ class TrackVisits
     private array $skipPrefixes = [
         'admin', 'livewire', 'storage', 'build', 'vendor', 'up',
         'favicon.ico', 'robots.txt', 'sitemap.xml', 'poshuk/pidkazky',
+        // Скринька довіри: навіть агреговані відвідування не потрібні.
+        'skrynka-doviry',
     ];
 
     public function handle(Request $request, Closure $next): Response
