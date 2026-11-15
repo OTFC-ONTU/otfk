@@ -63,13 +63,27 @@ class StatsAndEventsTest extends TestCase
 
         $html = $this->get('/')->assertOk()->getContent();
         $this->assertSame(2, substr_count($html, 'data-event-link'));
-        $this->assertMatchesRegularExpression('~<a\s+href="'.preg_quote(url('/novyny/olimpiada'), '~').'" data-event-link\s+class=~', $html);
-        $this->assertMatchesRegularExpression('~<a\s+href="https://example.org/forum" data-event-link\s+target="_blank" rel="noopener"~', $html);
+        $this->assertMatchesRegularExpression('~<a\s+href="'.preg_quote(url('/novyny/olimpiada'), '~').'" data-event-link aria-labelledby="event-\d+-title"\s+class=~', $html);
+        $this->assertMatchesRegularExpression('~<a\s+href="https://example.org/forum" data-event-link aria-labelledby="event-\d+-title"\s+target="_blank" rel="noopener"~', $html);
         $this->assertStringNotContainsString('javascript:alert', $html);
         $this->assertStringContainsString('Подія без посилання', $html);
 
         // На /en внутрішнє посилання веде на англійську версію
         $this->assertStringContainsString('href="'.url('/en/novyny/olimpiada').'"', $this->get('/en')->getContent());
+
+        // Свій сайт (основний домен, www, регістр схеми) — без нової вкладки; «/\host» відкидається
+        config(['otfk.seo.primary_host' => 'otfk.od.ua']);
+        foreach (['https://www.otfk.od.ua/novyny', 'HTTP://localhost/storage/a.pdf', '/novyny'] as $own) {
+            $this->assertFalse((new Event(['url' => $own]))->detailsUrlIsExternal(), $own);
+        }
+        $this->assertTrue((new Event(['url' => 'https://example.org']))->detailsUrlIsExternal());
+        $this->assertNull((new Event(['url' => '/\evil.example']))->detailsUrl());
+        $this->assertNull((new Event(['url' => '//evil.example']))->detailsUrl());
+
+        // /podiyi: внутрішнє посилання без target, на /en — локалізоване
+        $podiyi = $this->get('/en/podiyi')->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('~<a href="'.preg_quote(url('/en/novyny/olimpiada'), '~').'"\s+class=~', $podiyi);
+        $this->assertStringNotContainsString('javascript:alert', $podiyi);
     }
 
     public function test_event_ics_download_and_calendar_buttons(): void

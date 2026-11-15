@@ -65,20 +65,30 @@ class Event extends Model
     public function detailsUrl(): ?string
     {
         $url = trim((string) $this->url);
-        if ($url === '' || str_starts_with($url, '//') || ! preg_match('~^(/|https?://)~i', $url)) {
+        // «//host» і «/\host» браузер читає як адресу іншого сайту
+        if ($url === '' || preg_match('~^/[/\\\\]~', $url) || ! preg_match('~^(/|https?://)~i', $url)) {
             return null;
         }
 
         return \App\Support\LocalizedUrl::to($url);
     }
 
-    /** Чи веде «Детальніше» на інший сайт (тоді — нова вкладка). */
+    /**
+     * Чи веде «Детальніше» на інший сайт (тоді — нова вкладка). Свій сайт —
+     * відносний шлях, поточний хост або основний домен (www і регістр не важать),
+     * як QuickLink::isExternal().
+     */
     public function detailsUrlIsExternal(): bool
     {
         $href = $this->detailsUrl();
+        if ($href === null || str_starts_with($href, '/')) {
+            return false;
+        }
 
-        return $href !== null && ! str_starts_with($href, '/')
-            && ! str_starts_with($href, rtrim(url('/'), '/').'/') && $href !== rtrim(url('/'), '/');
+        $bare = fn (?string $value) => preg_replace('/^www\./', '', strtolower((string) $value));
+        $own = array_filter([$bare(request()->getHost()), $bare(parse_url(url('/'), PHP_URL_HOST)), $bare(config('otfk.seo.primary_host'))]);
+
+        return ! in_array($bare(parse_url($href, PHP_URL_HOST)), $own, true);
     }
 
     /** Посилання «Додати в Google Календар». */

@@ -68,8 +68,8 @@
                 ],
                 'organizer' => \App\Support\StructuredData::publisher(),
                 // Власне посилання події (новина/сторінка), інакше — календар подій; лише http(s) або шлях сайту
-                'url' => filled($e->url) && preg_match('~^(/|https?://)~i', $e->url) && ! str_starts_with($e->url, '//')
-                    ? \App\Support\StructuredData::absoluteUrl(\App\Support\LocalizedUrl::to($e->url))
+                'url' => $e->detailsUrl()
+                    ? \App\Support\StructuredData::absoluteUrl($e->detailsUrl())
                     : \App\Support\LocalizedUrl::route('events'),
             ]))->values()->all();
         @endphp

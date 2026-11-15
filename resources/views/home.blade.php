@@ -49,7 +49,7 @@
                     @endphp
                     <{{ $eventTag }}
                         @if ($eventHref)
-                            href="{{ $eventHref }}" data-event-link
+                            href="{{ $eventHref }}" data-event-link aria-labelledby="event-{{ $event->id }}-title"
                             {!! $event->detailsUrlIsExternal() ? 'target="_blank" rel="noopener"' : '' !!}
                         @endif
                         class="card group flex gap-4 p-5 {{ $eventHref ? 'card-interactive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600' : '' }}">
@@ -60,7 +60,7 @@
                             </div>
                         </div>
                         <div class="min-w-0">
-                            <h3 class="font-bold leading-snug text-slate-900 {{ $eventHref ? 'transition group-hover:text-brand-700' : '' }}">{{ $event->localized('title') }}</h3>
+                            <h3 id="event-{{ $event->id }}-title" class="font-bold leading-snug text-slate-900 {{ $eventHref ? 'transition group-hover:text-brand-700' : '' }}">{{ $event->localized('title') }}</h3>
                             <p class="mt-1 text-xs text-slate-500">
                                 <x-ico name="clock" class="-mt-0.5 inline h-3.5 w-3.5" /> {{ $event->starts_at->format('H:i') }}
                                 @if ($event->localized('location'))
