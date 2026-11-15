@@ -7,6 +7,7 @@ use App\Filament\Resources\MenuItemResource\Pages\ListMenuItems;
 use App\Filament\Resources\NewsResource\Pages\ListNews;
 use App\Filament\Resources\StaffResource;
 use App\Models\Banner;
+use App\Models\Document;
 use App\Models\Gallery;
 use App\Models\MenuItem;
 use App\Models\User;
@@ -88,6 +89,24 @@ class DragReorderTest extends TestCase
 
         $this->actingAs(User::firstOrFail());
         $this->get(StaffResource::getUrl('create'))->assertOk()->assertDontSee('data.sort_order', false);
+    }
+
+    public function test_newest_first_records_can_go_below_zero(): void
+    {
+        // Після нумерації 1…n другий новий документ отримує -1: на MySQL UNSIGNED давав 500 у strict-режимі
+        $category = \App\Models\DocumentCategory::create(['title' => 'Накази']);
+        Document::query()->update(['sort_order' => 1]);
+        $first = Document::create(['document_category_id' => $category->id, 'title' => 'Перший', 'is_published' => true]);
+        $second = Document::create(['document_category_id' => $category->id, 'title' => 'Другий', 'is_published' => true]);
+
+        $this->assertSame(0, $first->fresh()->sort_order);
+        $this->assertSame(-1, $second->fresh()->sort_order);
+        $this->assertSame($second->id, Document::query()->orderBy('sort_order')->value('id'));
+
+        foreach (['documents', 'galleries', 'videos', 'banners'] as $table) {
+            $column = collect(\Illuminate\Support\Facades\Schema::getColumns($table))->firstWhere('name', 'sort_order');
+            $this->assertStringNotContainsString('unsigned', strtolower($column['type']), $table);
+        }
     }
 
     public function test_migration_numbers_duplicates_in_public_order(): void
