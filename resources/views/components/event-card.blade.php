@@ -42,8 +42,8 @@
         <div class="mt-6 flex flex-1 flex-col justify-end gap-3">
             <x-event-calendar-links :event="$event" />
 
-            @if ($event->url)
-                <a href="{{ $event->url }}" @if (! str_starts_with($event->url, \App\Support\LocalizedUrl::to('/'))) target="_blank" rel="noopener" @endif
+            @if ($event->detailsUrl())
+                <a href="{{ $event->detailsUrl() }}" @if ($event->detailsUrlIsExternal()) target="_blank" rel="noopener" @endif
                    class="inline-flex items-center gap-1.5 self-start text-sm font-semibold text-brand-700 transition hover:gap-2.5">
                     {{ __('public.details') }} <x-ico name="arrow-right" class="h-4 w-4" />
                 </a>
