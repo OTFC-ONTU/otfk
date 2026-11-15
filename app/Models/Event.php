@@ -58,6 +58,29 @@ class Event extends Model
             ->copy()->shiftTimezone('Europe/Kyiv')->utc();
     }
 
+    /**
+     * Безпечне посилання «Детальніше» для публічного виводу: лише http(s) або
+     * шлях сайту, внутрішні адреси локалізуються (/en). Інакше — null.
+     */
+    public function detailsUrl(): ?string
+    {
+        $url = trim((string) $this->url);
+        if ($url === '' || str_starts_with($url, '//') || ! preg_match('~^(/|https?://)~i', $url)) {
+            return null;
+        }
+
+        return \App\Support\LocalizedUrl::to($url);
+    }
+
+    /** Чи веде «Детальніше» на інший сайт (тоді — нова вкладка). */
+    public function detailsUrlIsExternal(): bool
+    {
+        $href = $this->detailsUrl();
+
+        return $href !== null && ! str_starts_with($href, '/')
+            && ! str_starts_with($href, rtrim(url('/'), '/').'/') && $href !== rtrim(url('/'), '/');
+    }
+
     /** Посилання «Додати в Google Календар». */
     public function getGoogleCalendarUrlAttribute(): string
     {

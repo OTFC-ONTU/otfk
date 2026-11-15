@@ -146,8 +146,8 @@ Keep it running, then connect to `127.0.0.1:3307` (DataGrip: "Use SSH tunnel" of
 
 ## Last completed task
 
-- **2026-11-15 (branch `test`):** «Скринька довіри» wording: the recipient is now always called «керівник закладу освіти» (EN "the head of the educational institution") instead of «директор» — lead text (new key `trust_box.lead_recipient` as a separate paragraph «Ваше звернення отримує особисто керівник закладу освіти.»), guarantees, «Що буде далі», success text «Дякую, що не залишились осторонь. Ваш лист отримано.», meta description, admin hint and default recipient label in `TrustBoxSettings`.
-- Checks: `TrustBoxTest` (14 tests) passes, with new assertions for the recipient paragraph and the success text. Pushed to `test` (deploys to just-test.shop); not in `master`.
+- **2026-11-15 (branch `test`):** home «Найближчі події» cards with a «Детальніше» link (`events.url`) are now clickable as a whole (`<a data-event-link>`, shared `card-interactive` hover, «Детальніше →» hint; external links open in a new tab), cards without a link stay plain. New `Event::detailsUrl()` (only http(s) or a site path, internal addresses localized for `/en`) and `detailsUrlIsExternal()` are used on the home page and `/podiyi`. Earlier the same day: trust box wording «керівник закладу освіти» and `laravel/framework` 12.72.0 (CVE-2026-128083, `composer audit` blocked the deploy).
+- Checks: new `StatsAndEventsTest::test_home_event_card_with_details_link_is_clickable`; event/structured-data/translation tests (38) pass; full suite passed after the Laravel update; browser check on local SQLite with temporary events (deleted afterwards). Pushed to `test`; not in `master`.
 
 ## Other
 

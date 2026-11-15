@@ -221,8 +221,8 @@
 
                     <div class="mt-6 flex flex-wrap items-center gap-3">
                         <x-event-calendar-links :event="$featured" />
-                        @if ($featured->url)
-                            <a href="{{ $featured->url }}" @if (! str_starts_with($featured->url, \App\Support\LocalizedUrl::to('/'))) target="_blank" rel="noopener" @endif
+                        @if ($featured->detailsUrl())
+                            <a href="{{ $featured->detailsUrl() }}" @if ($featured->detailsUrlIsExternal()) target="_blank" rel="noopener" @endif
                                class="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 transition hover:gap-2.5">
                                 {{ __('public.details') }} <x-ico name="arrow-right" class="h-4 w-4" aria-hidden="true" />
                             </a>
@@ -267,8 +267,8 @@
                             @endif
                         </div>
                         <span class="hidden shrink-0 text-sm tabular-nums text-slate-400 sm:block">{{ $event->starts_at->format('Y') }}</span>
-                        @if ($event->url)
-                            <a href="{{ $event->url }}" @if (! str_starts_with($event->url, \App\Support\LocalizedUrl::to('/'))) target="_blank" rel="noopener" @endif
+                        @if ($event->detailsUrl())
+                            <a href="{{ $event->detailsUrl() }}" @if ($event->detailsUrlIsExternal()) target="_blank" rel="noopener" @endif
                                class="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-brand-700 transition hover:gap-2.5">
                                 {{ __('public.details') }} <x-ico name="arrow-right" class="h-4 w-4" aria-hidden="true" />
                             </a>

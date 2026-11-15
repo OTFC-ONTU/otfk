@@ -42,7 +42,17 @@
             </div>
             <div class="mt-9 grid gap-5 md:grid-cols-3">
                 @foreach ($events as $event)
-                    <div class="card flex gap-4 p-5">
+                    {{-- Картка з посиланням «Детальніше» клікабельна цілком --}}
+                    @php
+                        $eventHref = $event->detailsUrl();
+                        $eventTag = $eventHref ? 'a' : 'div';
+                    @endphp
+                    <{{ $eventTag }}
+                        @if ($eventHref)
+                            href="{{ $eventHref }}" data-event-link
+                            {!! $event->detailsUrlIsExternal() ? 'target="_blank" rel="noopener"' : '' !!}
+                        @endif
+                        class="card group flex gap-4 p-5 {{ $eventHref ? 'card-interactive focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600' : '' }}">
                         <div class="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-800">
                             <div class="text-center leading-none">
                                 <div class="text-2xl font-extrabold">{{ $event->starts_at->format('d') }}</div>
@@ -50,7 +60,7 @@
                             </div>
                         </div>
                         <div class="min-w-0">
-                            <h3 class="font-bold leading-snug text-slate-900">{{ $event->localized('title') }}</h3>
+                            <h3 class="font-bold leading-snug text-slate-900 {{ $eventHref ? 'transition group-hover:text-brand-700' : '' }}">{{ $event->localized('title') }}</h3>
                             <p class="mt-1 text-xs text-slate-500">
                                 <x-ico name="clock" class="-mt-0.5 inline h-3.5 w-3.5" /> {{ $event->starts_at->format('H:i') }}
                                 @if ($event->localized('location'))
@@ -60,8 +70,13 @@
                             @if ($event->localized('description'))
                                 <p class="mt-1.5 line-clamp-2 text-sm text-slate-500">{{ $event->localized('description') }}</p>
                             @endif
+                            @if ($eventHref)
+                                <span class="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 transition group-hover:gap-2.5">
+                                    {{ __('public.details') }} <x-ico name="arrow-right" class="h-4 w-4" aria-hidden="true" />
+                                </span>
+                            @endif
                         </div>
-                    </div>
+                    </{{ $eventTag }}>
                 @endforeach
             </div>
         </section>

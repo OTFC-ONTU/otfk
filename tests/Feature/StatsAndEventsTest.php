@@ -40,6 +40,38 @@ class StatsAndEventsTest extends TestCase
         $this->get('/podiyi')->assertSee('День відкритих дверей')->assertSee('Актова зала');
     }
 
+    public function test_home_event_card_with_details_link_is_clickable(): void
+    {
+        $internal = Event::create([
+            'title' => 'Олімпіада з програмування',
+            'starts_at' => now()->addDays(3)->setTime(10, 0),
+            'url' => url('/novyny/olimpiada'),
+            'is_published' => true,
+        ]);
+        Event::create([
+            'title' => 'Зовнішній форум',
+            'starts_at' => now()->addDays(4)->setTime(10, 0),
+            'url' => 'https://example.org/forum',
+            'is_published' => true,
+        ]);
+        Event::create([
+            'title' => 'Подія без посилання',
+            'starts_at' => now()->addDays(5)->setTime(10, 0),
+            'url' => 'javascript:alert(1)',
+            'is_published' => true,
+        ]);
+
+        $html = $this->get('/')->assertOk()->getContent();
+        $this->assertSame(2, substr_count($html, 'data-event-link'));
+        $this->assertMatchesRegularExpression('~<a\s+href="'.preg_quote(url('/novyny/olimpiada'), '~').'" data-event-link\s+class=~', $html);
+        $this->assertMatchesRegularExpression('~<a\s+href="https://example.org/forum" data-event-link\s+target="_blank" rel="noopener"~', $html);
+        $this->assertStringNotContainsString('javascript:alert', $html);
+        $this->assertStringContainsString('Подія без посилання', $html);
+
+        // На /en внутрішнє посилання веде на англійську версію
+        $this->assertStringContainsString('href="'.url('/en/novyny/olimpiada').'"', $this->get('/en')->getContent());
+    }
+
     public function test_event_ics_download_and_calendar_buttons(): void
     {
         $event = Event::create([
