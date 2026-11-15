@@ -129,7 +129,7 @@ class TrustBoxTest extends TestCase
         $this->assertStringContainsString('href="'.url('/en/skrynka-doviry').'"', $this->get('/en')->getContent());
 
         $response = $this->get('/skrynka-doviry')->assertOk()
-            ->assertSee('Скринька довіри')->assertSee('Лист отримує тільки директор')
+            ->assertSee('Скринька довіри')->assertSee('Ваше звернення отримує особисто керівник закладу освіти')->assertDontSee('Лист отримує тільки директор')
             ->assertSee('name="website"', false)
             ->assertDontSee('director@example.com')->assertDontSee('psycholog@example.com')
             ->assertDontSee('challenges.cloudflare.com');
@@ -138,7 +138,7 @@ class TrustBoxTest extends TestCase
         $this->assertSame('no-referrer', $response->headers->get('Referrer-Policy'));
 
         $this->get('/en/skrynka-doviry')->assertOk()
-            ->assertSee('Trust box')->assertSee('Only the director receives the message')
+            ->assertSee('Trust box')->assertSee('received personally by the head of the educational institution')->assertDontSee('Only the director')
             ->assertSee('Send anonymously')->assertSee('action="'.url('/en/skrynka-doviry').'"', false);
 
         $this->assertStringNotContainsString('skrynka-doviry', $this->get('/sitemap.xml')->getContent());
@@ -149,7 +149,7 @@ class TrustBoxTest extends TestCase
         $this->configure();
 
         $this->submit()->assertRedirect(url('/skrynka-doviry'));
-        $this->get('/skrynka-doviry')->assertOk()->assertSee('Звернення надіслано')->assertDontSee(self::TEXT);
+        $this->get('/skrynka-doviry')->assertOk()->assertSee('Звернення надіслано')->assertSee('Дякую, що не залишились осторонь. Ваш лист отримано.')->assertDontSee(self::TEXT);
 
         $this->assertSame(['director@example.com', 'psycholog@example.com'], array_column($this->mailer->sent, 'to'));
         $this->assertSame('skrynka.otfk@gmail.com', $this->mailer->sent[0]['sender']);

@@ -1,6 +1,6 @@
 {{--
     Скринька довіри (App\Http\Controllers\TrustBoxController). Отримувача завжди
-    називаємо «директор», скільки б адрес не було в налаштуваннях. Помилки й
+    називаємо «керівник закладу освіти», скільки б адрес не було в налаштуваннях. Помилки й
     введений текст приходять у даних відповіді на POST (не з сесії).
     Без аналітики (Analytics::tracking() вимкнено для цього маршруту) і noindex.
 --}}
@@ -28,6 +28,7 @@
                     <h1 class="mt-3 text-3xl font-extrabold leading-tight text-brand-950 sm:text-4xl">{{ __('trust_box.title') }}</h1>
                     <div class="accent-rule"></div>
                     <p class="mt-5 text-lg leading-relaxed text-slate-600">{{ __('trust_box.lead') }}</p>
+                    <p class="mt-3 text-lg font-semibold leading-relaxed text-brand-900">{{ __('trust_box.lead_recipient') }}</p>
                 </div>
             </div>
         </div>

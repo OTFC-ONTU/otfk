@@ -1,15 +1,16 @@
 <?php
 
-// Trust box (/en/skrynka-doviry). The recipient is always called "the director" on the site.
+// Trust box (/en/skrynka-doviry). The recipient is always called "the head of the educational institution" on the site.
 return [
     'title' => 'Trust box',
-    'description' => 'Anonymous message to the director of the Odesa Technical Professional College of ONTU.',
+    'description' => 'Anonymous message to the head of the educational institution, the Odesa Technical Professional College of ONTU.',
     'badge' => 'Anonymous',
-    'lead' => 'Here you can anonymously tell the college director about a problem: unfairness, bullying, misconduct or simply something that should change. Only the director receives the message.',
+    'lead' => 'Here you can anonymously tell the head of the educational institution about existing problems: corruption, bullying, misconduct or simply something that, in your view, should change.',
+    'lead_recipient' => 'Your message is received personally by the head of the educational institution.',
     'guarantees' => [
         ['title' => 'No name', 'text' => 'We do not ask for your name, e-mail or group.'],
         ['title' => 'No traces', 'text' => 'The site does not store the text or record your IP address.'],
-        ['title' => 'Director only', 'text' => 'The message goes to the director\'s personal e-mail.'],
+        ['title' => 'Head only', 'text' => 'The message goes to the personal e-mail of the head of the educational institution.'],
     ],
     'topic' => 'Topic',
     'optional' => 'optional',
@@ -32,7 +33,7 @@ return [
     'captcha_hint' => 'Bot check. If you cannot see it, turn off your content blocker for this page.',
     'next_title' => 'What happens next',
     'next' => [
-        'The director reads the message personally.',
+        'The head of the educational institution reads the message personally.',
         'If the issue concerns everyone, the decision will appear in the news or announcements.',
         'It is not possible to reply to a specific author.',
     ],
@@ -45,7 +46,7 @@ return [
         ['label' => 'Psychological support (Lifeline Ukraine)', 'phone' => '7333'],
     ],
     'sent_title' => 'Message sent',
-    'sent_text' => 'Thank you for speaking up. The college director has received your message. The site kept neither the text nor any data about you.',
+    'sent_text' => 'Thank you for speaking up. Your message has been received.',
     'send_another' => 'Send another one',
     'to_home' => 'Home page',
     'unavailable_title' => 'The trust box is temporarily unavailable',

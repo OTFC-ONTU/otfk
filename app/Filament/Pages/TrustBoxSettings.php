@@ -51,7 +51,7 @@ class TrustBoxSettings extends SettingsFormPage
     protected function fromSettings(array $state): array
     {
         $state[TrustBox::ENABLED] = ($state[TrustBox::ENABLED] ?? '') === '1';
-        $state[TrustBox::RECIPIENTS] = TrustBox::recipients((string) ($state[TrustBox::RECIPIENTS] ?? '')) ?: [['email' => '', 'label' => 'Директор']];
+        $state[TrustBox::RECIPIENTS] = TrustBox::recipients((string) ($state[TrustBox::RECIPIENTS] ?? '')) ?: [['email' => '', 'label' => 'Керівник закладу освіти']];
         $state['app_password'] = null;
         $state['turnstile_secret'] = null;
 
@@ -108,7 +108,7 @@ class TrustBoxSettings extends SettingsFormPage
                             }),
                     ]),
                 Section::make('Отримувачі')
-                    ->description('Від 1 до '.TrustBox::MAX_RECIPIENTS.' адрес. Кожен отримує окремий лист і не бачить інших. На сайті завжди написано, що звернення отримує директор; адреси ніде не показуються.')
+                    ->description('Від 1 до '.TrustBox::MAX_RECIPIENTS.' адрес. Кожен отримує окремий лист і не бачить інших. На сайті завжди написано, що звернення отримує керівник закладу освіти; адреси ніде не показуються.')
                     ->schema([
                         Repeater::make(TrustBox::RECIPIENTS)->hiddenLabel()
                             ->schema([
