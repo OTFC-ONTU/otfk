@@ -10,7 +10,7 @@ return [
     'guarantees' => [
         ['title' => 'No name', 'text' => 'We do not ask for your name, e-mail or group.'],
         ['title' => 'No traces', 'text' => 'The site does not store the text or record your IP address.'],
-        ['title' => 'Head only', 'text' => 'The message goes to the personal e-mail of the head of the educational institution.'],
+        ['title' => 'Head only', 'text' => 'The message goes to the e-mail of the head of the educational institution.'],
     ],
     'topic' => 'Topic',
     'optional' => 'optional',

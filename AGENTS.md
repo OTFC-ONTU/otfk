@@ -147,6 +147,7 @@ Keep it running, then connect to `127.0.0.1:3307` (DataGrip: "Use SSH tunnel" of
 ## Last completed task
 
 - **2026-11-15 (branch `test`):** home «Найближчі події» cards with a «Детальніше» link (`events.url`) are now clickable as a whole (`<a data-event-link>`, shared `card-interactive` hover, «Детальніше →» hint; external links open in a new tab), cards without a link stay plain. New `Event::detailsUrl()` (only http(s) or a site path, internal addresses localized for `/en`) and `detailsUrlIsExternal()` are used on the home page and `/podiyi`. Earlier the same day: trust box wording «керівник закладу освіти» and `laravel/framework` 12.72.0 (CVE-2026-128083, `composer audit` blocked the deploy).
+- Follow-up: trust box guarantee text is now «Лист надходить на пошту керівника закладу освіти.» (EN without "personal"); `TrustBoxTest` passes.
 - Checks: new `StatsAndEventsTest::test_home_event_card_with_details_link_is_clickable`; event/structured-data/translation tests (38) pass; full suite passed after the Laravel update; browser check on local SQLite with temporary events (deleted afterwards). Pushed to `test`; not in `master`.
 
 ## Other
