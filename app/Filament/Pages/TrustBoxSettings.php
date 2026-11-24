@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Log;
  * і пароль застосунку, список отримувачів (1–5, кожен отримує окремий лист),
  * ключі Cloudflare Turnstile, тестовий лист і лічильники за місяць.
  * Пароль і секретний ключ зберігаються зашифрованими й у форму не повертаються.
- * Увімкнути скриньку можна лише після успішного тестового листа з цими налаштуваннями.
+ * Тестовий лист необов'язковий — лише перевірка; скринька вмикається перемикачем.
  */
 class TrustBoxSettings extends SettingsFormPage
 {
@@ -85,7 +85,7 @@ class TrustBoxSettings extends SettingsFormPage
                                 .', помилок надсилання — '.$s['failed'].', Turnstile був недоступний — '.$s['captcha_unavailable'].'.';
                         }),
                         Toggle::make(TrustBox::ENABLED)->label('Скринька довіри працює на сайті')
-                            ->helperText('Коли вимкнено, посилання зникають із шапки, меню й підвалу, а сторінка /skrynka-doviry показує контакти приймальні замість форми. Увімкнути можна лише після успішного тестового листа.'),
+                            ->helperText('Коли вимкнено, посилання зникають із шапки, меню й підвалу, а сторінка /skrynka-doviry показує контакти приймальні замість форми. Перед увімкненням варто надіслати тестовий лист.'),
                     ]),
                 Section::make('Пошта-відправник (Gmail або Google Workspace)')
                     ->description('Окрема скринька Google лише для цих листів: @gmail.com або адреса домену коледжу в Google Workspace. Пароль застосунку створюється в акаунті Google цієї скриньки: Безпека → Двоетапна перевірка → Паролі застосунків (у Workspace адміністратор домену має дозволити двоетапну перевірку).')
@@ -143,13 +143,13 @@ class TrustBoxSettings extends SettingsFormPage
         if (! TrustBox::configured()) {
             return 'Скринька не налаштована: потрібні адреса відправника, пароль застосунку й хоча б один отримувач.';
         }
+        $state = TrustBox::enabled() ? 'Скринька працює на сайті.' : 'Скриньку можна вмикати.';
         if (! TrustBox::verified()) {
-            return 'Налаштування ще не перевірені: надішліть тестовий лист, після цього скриньку можна ввімкнути.';
+            return 'Тестовий лист з цими налаштуваннями ще не надсилався (необов\'язково, але бажано). '.$state;
         }
         $at = TrustBox::verifiedAt()?->timezone('Europe/Kyiv')->format('d.m.Y H:i');
 
-        return 'Тестовий лист з цими налаштуваннями надіслано успішно'.($at ? ' '.$at : '').'. '
-            .(TrustBox::enabled() ? 'Скринька працює на сайті.' : 'Скриньку можна вмикати.');
+        return 'Тестовий лист з цими налаштуваннями надіслано успішно'.($at ? ' '.$at : '').'. '.$state;
     }
 
     /** @return array<Action> */
@@ -168,7 +168,7 @@ class TrustBoxSettings extends SettingsFormPage
             Action::make('forgetPassword')->label('Видалити пароль')->color('danger')->icon('heroicon-o-trash')
                 ->visible(fn () => filled(\App\Models\Setting::get(TrustBox::PASSWORD)))
                 ->requiresConfirmation()
-                ->modalDescription('Скринька перестане надсилати листи й зникне з сайту, доки не буде введено новий пароль і надіслано тестовий лист.')
+                ->modalDescription('Скринька перестане надсилати листи й зникне з сайту, доки не буде введено новий пароль і скриньку не ввімкнуть знову.')
                 ->action(function (): void {
                     abort_unless(static::canAccess(), 403);
                     TrustBox::storeSecret(TrustBox::PASSWORD, null);
@@ -201,14 +201,6 @@ class TrustBoxSettings extends SettingsFormPage
         }
         $this->data['app_password'] = null;
         $this->data['turnstile_secret'] = null;
-
-        if (TrustBox::enabled() && ! TrustBox::verified()) {
-            TrustBox::storeValue(TrustBox::ENABLED, '0');
-            $this->data[TrustBox::ENABLED] = false;
-            Notification::make()->title('Скриньку не ввімкнено')
-                ->body('Налаштування пошти змінилися або ще не перевірені. Надішліть тестовий лист і ввімкніть скриньку знову.')
-                ->warning()->send();
-        }
     }
 
     /** Тестовий лист кожному отримувачу з поточних (навіть незбережених) значень форми. */
@@ -239,7 +231,7 @@ class TrustBoxSettings extends SettingsFormPage
             TrustBox::markVerified(TrustBox::configHash($sender, $password, $recipients));
             Notification::make()->title('Тестовий лист надіслано')
                 ->body('Отримувачів: '.count($results).'. Перевірте пошту (і папку «Спам»). '
-                    .($this->formMatchesSaved($sender, $password, $recipients) ? 'Тепер скриньку можна ввімкнути.' : 'Збережіть налаштування, щоб увімкнути скриньку.'))
+                    .($this->formMatchesSaved($sender, $password, $recipients) ? '' : 'Не забудьте зберегти налаштування.'))
                 ->success()->persistent()->send();
 
             return;

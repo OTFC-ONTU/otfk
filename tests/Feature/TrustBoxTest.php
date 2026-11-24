@@ -101,7 +101,7 @@ class TrustBoxTest extends TestCase
         ], $overrides), ['REMOTE_ADDR' => '203.0.113.7', 'HTTP_USER_AGENT' => 'UniqueAgent/9.9']);
     }
 
-    public function test_hidden_and_unavailable_until_configured_and_verified(): void
+    public function test_hidden_and_unavailable_until_configured_and_enabled(): void
     {
         $home = $this->get('/')->assertOk()->getContent();
         $this->assertStringNotContainsString('skrynka-doviry', $home);
@@ -113,11 +113,16 @@ class TrustBoxTest extends TestCase
         $this->configure(enabled: false);
         $this->assertStringNotContainsString('skrynka-doviry', $this->get('/')->getContent());
 
-        // Зміна отримувачів після тесту знімає перевірку — скринька зникає з сайту.
+        // Тестовий лист не потрібен: увімкнена й налаштована скринька доступна, зміна отримувачів її не вимикає.
         $this->configure();
+        Setting::where('key', TrustBox::VERIFIED_HASH)->update(['value' => '']);
+        \Illuminate\Support\Facades\Cache::flush();
+        $this->assertFalse(TrustBox::verified());
         $this->assertTrue(TrustBox::available());
         TrustBox::storeValue(TrustBox::RECIPIENTS, json_encode([['email' => 'other@example.com', 'label' => '']]));
-        $this->assertFalse(TrustBox::available());
+        $this->assertTrue(TrustBox::available());
+        TrustBox::storeValue(TrustBox::RECIPIENTS, '[]');
+        $this->assertFalse(TrustBox::available(), 'Без отримувачів скринька недоступна');
     }
 
     public function test_links_page_and_headers_in_both_locales(): void
@@ -347,7 +352,7 @@ class TrustBoxTest extends TestCase
             ->assertDontSee(TrustBox::PASSWORD)->assertDontSee(TrustBox::VERIFIED_HASH);
     }
 
-    public function test_enabling_requires_successful_test_mail_with_current_settings(): void
+    public function test_enabling_does_not_require_test_mail(): void
     {
         $this->actingAs(User::factory()->create());
 
@@ -362,20 +367,21 @@ class TrustBoxTest extends TestCase
             ->call('save')
             ->assertHasNoErrors()
             ->assertSet('data.app_password', null)
-            ->assertSet('data.'.TrustBox::ENABLED, false);
+            ->assertSet('data.'.TrustBox::ENABLED, true);
 
-        $this->assertFalse(TrustBox::enabled(), 'Без тестового листа скринька не вмикається');
+        $this->assertTrue(TrustBox::enabled(), 'Скринька вмикається без тестового листа');
+        $this->assertFalse(TrustBox::verified());
+        $this->assertTrue(TrustBox::available());
         $this->assertSame(self::PASSWORD, TrustBox::password());
         $this->assertSame('skrynka.otfk@gmail.com', TrustBox::sender());
         $this->assertSame(['director@example.com', 'deputy@example.com'], array_column(TrustBox::recipients(), 'email'));
+        $this->get('/skrynka-doviry')->assertOk()->assertSee('name="issued"', false);
 
+        // Тестовий лист — необов'язкова перевірка, його успіх видно в стані сторінки.
         $page->call('sendTest')->assertHasNoErrors();
         $this->assertSame(['director@example.com', 'deputy@example.com'], array_column($this->mailer->sent, 'to'));
         $this->mailer->sent[0]['message']->assertHasSubject('Скринька довіри: тестовий лист');
         $this->assertTrue(TrustBox::verified());
-
-        $page->set('data.'.TrustBox::ENABLED, true)->call('save')->assertSet('data.'.TrustBox::ENABLED, true);
-        $this->assertTrue(TrustBox::available());
 
         // Порожнє поле пароля не стирає збережений; хибний формат відхиляється.
         $page->call('save');
@@ -387,7 +393,8 @@ class TrustBoxTest extends TestCase
         // Google Workspace з доменом коледжу — та сама SMTP-авторизація, адреса приймається.
         $page->set('data.'.TrustBox::SENDER, 'Skrinka@otfk.ukr.education')->call('save')->assertHasNoErrors();
         $this->assertSame('skrinka@otfk.ukr.education', TrustBox::sender());
-        $this->assertFalse(TrustBox::available(), 'Новий відправник потребує нового тестового листа');
+        $this->assertFalse(TrustBox::verified(), 'Тест зараховується лише для тих самих налаштувань');
+        $this->assertTrue(TrustBox::available(), 'Зміна відправника не вимикає скриньку');
     }
 
     public function test_failed_test_mail_does_not_verify(): void
