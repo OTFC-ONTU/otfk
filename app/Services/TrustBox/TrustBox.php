@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\Crypt;
  *
  * Пароль застосунку Gmail і секретний ключ Turnstile зберігаються в settings
  * зашифрованими (Crypt, APP_KEY), у форму не повертаються і приховані з
- * «Розширених налаштувань». Скриньку можна ввімкнути лише після успішного
- * тестового листа з тими самими налаштуваннями (verifiedHash).
+ * «Розширених налаштувань». Тестовий лист необов'язковий: його успіх лише
+ * показується в стані сторінки налаштувань (verifiedHash), скринька від нього не залежить.
  */
 class TrustBox
 {
@@ -51,10 +51,10 @@ class TrustBox
         return Setting::get(self::ENABLED) === '1';
     }
 
-    /** Скринька працює на сайті: увімкнена, налаштована і саме ці налаштування пройшли тест. */
+    /** Скринька працює на сайті: увімкнена й налаштована (тестовий лист не обов'язковий). */
     public static function available(): bool
     {
-        return static::enabled() && static::configured() && static::verified();
+        return static::enabled() && static::configured();
     }
 
     public static function configured(): bool
